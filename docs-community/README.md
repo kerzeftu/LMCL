@@ -3,7 +3,7 @@
 > 基于 [HMCL](https://github.com/HMCL-dev/HMCL)（GPLv3）的社区版 Minecraft 启动器开发文档库。
 > 面向中国大陆用户，独立产品身份；核心差异化是**启动保障**（能不能玩上）与**性能优化向导**（玩得顺不顺）。
 >
-> **文档版本 v1.8（2026-10-21）**：基线 **v3.16.4（release/3.16，commit `fbcc1747`）**。已按源码实读重写架构边界与排期，并完成两轮源码核对；HMCLauncher 源码与发布二进制的实测结论见[步骤 20 §2.3](steps/20-HMCLauncher启动壳重建.md) 与[审查记录 §9](审查记录-v3.16.4源码核对.md)。
+> **文档版本 v1.9（2026-10-21）**：基线 **v3.16.4（release/3.16，commit `fbcc1747`）**。已按源码实读重写架构边界与排期，并完成两轮源码核对；HMCLauncher 源码与发布二进制的实测结论见[步骤 20 §2.3](steps/20-HMCLauncher启动壳重建.md) 与[审查记录 §9](审查记录-v3.16.4源码核对.md)。
 
 ---
 
@@ -71,7 +71,7 @@
 | 03 | [产品身份与合规改造](steps/03-产品身份与合规改造.md) | 一 | P0 | 3–5 天 | 独立名称、版本号、图标、许可证文件齐全 | ◐ 代码已落地，图标待补 |
 | 04 | [包名策略与 Relocate 门禁](steps/04-包名Relocate改造.md) | 一 | P1 | 3–5 天 | 验证并记录 Go/No-Go；**首发 No-Go**（崩溃窗口依赖包名字符串） | ☐ |
 | 05 | [禁用自动更新与更新提示](steps/05-禁用自动更新与更新提示.md) | 一 | P0 | 2–3 天 | 自动更新不可用；新版本只弹窗提示并跳仓库，绝不下载 | ◐ Bootstrap/通知服务已编译，UI 待 13 |
-| 06 | [数据目录与用户迁移](steps/06-数据目录与用户迁移.md) | 一 | P1 | 3–5 天 | 独立数据目录 + 一次性导入旧配置 | ☐ |
+| 06 | [数据目录与用户迁移](steps/06-数据目录与用户迁移.md) | 一 | P1 | 3–5 天 | 独立数据目录 + 一次性导入旧配置 | ◐ 路径注入/检测/导入/设置面板已编译，提示条与 GUI 未验 |
 | 07 | [下载源配置](steps/07-下载源配置.md) | 一 | P0 | 3–5 天 | 默认大陆可用 + 用户可自主换源（复用上游机制） | ☐ |
 | 20 | [HMCLauncher 启动壳重建](steps/20-HMCLauncher启动壳重建.md) | 一 | P1 | 2–5 天 | fork stub（C++20）重建自有品牌 exe | ☐ |
 | 08 | [启动保障 · 启动前体检](steps/08-启动保障-启动前体检.md) | 二 | P0 | 2 周 | 启动前红/黄/绿清单，失败也照常启动 | ☐ |
@@ -192,6 +192,7 @@
 |---|---|---|
 | 2026-10-21 | v1.5 | 产品定名 **Lumina Minecraft Launcher（LMCL）**：03 身份字段、02/18 发行命名、17 守护二进制名、20 VERSIONINFO 字段全部回填；新增 00 §13 #18（定名决策）与 §9 商标复核风险行；确立命名分层——Gradle 内部产物仍为 `HMCL-<version>.*`（不改构建脚本），发行时在 `dist/` 重命名为 `LMCL-<version>-<arch>.<ext>`（`win-x86`/`any`/`all`），附录 `build-release.yml` 已加改名步骤；本地 git 仓库 `lmcl/` 从 v3.16.4 初始化（`main` 分支 + `patches/BASELINE.txt`，origin 暂缺、upstream 指向官方） |
 | 2026-10-21 | v1.6 | **步骤 03 已落地并本地构建验证**（提交 `cf3ff6ecb`/合并 `722e646e5`）：`Metadata` 四字段改 LMCL、`hmcl.community.baseline{,.commit}` 注入 `assets/hmcl.properties`、新增 `community/CommunityMetadata` 与 `LICENSE-ADDITIONAL-TERMS.md`；实测 `HMCL-3.16.1000.jar` 的 `Main-Class` 仍为 `org.jackhuang.hmcl.Main`（05 才换 Bootstrap）。修正 CI 版本注入口径：上游只认 `VERSION_ROOT`+`BUILD_NUMBER` 环境变量（`-Pversion` 无效），`build-release.yml` 解析步骤同步注入 `UPSTREAM_BASELINE*`（改自 `patches/BASELINE.txt`） |'
+| 2026-10-21 | v1.9 | **步骤 06 已实现**：`CommunityPaths`（`LMCL`/`.lmcl` 双根注入，显式覆盖与降级）、`OfficialDataLocator`（三平台候选，Windows 点目录 `.hmcl` 优先）、`OfficialDataImporter`（receipt 幂等、token 剥离、`private/**` 不读、原子写回滚）、设置面板数据组可扫描/导入；`CommunityPathsTest`+`OfficialDataImporterTest` 共 14 测试通过，`shadowJar` 验证；`eca4938f0` → `949437ef2`。遗留：首页一次性提示条、重启引导、GUI 验证 |
 | 2026-10-21 | v1.8 | **步骤 13 框架已实现**：`community.dashboard`（布局引擎/配置/组件契约/网格/面板）、`CommunitySettingsPanel`（三组+扩展点）、`CommunityUpdateDialog`、`MainPage` 挂载、i18n 与布局单测；`1bdaee0a1` → `d13a00bec`。编译/单测/shadowJar 通过（33 个 `community/` 条目，`Main-Class` 不变）；无组件提供者时首页保持上游原样，14 合入后再回归。13 §10 记录实现状态与偏差（数据组暂不依赖 06） |
 | 2026-10-21 | v1.7 | **官网与更新策略定案**：`PUBLISH_URL=https://www.kerzeftu.top/lmcl`；不做自动更新（00 §13 #19），新增 `community.update.CommunityUpdateNotifier`（只读 Releases API、只提示跳仓库，仓库留空即静默）；05 重写为《禁用自动更新与更新提示》；`CommunityBootstrap` 与 `Main-Class` 已实现并编译验证（jar `Main-Class: org.jackhuang.hmcl.community.CommunityBootstrap`）；13 增加"首次启动更新提示 + [检查更新]"UI 契约；03/18/00 的 URL 与阻断项同步 |
 | 2026-10-21 | v1.4.1 | 引用复核收口：脚本两轮校验 31 个 md 的 `文件:行` 引用（0 越界），修正 `StyleSheets` 行号区间（`:48-68/161-188/190` 等）；`EntryPoint.java:48`/`Launcher.java:158` 消歧义为完整模块路径；`HMCL/...` 简写全部展开；补记审查记录 §10 |
