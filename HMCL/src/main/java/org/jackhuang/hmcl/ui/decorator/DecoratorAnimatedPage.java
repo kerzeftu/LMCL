@@ -62,8 +62,12 @@ public class DecoratorAnimatedPage extends Control {
             super(control);
 
             BorderPane pane = new BorderPane();
-            pane.setLeft(control.left);
-            FXUtils.setLimitWidth(control.left, 200);
+            // LMCL: pages without a left sidebar (currently only RootPage after the
+            // community home redesign) must not reserve the upstream 200px column.
+            if (!control.left.getChildren().isEmpty()) {
+                pane.setLeft(control.left);
+                FXUtils.setLimitWidth(control.left, 200);
+            }
             pane.setCenter(control.center);
             getChildren().setAll(pane);
         }

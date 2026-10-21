@@ -19,6 +19,7 @@ package org.jackhuang.hmcl.community.dashboard;
 
 import javafx.scene.Node;
 import org.jackhuang.hmcl.Metadata;
+import org.jackhuang.hmcl.community.dashboard.builtin.HomePane;
 import org.jackhuang.hmcl.community.download.CommunityDownloadInstaller;
 import org.jackhuang.hmcl.ui.main.MainPage;
 import org.jetbrains.annotations.NotNull;
@@ -45,7 +46,7 @@ public final class CommunityDashboard {
     public static final String FAIL_MOUNT_PROPERTY = "community.dashboard.failMount";
 
     /// 当前已挂载的面板。
-    private static volatile @Nullable DashboardPane mounted;
+    private static volatile @Nullable HomePane mounted;
 
     /// 本类只提供静态方法。
     private CommunityDashboard() {
@@ -75,7 +76,7 @@ public final class CommunityDashboard {
             Path configPath = Metadata.HMCL_LOCAL_HOME
                     .resolve("config")
                     .resolve(DashboardConfig.FILE_NAME);
-            DashboardPane pane = new DashboardPane(mainPage, configPath);
+            HomePane pane = new HomePane(mainPage, configPath);
             if (!pane.hasEnabledWidgets()) {
                 pane.dispose();
                 return null;
@@ -92,13 +93,13 @@ public final class CommunityDashboard {
     ///
     /// @return 面板或 `null`
     @Nullable
-    public static DashboardPane mounted() {
+    public static HomePane mounted() {
         return mounted;
     }
 
     /// 释放当前面板（退出/重载首页前调用）。
     public static void disposeAll() {
-        DashboardPane pane = mounted;
+        HomePane pane = mounted;
         mounted = null;
         if (pane != null) {
             pane.dispose();
