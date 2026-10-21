@@ -118,7 +118,7 @@ public final class SnapshotWidget extends DashboardWidget {
     ///
     /// @param scope 当前作用域
     private void render(@Nullable SnapshotScope scope) {
-        SnapshotInfo latest = snapshots.isEmpty() ? null : snapshots.get(0);
+        SnapshotInfo latest = latestSuccess();
         if (latest == null) {
             lastLabel.setText(i18n("community.snapshot.none"));
             detailLabel.setText("");
@@ -138,9 +138,22 @@ public final class SnapshotWidget extends DashboardWidget {
         updateButtons();
     }
 
+    /// 最近一次成功启动产生的快照；回滚只针对它，避免误回滚到 pre-restore/manual。
+    ///
+    /// @return 快照，或 `null`
+    @Nullable
+    private SnapshotInfo latestSuccess() {
+        for (SnapshotInfo snapshot : snapshots) {
+            if (snapshot.reason() == SnapshotReason.AUTO_START) {
+                return snapshot;
+            }
+        }
+        return null;
+    }
+
     /// 更新按钮可用性。
     private void updateButtons() {
-        boolean ready = hasSelection && !snapshots.isEmpty();
+        boolean ready = hasSelection && latestSuccess() != null;
         rollbackButton.setDisable(!ready);
         markButton.setDisable(!hasSelection);
         manageButton.setDisable(!hasSelection);
@@ -149,10 +162,13 @@ public final class SnapshotWidget extends DashboardWidget {
     /// 回滚到最近一次成功启动对应的快照。
     private void rollbackLast() {
         String versionId = context.selectedInstanceId().getValue();
-        if (versionId == null || snapshots.isEmpty()) {
+        if (versionId == null) {
             return;
         }
-        SnapshotInfo latest = snapshots.get(0);
+        SnapshotInfo latest = latestSuccess();
+        if (latest == null) {
+            return;
+        }
         org.jackhuang.hmcl.ui.Controllers.confirm(
                 i18n("community.snapshot.restore_confirm", TIME_FORMAT.format(latest.at())),
                 i18n("community.snapshot.title"),
