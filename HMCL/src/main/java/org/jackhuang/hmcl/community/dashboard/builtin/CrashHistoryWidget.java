@@ -65,10 +65,10 @@ public final class CrashHistoryWidget extends DashboardWidget {
     private final VBox list = new VBox(2);
 
     /// 空态。
-    private final Label emptyLabel = BuiltinWidgets.caption("community.crash.empty");
+    private final Label emptyLabel = BuiltinWidgets.caption(i18n("community.crash.empty"));
 
     /// 错误态。
-    private final Label errorLabel = BuiltinWidgets.caption("community.crash.card.unavailable");
+    private final Label errorLabel = BuiltinWidgets.caption(i18n("community.crash.card.unavailable"));
 
     /// 未读红点。
     private final Label unseenLabel = new Label();

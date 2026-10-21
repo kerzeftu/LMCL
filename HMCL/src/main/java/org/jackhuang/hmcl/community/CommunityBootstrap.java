@@ -22,6 +22,7 @@ import org.jackhuang.hmcl.community.crash.CrashArchiveListener;
 import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jackhuang.hmcl.community.java.CommunityJavaMirror;
 import org.jackhuang.hmcl.community.memory.MemoryReclaimer;
+import org.jackhuang.hmcl.community.play.PlayRecordTracker;
 import org.jetbrains.annotations.NotNullByDefault;
 
 /// LMCL 的进程入口（shadowJar 的 `Main-Class`）。
@@ -98,6 +99,13 @@ public final class CommunityBootstrap {
         // 设置与堆指标延迟到真正需要时再读，避免提前触发 Metadata 初始化。
         try {
             MemoryReclaimer.install();
+        } catch (Throwable ignored) {
+        }
+
+        // 游玩记录（步骤 15）：恢复上次进程被杀时留下的会话；必须在 UI 之前完成，
+        // 以免首页日历先读到旧数据。只读写本地 JSON，失败不阻塞启动。
+        try {
+            PlayRecordTracker.recoverNow();
         } catch (Throwable ignored) {
         }
 

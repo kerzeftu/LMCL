@@ -64,7 +64,7 @@ public final class PinnedInstancesWidget extends DashboardWidget {
     private final FlowPane tiles = new FlowPane(6, 6);
 
     /// 空态说明。
-    private final Label emptyLabel = BuiltinWidgets.caption("community.pinned.empty");
+    private final Label emptyLabel = BuiltinWidgets.caption(i18n("community.pinned.empty"));
 
     /// 超出可见数量时的提示。
     private final Label moreLabel = BuiltinWidgets.caption("");

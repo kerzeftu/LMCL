@@ -48,14 +48,14 @@ public final class NetworkWidget extends DashboardWidget {
     private final Label mirrorLabel = BuiltinWidgets.caption("");
 
     /// 官方兜底行。
-    private final Label fallbackLabel = BuiltinWidgets.caption("community.network.fallback");
+    private final Label fallbackLabel = BuiltinWidgets.caption(i18n("community.network.fallback"));
 
     /// 配置按钮。
     private final JFXButton configureButton = BuiltinWidgets.borderButton(
             i18n("community.network.configure"), this::openSettings);
 
     /// 配置失败提示。
-    private final Label errorLabel = BuiltinWidgets.caption("community.network.error");
+    private final Label errorLabel = BuiltinWidgets.caption(i18n("community.network.error"));
 
     /// 构造网络卡。
     ///
