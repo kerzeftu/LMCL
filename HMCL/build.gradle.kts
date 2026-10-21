@@ -216,7 +216,7 @@ tasks.shadowJar {
     manifest.attributes(
         "Created-By" to "Copyright(c) 2013-2025 huangyuhui.",
         "Implementation-Version" to project.version.toString(),
-        "Main-Class" to "org.jackhuang.hmcl.Main",
+        "Main-Class" to "org.jackhuang.hmcl.community.CommunityBootstrap",
         "Multi-Release" to "true",
         "Add-Opens" to addOpens.joinToString(" "),
         "Enable-Native-Access" to "ALL-UNNAMED",
