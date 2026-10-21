@@ -201,6 +201,17 @@ public final class CommunityLaunchHooks {
         }
     }
 
+    /// 通知“启动任务链失败”（进程尚未创建）；幂等。
+    ///
+    /// @param versionId 实例 id
+    public static void onLaunchFailed(@NotNull String versionId) {
+        try {
+            tracker().onLaunchFailed(versionId);
+        } catch (Throwable e) {
+            LOG.warning("Community launch hook onLaunchFailed failed", e);
+        }
+    }
+
     /// 该实例是否正在启动中。
     ///
     /// @param versionId 实例 id

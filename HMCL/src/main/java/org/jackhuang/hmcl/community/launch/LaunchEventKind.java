@@ -48,5 +48,8 @@ public enum LaunchEventKind {
     EXITED_ABNORMAL,
 
     /// 用户主动停止，不计入崩溃。
-    ABORTED_BY_USER
+    ABORTED_BY_USER,
+
+    /// 启动任务链失败（进程尚未创建）。
+    LAUNCH_FAILED
 }

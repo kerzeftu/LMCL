@@ -306,6 +306,8 @@ public final class LauncherHelper {
                     if (!Controllers.isStopped()) {
                         launchingStepsPane.fireEvent(new DialogCloseEvent());
                         if (!success) {
+                            // community: tell hooks that the launch ended before a process was created
+                            CommunityLaunchHooks.onLaunchFailed(selectedVersion);
                             Exception ex = executor.getException();
                             if (ex != null && !(ex instanceof CancellationException)) {
                                 String message;

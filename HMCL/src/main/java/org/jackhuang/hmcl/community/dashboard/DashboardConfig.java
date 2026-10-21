@@ -92,6 +92,11 @@ public final class DashboardConfig {
     /// 最近一次写入/读取的时间戳。
     private Instant updatedAt = Instant.EPOCH;
 
+    /// 是否是首次运行（无配置文件或配置文件损坏）。
+    ///
+    /// 只有首次运行才允许写入默认布局；用户主动清空布局后保持空，不再回填。
+    private boolean firstRun = true;
+
     /// 使用配置路径构造空布局（不读盘）。
     ///
     /// @param path `dashboard.json` 的路径
@@ -122,6 +127,7 @@ public final class DashboardConfig {
         updatedAt = Instant.EPOCH;
 
         if (!Files.isRegularFile(path)) {
+            firstRun = true;
             return;
         }
 
@@ -132,7 +138,9 @@ public final class DashboardConfig {
                 throw new JsonParseException("dashboard.json root is not an object");
             }
             parse(object);
+            firstRun = false;
         } catch (Throwable e) {
+            firstRun = true;
             LOG.warning("Failed to load dashboard config " + path + ", falling back to defaults", e);
             backupCorrupt();
             items.clear();
@@ -300,6 +308,15 @@ public final class DashboardConfig {
     /// @return 只读标志
     public boolean readOnly() {
         return readOnly;
+    }
+
+    /// 是否是首次运行（无配置文件，或文件存在但解析失败）。
+    ///
+    /// 首次运行时调用方才允许写入默认布局；用户清空布局后本值保持 `false`。
+    ///
+    /// @return 首次运行标志
+    public boolean firstRun() {
+        return firstRun;
     }
 
     /// 返回列数配置（当前恒为 `"auto"`）。
