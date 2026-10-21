@@ -1,2 +1,3 @@
 org.jackhuang.hmcl.community.download.CommunityDownloadSettingsProvider
 org.jackhuang.hmcl.community.java.CommunityJavaSettingsProvider
+org.jackhuang.hmcl.community.memory.CommunityMemorySettingsProvider
