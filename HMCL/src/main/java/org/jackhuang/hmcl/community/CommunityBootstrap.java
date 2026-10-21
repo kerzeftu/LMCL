@@ -18,6 +18,7 @@
 package org.jackhuang.hmcl.community;
 
 import org.jackhuang.hmcl.Main;
+import org.jackhuang.hmcl.community.crash.CrashArchiveListener;
 import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jetbrains.annotations.NotNullByDefault;
 
@@ -75,6 +76,13 @@ public final class CommunityBootstrap {
         // 显式覆盖（-Dhmcl.dir/-Dhmcl.home/HMCL_LOCAL_HOME/HMCL_USER_HOME）优先，不覆盖。
         if (!Boolean.getBoolean(CommunityPaths.PROP_PATHS_EXPLICIT)) {
             CommunityPaths.applySystemProperties();
+        }
+
+        // 崩溃归档监听器（步骤 09）：只注册回调，不读取任何上游状态；
+        // 失败不能阻塞启动（此时 LOG 可能尚未初始化，故不能记日志）。
+        try {
+            CrashArchiveListener.install();
+        } catch (Throwable ignored) {
         }
 
         Main.main(args);
