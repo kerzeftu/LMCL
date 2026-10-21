@@ -32,6 +32,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.community.CommunityMetadata;
+import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jackhuang.hmcl.community.migration.OfficialDataImporter;
 import org.jackhuang.hmcl.community.migration.OfficialDataLocator;
 import org.jackhuang.hmcl.community.update.CommunityUpdateDialog;
@@ -101,10 +102,18 @@ public final class CommunitySettingsPanel {
         dashboardActions = actions;
     }
 
-    /// 打开设置面板。
+    /// 打开设置面板（默认选中第一个分组）。
     ///
     /// @param owner 所属窗口（仅用于定位；可为 `null`）
     public static void open(@Nullable Window owner) {
+        open(owner, null);
+    }
+
+    /// 打开设置面板并选中指定分组。
+    ///
+    /// @param owner 所属窗口（仅用于定位；可为 `null`）
+    /// @param sectionId 初始分组 id（`null` 或不存在时选中第一个分组）
+    public static void open(@Nullable Window owner, @Nullable String sectionId) {
         FXUtils.checkFxUserThread();
 
         if (current != null && current.getScene() != null) {
@@ -117,7 +126,7 @@ public final class CommunitySettingsPanel {
             return;
         }
 
-        VBox root = buildRoot(sections);
+        VBox root = buildRoot(sections, sectionId);
         current = root;
         root.addEventHandler(DialogCloseEvent.CLOSE, event -> current = null);
         Controllers.dialog(root);
@@ -180,9 +189,10 @@ public final class CommunitySettingsPanel {
     /// 构建面板根节点：标题行 + 左侧分组 + 右侧内容。
     ///
     /// @param sections 分组
+    /// @param initialSectionId 初始选中的分组 id；`null` 或不存在时选中第一个
     /// @return 根节点
     @NotNull
-    private static VBox buildRoot(@NotNull List<SettingsSection> sections) {
+    private static VBox buildRoot(@NotNull List<SettingsSection> sections, @Nullable String initialSectionId) {
         VBox root = new VBox(12);
         root.getStyleClass().add("jfx-dialog-layout");
         root.setPrefWidth(PANEL_WIDTH);
@@ -225,9 +235,18 @@ public final class CommunitySettingsPanel {
         }
 
         if (!tabs.getChildren().isEmpty()) {
-            ToggleButton first = (ToggleButton) tabs.getChildren().get(0);
-            first.setSelected(true);
-            content.getChildren().setAll(resolveContent((SettingsSection) first.getUserData(), cache));
+            ToggleButton initial = (ToggleButton) tabs.getChildren().get(0);
+            if (initialSectionId != null) {
+                for (var node : tabs.getChildren()) {
+                    ToggleButton tab = (ToggleButton) node;
+                    if (((SettingsSection) tab.getUserData()).id().equals(initialSectionId)) {
+                        initial = tab;
+                        break;
+                    }
+                }
+            }
+            initial.setSelected(true);
+            content.getChildren().setAll(resolveContent((SettingsSection) initial.getUserData(), cache));
         }
 
         HBox body = new HBox(12, tabs, content);
@@ -323,8 +342,8 @@ public final class CommunitySettingsPanel {
     private static Parent buildDataSection() {
         VBox box = section("community.settings.data.title");
 
-        Path local = Metadata.HMCL_LOCAL_HOME;
-        Path user = Metadata.HMCL_USER_HOME;
+        Path local = CommunityPaths.localHome();
+        Path user = CommunityPaths.userHome();
 
         box.getChildren().addAll(
                 pathRow("community.settings.data.path.local", local),
