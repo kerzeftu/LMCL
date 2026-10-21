@@ -21,6 +21,7 @@ import org.jackhuang.hmcl.Main;
 import org.jackhuang.hmcl.community.crash.CrashArchiveListener;
 import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jackhuang.hmcl.community.java.CommunityJavaMirror;
+import org.jackhuang.hmcl.community.memory.MemoryReclaimer;
 import org.jetbrains.annotations.NotNullByDefault;
 
 /// LMCL 的进程入口（shadowJar 的 `Main-Class`）。
@@ -90,6 +91,13 @@ public final class CommunityBootstrap {
         // 失败不能阻塞启动（此时 LOG 可能尚未初始化，故不能记日志）。
         try {
             CrashArchiveListener.install();
+        } catch (Throwable ignored) {
+        }
+
+        // 内存回收基座（步骤 12）：只创建守护调度线程并监听启动事件，
+        // 设置与堆指标延迟到真正需要时再读，避免提前触发 Metadata 初始化。
+        try {
+            MemoryReclaimer.install();
         } catch (Throwable ignored) {
         }
 
