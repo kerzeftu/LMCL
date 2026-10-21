@@ -74,17 +74,16 @@ public static final String API_ROOT =
 - 若 foojay 的使用条款不允许代理（**上线前必须确认**），退路：镜像只代理**列表元数据**、下载链接保持官方 CDN；仍不允许则默认关闭镜像，仅保留"用户可自填镜像"入口；
 - 运维监控：`GET /disco/v3.0/distributions` 健康检查 + 5xx 率告警（步骤 18 的发布 checklist 纳入）。
 
-**注入**（Bootstrap，见步骤 05 属性表新增一行）：
+**注入**（Bootstrap，实际实现见 §10）：
 
 ```java
-// CommunityBootstrap.main 内，早于 EntryPoint.main
-if (System.getProperty("hmcl.discoapi.override") == null) {
-    System.setProperty("hmcl.discoapi.override", "https://java.<community-domain>/disco/v3.0");
-}
+// CommunityBootstrap.main 内，早于 Main.main
+CommunityJavaMirror.install();   // 镜像地址已配置且用户未显式 -D 时才 setProperty
 ```
 
-- 用户显式 `-Dhmcl.discoapi.override=...` 时**不覆盖**（便于排查与自建镜像）；
-- 镜像地址集中在 `CommunityConfig` 常量，便于随域名迁移；
+- 镜像地址集中在 `CommunityConfig.DISCO_API_OVERRIDE` 常量，便于随域名迁移；
+- **当前取值为空串 = 镜像尚未部署**：`install()` 为 no-op，行为与上游一致（走官方 `api.foojay.io`）。这是有意的：不能把用户导向一个不存在的端点。部署侧反向代理就绪后只需回填该常量；
+- 用户显式 `-Dhmcl.discoapi.override=...` 时**不覆盖**（便于排查与自建镜像）；`CommunityJavaMirror.effectiveApiRoot()` 供面板显示实际接口地址；
 - 该属性只影响链路 A；链路 B 的 Mojang Java 仍走步骤 07 的下载源策略。
 
 ### 3.2 发行版偏好（社区设置，默认 Zulu）
@@ -108,11 +107,14 @@ if (System.getProperty("hmcl.discoapi.override") == null) {
 
 ```java
 public final class org.jackhuang.hmcl.community.java.JavaPreference {
-    public static Preference get();                       // 懒加载，读失败返回默认
-    public static void setDistribution(DiscoJavaDistribution distribution);  // 原子写 + 立即刷新
+    public static Preference get();                                   // 独立实例（读默认路径），读失败返回默认
+    public static Preference get(CommunitySettings settings);         // 指定设置实例（测试/注入用）
+    public static void setDistribution(@Nullable DiscoJavaDistribution distribution);              // 写默认路径
+    public static void setDistribution(CommunitySettings settings, @Nullable DiscoJavaDistribution distribution);
 }
 
-public record Preference(DiscoJavaDistribution distribution, boolean mirrorEnabled) {}
+// distribution 为 null 表示 "ANY"；mirrorEnabled 由 CommunityConfig.isJavaMirrorConfigured() 决定
+public record Preference(@Nullable DiscoJavaDistribution distribution, boolean mirrorEnabled) {}
 ```
 
 > 14 不得直接解析 `community-settings.json`；写偏好统一走 `setDistribution`，由本类负责段内字段合并（`CommunitySettings.update`）。
@@ -159,7 +161,7 @@ community.java.limit.upstream_dialog
 community.java.error.list_failed / .install_failed
 ```
 
-四份 `assets/lang/I18N*.properties` 同步。
+三份 `assets/lang/I18N*.properties` 同步（英文基座 + `zh` + `zh_CN`，其余语言回退基座；同 08/09 口径）。
 
 ---
 
@@ -229,3 +231,79 @@ community.java.error.list_failed / .install_failed
 - 下载源（Mojang Java 链路）：[步骤 07](07-下载源配置.md)
 - 面板容器/卡片：[步骤 13](13-首页组件化A-框架搭建.md)、[步骤 14](14-首页组件化B-P0组件与接入.md)
 - 下一步：[步骤 11 · JVM 参数预设向导](11-性能策略-JVM参数预设向导.md)
+
+---
+
+## 10. 实现记录（2026-10-21）
+
+### 10.1 提交与规模
+
+- 分支 `feature/10-java-preference` → 提交 `eb421e004`（feat(10)）→ 合并 `main` = `115e9f932`（merge 10-java-preference）。
+- 13 files changed，+1158 行（含测试 104 行）。
+- 本步**没有**改任何上游 `HMCL/` 既有文件（新增包 + `CommunityBootstrap` 一处调用 + 三份语言文件 + 两份 `META-INF/services`）。
+
+### 10.2 落盘文件
+
+| 文件 | 职责 |
+|---|---|
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/CommunityConfig.java` | 部署常量：`UPSTREAM_DISCO_API`、`PROP_DISCO_API="hmcl.discoapi.override"`、`DISCO_API_OVERRIDE`（空串=未部署）、`isJavaMirrorConfigured()`、`javaMirrorUrl()` |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/java/CommunityJavaMirror.java` | `install()`（幂等、不覆盖显式 `-D`）、`effectiveApiRoot()`、`isInjected()`、`explicitOverride()` |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/java/JavaChoice.java` | 面板/设置下拉的枚举：`ZULU/TEMURIN/LIBERICA/CORRETTO/ANY`，`distribution()`、`i18nKey()`、`of(DiscoJavaDistribution)` |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/java/JavaPreference.java` | 偏好读写：`SECTION="java"`、`KEY_DISTRIBUTION`、`KEY_MIRROR_ENABLED`、`VALUE_ANY="ANY"`、`DEFAULT_DISTRIBUTION=ZULU`；`record Preference(@Nullable DiscoJavaDistribution distribution, boolean mirrorEnabled)` + `storageValue()`/`choice()`；`get()`/`get(CommunitySettings)`、`setDistribution(...)` 两个重载 |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/java/JavaRecommendPane.java` | 推荐面板：`refresh()`、`isLoaded()`、`selectedPreference()`、`selectPreference(JavaChoice)`、`install(Candidate)`；列表按偏好发行版优先、每发行版取最新匹配项 |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/java/CommunityJavaSettingsPane.java` | 设置面板“Java”分组：偏好下拉 + 镜像地址说明 + 上游“下载 Java”对话框不受影响的说明 |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/java/CommunityJavaSettingsProvider.java` | `SettingsSectionProvider`：`SECTION_ID="java"`、`I18N_KEY="community.settings.tab.java"`、`ORDER=25` |
+| `HMCL/src/main/resources/META-INF/services/org.jackhuang.hmcl.community.ui.SettingsSectionProvider` | 追加 `CommunityJavaSettingsProvider`（与 07 的 download provider 并列） |
+| 三份 `HMCL/src/main/resources/assets/lang/I18N*.properties` | 各追加 25 个 key（`community.settings.tab.java` + `community.java.*`） |
+| `HMCL/src/test/java/org/jackhuang/hmcl/community/java/JavaPreferenceTest.java` | 5 个用例：默认 Zulu、`ANY`→null、未知值回退 Zulu、写后读回且落盘、写偏好保留 `mirrorEnabled` 字段 |
+
+`CommunityBootstrap.main` 在 `CrashArchiveListener.install()` 之前调用 `CommunityJavaMirror.install()`，包 try/catch，失败只 WARNING、不阻塞启动。
+
+### 10.3 对外契约（回填给 14/08）
+
+```java
+JavaPreference.Preference JavaPreference.get();                    // 读默认设置文件
+void JavaPreference.setDistribution(@Nullable DiscoJavaDistribution distribution);
+record JavaPreference.Preference(@Nullable DiscoJavaDistribution distribution, boolean mirrorEnabled)
+
+JavaRecommendPane pane = new JavaRecommendPane();   // 无参；构造不联网
+pane.refresh();                                     // 手动触发加载（幂等）
+boolean loaded = pane.isLoaded();
+JavaChoice choice = pane.selectedPreference();
+```
+
+- 14 的 `java-recommend` 卡片：先 `new JavaRecommendPane()`，首次可见时调 `refresh()`；卡片宽度变化由容器负责，面板内部 `ListView` 已 `setPrefWidth(0)` 自适应。
+- 面板内“安装”不跳上游 `JavaDownloadDialog`：直接 `Controllers.taskDialog(...)` 执行“列表项 → 临时文件 → `JavaManager.getInstallJavaTask`”。上游 `JavaDownloadDialog` 保持原样（DoD）。
+- 08 体检的“打开 Java 推荐面板”只需滚动/展开 14 的卡片，不新增根导航。
+
+### 10.4 与设计稿的偏差（重要）
+
+1. **镜像未部署**：`CommunityConfig.DISCO_API_OVERRIDE` 为空串，`install()` 不注入任何属性 → 当前实际行为=上游官方 `api.foojay.io`。这是有意的降级（避免指向不存在端点），也意味着“大陆可用”这一目标**尚未兑现**，需等反向代理部署后回填常量。
+2. `mirrorEnabled` 不是用户可切换项：由 `CommunityConfig.isJavaMirrorConfigured()` 派生；设置面板不提供开关（避免“假装能热切换”）。
+3. 面板构造不自动加载；由业务方（14）调用 `refresh()`。文档 §3.3 的“默认勾选/自动回退”已实现为 `selectCandidate` 的候选排序与 `fallback` 提示，但**没有**自动安装/自动选中列表项。
+4. 安装路径不做上游的 `JavaInstallPage` 向导（命名/更新选项），直接以 `<apiParameter>-<javaVersion>-<packageType>` 作为注册名；重名时提示 `community.java.error.exists` 并中止。
+5. 语言文件按 08/09 口径只同步 3 份，不是设计稿早期写的 4 份。
+6. 只抓取偏好 + 其余最多 2 个发行版的列表（共 ≤3 个请求），避免一次加载全部发行版；失败时显示 `community.java.error.list_failed`、保留“刷新”按钮。
+7. `JavaRecommendPane` 尚未被 14 引用（14 未实现），因此本轮**无 GUI 验证**（环境无 DISPLAY）。
+
+### 10.5 验证
+
+| 项 | 结果 |
+|---|---|
+| `:HMCL:compileJava --no-daemon` | BUILD SUCCESSFUL（仅 3 条既有 JavaFX `--add-exports` 警告） |
+| `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` | **54 tests / 0 failures**（原 49 + Java 偏好 5） |
+| `VERSION_ROOT=3.16 BUILD_NUMBER=1000 :HMCL:shadowJar` | BUILD SUCCESSFUL，`HMCL/build/libs/HMCL-3.16.1000.jar` **10,672,731 B** |
+| jar 内容 | 新增 12 项：`community/CommunityConfig.class`、`community/java/` 下 9 个 class（含 `JavaRecommendPane$1`、`JavaRecommendPane$Candidate`）、`META-INF/services/...SettingsSectionProvider` |
+| manifest | `Main-Class: org.jackhuang.hmcl.community.CommunityBootstrap`、`Implementation-Version: 3.16.1000` 未变 |
+| `assets/hmcl.properties` | `hmcl.version=3.16.1000`、`hmcl.community.baseline=v3.16.4`、`hmcl.community.baseline.commit=fbcc1747…` 未变 |
+| i18n | `assets/lang/I18N.properties` 中 `community.java.*` = 24 个（另有 `community.settings.tab.java`） |
+
+固定环境：`export JAVA_HOME=/home/kerze/hmclce/.tools/jdk-17.0.13+11 GRADLE_USER_HOME=/home/kerze/hmclce/.tools/gradle-home`。
+
+### 10.6 未完成 / 依赖外部
+
+- 镜像反向代理部署（域名 `<community-domain>` 未定）→ 回填 `CommunityConfig.DISCO_API_OVERRIDE`；
+- foojay 使用条款确认（是否允许代理列表/下载重定向）；
+- 14 的卡片接入与 GUI 验收（含“屏蔽 foojay 后列表仍可用”的注入生效验证——需镜像先部署）；
+- 一键安装在真实网络下的端到端验证（本轮仅编译/单测/打包验证）；
+- 上游升级时核对 `hmcl.discoapi.override` 与 `DiscoFetchJavaListTask` 是否变更（列入升级 checklist）。
