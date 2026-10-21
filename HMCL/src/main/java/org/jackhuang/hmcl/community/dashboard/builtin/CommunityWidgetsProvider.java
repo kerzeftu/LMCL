@@ -27,10 +27,10 @@ import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
-/// 内置十一张卡片的组件工厂（步骤 14 的 P0 六卡 + 步骤 15 的 P1/P2 四卡 + 步骤 16 的快照卡）。
+/// 内置十张卡片的组件工厂（步骤 14 的 P0 六卡去掉内存卡 + 步骤 15 的 P1/P2 四卡 + 步骤 16 的快照卡）。
 ///
 /// 通过 `META-INF/services/org.jackhuang.hmcl.community.dashboard.WidgetProvider` 注册。
-/// 描述顺序与默认布局一致：启动、置顶实例、内存、崩溃历史、Java、网络、最近存档、存储、健康检查、游玩日历。
+/// 描述顺序与默认布局一致：启动、置顶实例、崩溃历史、Java、网络、快照、最近存档、存储、健康检查、游玩日历。
 @NotNullByDefault
 public final class CommunityWidgetsProvider implements WidgetProvider {
 
@@ -42,9 +42,6 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
 
     /// 置顶实例卡 id。
     public static final String ID_PINNED = "pinned-instances";
-
-    /// 内存卡 id。
-    public static final String ID_MEMORY = "memory";
 
     /// 崩溃历史卡 id。
     public static final String ID_CRASH = "crash-history";
@@ -71,7 +68,6 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
     private static final List<DashboardWidgetDescriptor> DESCRIPTORS = List.of(
             new DashboardWidgetDescriptor(ID_LAUNCH, "community.launch.title", null, 2, 1, 10),
             new DashboardWidgetDescriptor(ID_PINNED, "community.pinned.title", null, 2, 1, 20),
-            new DashboardWidgetDescriptor(ID_MEMORY, "community.memory.title", null, 1, 1, 30),
             new DashboardWidgetDescriptor(ID_CRASH, "community.crash.title", null, 1, 1, 40),
             new DashboardWidgetDescriptor(ID_SNAPSHOT, "community.snapshot.title", null, 2, 1, 45),
             new DashboardWidgetDescriptor(ID_JAVA, "community.java.title", null, 1, 1, 50),
@@ -107,7 +103,6 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
         return switch (descriptor.id()) {
             case ID_LAUNCH -> new LaunchWidget(descriptor, context);
             case ID_PINNED -> new PinnedInstancesWidget(descriptor, context);
-            case ID_MEMORY -> new MemoryWidget(descriptor, context);
             case ID_CRASH -> new CrashHistoryWidget(descriptor, context);
             case ID_SNAPSHOT -> new SnapshotWidget(descriptor, context);
             case ID_JAVA -> new JavaRecommendWidget(descriptor, context);

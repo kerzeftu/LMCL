@@ -315,8 +315,10 @@ public final class MainPage extends StackPane implements DecoratorPage {
             getChildren().add(communityDashboard);
             javafx.scene.layout.StackPane.setAlignment(
                     communityDashboard, javafx.geometry.Pos.TOP_LEFT);
+            // v3.5: edge-to-edge home; the upstream floating launch button is
+            // re-fronted below and therefore stays above the scrolling cards.
             javafx.scene.layout.StackPane.setMargin(
-                    communityDashboard, new javafx.geometry.Insets(56, 0, 96, 0));
+                    communityDashboard, javafx.geometry.Insets.EMPTY);
 
             // The nightly announcement is an upstream full-screen overlay whose
             // empty content still has pickOnBounds=true; the community home
@@ -328,6 +330,7 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
             updatePane.toFront();
             launchPane.toFront();
+            launchPane.setPickOnBounds(false);
         }
     }
 

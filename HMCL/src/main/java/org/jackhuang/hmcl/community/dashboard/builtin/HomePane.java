@@ -103,7 +103,6 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
             new Slot("pinned-instances", 188),
             new Slot("storage", 144),
             new Slot("java-recommend", 168),
-            new Slot("memory", 158),
             new Slot("snapshot", 176),
             new Slot("crash-history", 176),
             new Slot("health-check", 154),
@@ -115,8 +114,8 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 主列/信息栏间距（像素）。
     private static final int COLUMN_GAP = 16;
 
-    /// 内容底部留白，避免最后一张卡贴住滚动区边缘。
-    private static final int BOTTOM_PADDING = 24;
+    /// 内容底部留白；v3.5 起改为 0，让卡片可以贴住页面底边。
+    private static final int BOTTOM_PADDING = 0;
 
     /// 首页。
     private final MainPage mainPage;
@@ -187,9 +186,10 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
         getStyleClass().add("community-home");
         CommunityStyles.apply(this);
-        setSpacing(14);
+        setSpacing(12);
         setFillWidth(true);
-        setPadding(new Insets(0, 2, 0, 2));
+        setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        setPadding(Insets.EMPTY);
 
         if (!config.readOnly() && config.items().isEmpty()) {
             config.setItems(defaultItems());
@@ -347,9 +347,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
         scroll.setFitToWidth(true);
         scroll.setPannable(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scroll.getStyleClass().add("edge-to-edge");
+        scroll.getStyleClass().addAll("edge-to-edge", "community-home-scroll");
         VBox.setVgrow(scroll, Priority.ALWAYS);
         return scroll;
     }
@@ -384,6 +384,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         HBox body = new HBox(COLUMN_GAP, infoColumn, instanceColumn);
         body.setAlignment(Pos.TOP_LEFT);
         body.setPadding(new Insets(0, 0, BOTTOM_PADDING, 0));
+        body.getStyleClass().add("community-home-body");
         scroll.setContent(body);
     }
 
