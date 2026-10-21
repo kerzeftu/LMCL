@@ -52,15 +52,27 @@ jobs:
         id: meta
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
-          # v3.16.1000 -> 3.16.1000
+          # v3.16.1000 -> VERSION=3.16.1000 / VERSION_ROOT=3.16 / BUILD_NUMBER=1000
           VERSION="${TAG#v}"
+          VERSION_ROOT="${VERSION%.*}"
+          BUILD_NUMBER="${VERSION##*.}"
+          UPSTREAM_BASELINE=$(sed -n 's/^baseline_tag=//p' patches/BASELINE.txt)
+          UPSTREAM_BASELINE_COMMIT=$(sed -n 's/^upstream_sha=//p' patches/BASELINE.txt)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "构建标签 $TAG，Gradle 版本 $VERSION"
+          echo "version_root=$VERSION_ROOT" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "baseline=$UPSTREAM_BASELINE" >> "$GITHUB_OUTPUT"
+          echo "baseline_commit=$UPSTREAM_BASELINE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "标签 $TAG → Gradle $VERSION（基线 $UPSTREAM_BASELINE）"
 
       - name: Build
-        run: xvfb-run --auto-servernum ./gradlew clean build --no-daemon --parallel -Pversion="${{ steps.meta.outputs.version }}"
+        run: xvfb-run --auto-servernum ./gradlew clean build --no-daemon --parallel
         env:
+          VERSION_ROOT: ${{ steps.meta.outputs.version_root }}
+          BUILD_NUMBER: ${{ steps.meta.outputs.build_number }}
+          UPSTREAM_BASELINE: ${{ steps.meta.outputs.baseline }}
+          UPSTREAM_BASELINE_COMMIT: ${{ steps.meta.outputs.baseline_commit }}
           JAVA_TOOL_OPTIONS: -Djava.awt.headless=true
           MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
           MICROSOFT_AUTH_SECRET: ${{ secrets.MICROSOFT_AUTH_SECRET }}
