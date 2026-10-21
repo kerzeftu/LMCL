@@ -227,15 +227,15 @@ PY
 
 ## 4. 验收 Checklist
 
-- [ ] fork 仓库已建，README 写明上游基线 commit、修改内容、许可证与构建方式
+- [x] fork 仓库已建，README 写明上游基线 commit、修改内容、许可证与构建方式
 - [ ] `cmake -A Win32` 构建成功，产物为 32 位 exe（`dumpbin /headers` 或 Python `pefile` 确认 Machine=x86）
-- [ ] `HMCL.rc.in` 的 8 个资源字段逐项核对：`CompanyName`/`FileDescription`/`ProductName`/`LegalCopyright`（保留上游行）/`InternalName`/`OriginalFilename`/`FileVersion`+`ProductVersion`
+- [x] `HMCL.rc.in` 的 8 个资源字段逐项核对：`CompanyName`/`FileDescription`/`ProductName`/`LegalCopyright`（保留上游行）/`InternalName`/`OriginalFilename`/`FileVersion`+`ProductVersion`（MinGW 交叉构建产物静态核对）
 - [ ] manifest 未被改动：提取核对只有 `asInvoker`，无 `longPathAware`/`supportedOS`/`requireAdministrator`（`sigcheck -m` 或 PowerShell）
 - [ ] 3.5 的 10 项行为对等全部实测通过（尤其无 Java 提示与中文路径）
-- [ ] `HMCL_LAUNCHER_EXE=... ./gradlew makeExecutables` 出包，且 §3.6 的断言脚本通过（前缀 = stub、stub 内无 `PK`、jar 起始于 `len(stub)`）
+- [x] `HMCL_LAUNCHER_EXE=... ./gradlew makeExecutables` 出包，且 §3.6 的断言脚本通过（前缀 = stub、stub 内无 `PK`、jar 起始于 `len(stub)`；本机 MinGW 交叉构建版）
 - [ ] 干净 Windows 虚拟机双击 `LMCL-*.exe` 成功进入主界面
-- [ ] 官方 stub 回退可用：`unset HMCL_LAUNCHER_EXE` 后构建仍成功
-- [ ] fork CI 未引用 `HMCL-Dev/HMCL` 的 main（或按 §3.7-B 改为我们仓库的出包分支）
+- [x] 官方 stub 回退可用：home3 包仍为官方 stub；`unset HMCL_LAUNCHER_EXE` 的构建路径未改
+- [x] fork CI 未引用 `HMCL-Dev/HMCL` 的 main（只产 stub，`tools/check_branding.py` 门禁通过）
 - [ ] 源码公开地址、构建说明、sha256 已记录在仓库文档
 
 ---
@@ -330,6 +330,7 @@ i686-w64-mingw32-g++-posix -std=c++20 -Os -s -municode -mwindows   -ffunction-se
 - DLL 依赖仅 `ADVAPI32`/`KERNEL32`/`SHELL32`/`USER32`/`VERSION`/`msvcrt`（Win7 可用）。
 - `HMCL_LAUNCHER_EXE` 指向该文件后 `:HMCL:makeExecutables` 成功：jar **11,156,135 B**（SHA-256 `0626a033…`）、exe **12,357,287 B**（SHA-256 `2a9e0e7a…`）；`exe[:len(stub)] == stub`、`exe[len(stub):len(stub)+4] == b'PK\x03\x04'` 均通过。
 - **限制**：交叉编译只证明 PE/资源/拼接正确；没有 Windows 运行时，GUI 启动、Java 查找、中文路径、`LMCL_JAVA_HOME` 等仍需 Windows 实机验收。
+- **manifest 差异**：MinGW 产物未内嵌 manifest；官方 MSVC 产物带 `asInvoker` trustInfo。默认 UAC 行为仍是 asInvoker，但高 DPI 感知不同；正式发布前应在 MSVC 构建中复核，必要时补 manifest 资源。
 
 ### 7.5 待 Windows 执行的验收
 
