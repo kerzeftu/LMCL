@@ -26,27 +26,18 @@ import org.jackhuang.hmcl.event.RefreshedVersionsEvent;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.game.ModpackHelper;
 import org.jackhuang.hmcl.game.Version;
-import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.setting.GameDirectory;
 import org.jackhuang.hmcl.setting.GameDirectoryManager;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.task.Task;
-import org.jackhuang.hmcl.terracotta.TerracottaMetadata;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
-import org.jackhuang.hmcl.ui.SVG;
-import org.jackhuang.hmcl.ui.account.AccountAdvancedListItem;
-import org.jackhuang.hmcl.ui.account.AccountListPopupMenu;
-import org.jackhuang.hmcl.ui.animation.AnimationUtils;
-import org.jackhuang.hmcl.ui.construct.AdvancedListBox;
-import org.jackhuang.hmcl.ui.construct.AdvancedListItem;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
 import org.jackhuang.hmcl.ui.decorator.DecoratorAnimatedPage;
 import org.jackhuang.hmcl.ui.decorator.DecoratorPage;
 import org.jackhuang.hmcl.ui.download.ModpackInstallWizardProvider;
 import org.jackhuang.hmcl.ui.nbt.NBTEditorPage;
 import org.jackhuang.hmcl.ui.nbt.NBTFileType;
-import org.jackhuang.hmcl.ui.versions.GameAdvancedListItem;
 import org.jackhuang.hmcl.ui.versions.GameListPopupMenu;
 import org.jackhuang.hmcl.ui.versions.Versions;
 import org.jackhuang.hmcl.upgrade.UpdateChecker;
@@ -63,7 +54,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 import static org.jackhuang.hmcl.ui.FXUtils.runInFX;
@@ -145,103 +135,9 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
         protected Skin(RootPage control) {
             super(control);
 
-            // first item in left sidebar
-            AccountAdvancedListItem accountListItem = new AccountAdvancedListItem();
-            accountListItem.setOnAction(e -> Controllers.navigate(Controllers.getAccountListPage()));
-            FXUtils.onSecondaryButtonClicked(accountListItem, () -> AccountListPopupMenu.show(accountListItem, JFXPopup.PopupVPosition.TOP, JFXPopup.PopupHPosition.LEFT, accountListItem.getWidth(), 0));
-            accountListItem.accountProperty().bind(Accounts.selectedAccountProperty());
-
-            // second item in left sidebar
-            GameAdvancedListItem gameListItem = new GameAdvancedListItem();
-            gameListItem.setOnAction(e -> {
-                String version = GameDirectoryManager.getSelectedRepository().getSelectedInstance();
-                if (version == null) {
-                    Controllers.navigate(Controllers.getGameListPage());
-                } else {
-                    Versions.modifyGameSettings(GameDirectoryManager.getSelectedRepository(), version);
-                }
-            });
-            FXUtils.onScroll(gameListItem, getSkinnable().getMainPage().getVersions(), list -> {
-                String currentId = getSkinnable().getMainPage().getCurrentGame();
-                return Lang.indexWhere(list, instance -> instance.getId().equals(currentId));
-            }, it -> getSkinnable().getMainPage().getRepository().setSelectedInstance(it.getId()));
-            if (AnimationUtils.isAnimationEnabled()) {
-                FXUtils.prepareOnMouseEnter(gameListItem, Controllers::prepareVersionPage);
-            }
-            FXUtils.onSecondaryButtonClicked(gameListItem, () -> showGameListPopupMenu(gameListItem));
-
-            // third item in left sidebar
-            AdvancedListItem gameItem = new AdvancedListItem();
-            gameItem.setLeftIcon(SVG.FORMAT_LIST_BULLETED);
-            gameItem.setTitle(i18n("version.manage"));
-            gameItem.setOnAction(e -> Controllers.navigate(Controllers.getGameListPage()));
-            FXUtils.onSecondaryButtonClicked(gameItem, () -> showGameListPopupMenu(gameItem));
-
-            // forth item in left sidebar
-            AdvancedListItem downloadItem = new AdvancedListItem();
-            downloadItem.setLeftIcon(SVG.DOWNLOAD);
-            downloadItem.setTitle(i18n("download"));
-            downloadItem.setOnAction(e -> {
-                Controllers.getDownloadPage().showGameDownloads();
-                Controllers.navigate(Controllers.getDownloadPage());
-            });
-            if (AnimationUtils.isAnimationEnabled()) {
-                FXUtils.prepareOnMouseEnter(downloadItem, Controllers::prepareDownloadPage);
-            }
-
-            // fifth item in left sidebar
-            AdvancedListItem launcherSettingsItem = new AdvancedListItem();
-            launcherSettingsItem.setLeftIcon(SVG.SETTINGS);
-            launcherSettingsItem.setTitle(i18n("settings"));
-            launcherSettingsItem.setOnAction(e -> {
-                Controllers.getSettingsPage().showGameSettings(GameDirectoryManager.getSelectedRepository());
-                Controllers.navigate(Controllers.getSettingsPage());
-            });
-            if (AnimationUtils.isAnimationEnabled()) {
-                FXUtils.prepareOnMouseEnter(launcherSettingsItem, Controllers::prepareSettingsPage);
-            }
-
-            // sixth item in left sidebar
-            AdvancedListItem terracottaItem = new AdvancedListItem();
-            terracottaItem.setLeftIcon(SVG.GRAPH2);
-            terracottaItem.setTitle(i18n("terracotta"));
-            terracottaItem.setOnAction(e -> {
-                if (TerracottaMetadata.PROVIDER != null) {
-                    Controllers.navigate(Controllers.getTerracottaPage());
-                } else {
-                    String message;
-                    if (Architecture.SYSTEM_ARCH.getBits() == Bits.BIT_32)
-                        message = i18n("terracotta.unsupported.arch.32bit");
-                    else if (OperatingSystem.CURRENT_OS == OperatingSystem.WINDOWS
-                            && !OperatingSystem.SYSTEM_VERSION.isAtLeast(OSVersion.WINDOWS_10))
-                        message = i18n("terracotta.unsupported.os.windows.old");
-                    else if (Platform.SYSTEM_PLATFORM.equals(OperatingSystem.LINUX, Architecture.LOONGARCH64_OW))
-                        message = i18n("terracotta.unsupported.arch.loongarch64_ow");
-                    else
-                        message = i18n("terracotta.unsupported");
-
-                    Controllers.dialog(message, null, MessageDialogPane.MessageType.WARNING);
-                }
-            });
-
-            // the left sidebar
-            AdvancedListBox sideBar = new AdvancedListBox()
-                    .startCategory(i18n("account").toUpperCase(Locale.ROOT))
-                    .add(accountListItem)
-                    .startCategory(i18n("version").toUpperCase(Locale.ROOT))
-                    .add(gameListItem)
-                    .add(gameItem)
-                    .add(downloadItem)
-                    .startCategory(i18n("settings.launcher.general").toUpperCase(Locale.ROOT))
-                    .add(launcherSettingsItem)
-                    .add(terracottaItem)
-                    .addNavigationDrawerItem(i18n("contact.chat"), SVG.CHAT, () -> {
-                        Controllers.getSettingsPage().showFeedback();
-                        Controllers.navigate(Controllers.getSettingsPage());
-                    });
-
-            // the root page, with the sidebar in left, navigator in center.
-            setLeft(sideBar);
+            // LMCL: the 200px text sidebar has been removed. Navigation and account
+            // entry points now live on the community home page; the centre keeps the
+            // upstream MainPage so the launch button / background still work.
             setCenter(getSkinnable().getMainPage());
         }
 
