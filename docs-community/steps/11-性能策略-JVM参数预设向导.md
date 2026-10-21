@@ -131,6 +131,7 @@ org.jackhuang.hmcl.community.jvm
 ├── JvmPreset              // enum：UPSTREAM / G1 / ZGC / CUSTOM
 ├── JvmArgValidator        // 冲突检测 8 条规则（纯函数，可单测）
 ├── JvmArgWriter           // 写 GameSettings.jvmOptionsProperty() + 只读/schema 保护
+├── JvmWizardStore         // 状态存储：community-settings.json 的 jvmWizard.<instanceId>
 └── JvmMemoryOptions       // JEP 346 纯函数：生成/判断 "空闲归还内存" 三项参数（12 复用做验收）
 ```
 
@@ -249,7 +250,7 @@ community.jvm.xms_equals_xmx.note
 community.jvm.readonly_instance
 ```
 
-四份 properties 同步。
+三份 properties 同步（英文基座 + `zh` + `zh_CN`；其余语言回退基座）。
 
 ### 3.7 与 08 / 12 的边界
 
@@ -300,7 +301,7 @@ community.jvm.readonly_instance
 - [ ] 上游实例设置页打开后显示的 JVM 参数与向导一致；
 - [ ] 只读实例不产生任何写入（文件 mtime/权限验证）；
 - [ ] 文案无性能百分比承诺（review 记录）；
-- [ ] i18n key 四份一致。
+- [ ] i18n key 三份一致（英文基座 + `zh` + `zh_CN`，其余语言回退基座）。
 
 ---
 
@@ -332,3 +333,72 @@ community.jvm.readonly_instance
 - 内存体检：[步骤 08](08-启动保障-启动前体检.md)
 - 跨平台基座：[步骤 12](12-内存优化P0-跨平台基座.md)
 - 面板容器：[步骤 13](13-首页组件化A-框架搭建.md)
+
+---
+
+## 10. 实现记录（v2.4，2026-10-21）
+
+### 10.1 提交与验证
+
+| 项 | 值 |
+|---|---|
+| 代码提交 | `f51e38183 feat(11): JVM preset wizard with conflict detection`（13 files, +2169）+ `a54a05502 feat(11): opt-in full G1 arguments…` |
+| 合并 | `35c42aa11 merge 11-jvm-wizard: JVM preset wizard verified locally` |
+| 编译 | `:HMCL:compileJava` 通过（仅 3 条既有 JavaFX `--add-exports` 警告） |
+| 单测 | `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` = **82 tests / 0 failures**（新增 28） |
+| 构建 | `VERSION_ROOT=3.16 BUILD_NUMBER=1000 :HMCL:shadowJar` → `HMCL/build/libs/HMCL-3.16.1000.jar` **10,711,716 B**；含 `community/jvm/` 6 个顶层类共 15 个 class；3 份语言各 47 个 `community.jvm.*` key；`Main-Class` 仍为 `CommunityBootstrap` |
+
+### 10.2 落盘文件
+
+| 文件 | 内容 |
+|---|---|
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/jvm/JvmPreset.java` | 档位枚举 + `storageValue()` / `i18nKey()` / `of(String)`（未知回退 UPSTREAM） |
+| `…/jvm/JvmMemoryOptions.java` | JEP 346 纯函数与 `GenerationResult`；常量 `MIN_JAVA_MAJOR=12`、三项参数 |
+| `…/jvm/JvmArgValidator.java` | 11 条规则（文档 8 条 + ZGC 的 Java/位宽/小堆/物理内存 4 条）；`Input`/`Conflict`/`Severity`；`parseHeapMb` / `tokenize` 公开可测 |
+| `…/jvm/JvmArgWriter.java` | 唯一写入口：`compose` / `apply` / `clear` / `removeArg` / `merge` / `strip`；`Status` 三态 |
+| `…/jvm/JvmWizardStore.java` | `jvmWizard` 段落读写、删除、`prune`、`loadAll`；默认堆 4096 |
+| `…/jvm/JvmPresetWizard.java` | 无参构造 UI；`setRepository(HMCLGameRepository)`、`refresh()`、`isLoaded()`、`hasRepository()` |
+| `HMCL/src/test/java/…/jvm/JvmMemoryOptionsTest.java` | 4 个：opt_out / java_too_old / gc_not_g1 / Java 12 边界生成 |
+| `…/jvm/JvmArgValidatorTest.java` | 11 个：堆解析、移除 GC 分级、多 GC、ZGC 混 G1、重复 Xmx、Xms>Xmx、32 位大堆、旧日志参数、上游自定义 G1、ZGC 前置、空串 |
+| `…/jvm/JvmWizardStoreTest.java` | 6 个：往返、损坏条目、删除、prune、未知档位回退、loadAll |
+| `…/jvm/JvmArgWriterTest.java` | 7 个：compose、JEP 346 追加、merge 保留用户参数、strip、重复 token、单参数移除 |
+
+i18n：三份 `assets/lang/I18N.properties`、`I18N_zh.properties`、`I18N_zh_CN.properties` 各新增 47 个 key
+（`community.jvm.*`，含 12 条冲突文案、3 档/自定义、状态与只读提示、`full_g1`）。
+
+### 10.3 关键实现决定
+
+1. **`JvmWizardStore` 独立成类**：文档 §3.1.1 只列了四个纯类，状态读写单独抽出，便于 13/14 与测试复用；schema 是“实例 id → 对象”，不放进 `java` 段。
+2. **手改判定用 token 归一化**：`normalize` = `String.join(" ", tokenize(x))`，因此多空格/换行不算手改，顺序变化算手改（保守方向）。
+3. **`JvmArgWriter.apply` 先移除旧片段再追加新片段**：`previousGenerated` 来自 store；用户手填的其它参数原样保留。清除只在“当前值与生成值完全一致”时执行。
+4. **校验输入是“候选串”**：G1/ZGC 档用 `merge(当前, 旧生成, 新生成)` 生成候选串后再跑规则，这样能提前暴露“残留 G1 参数”“-Xms>-Xmx”等问题；UPSTREAM/CUSTOM 只校验当前串。
+5. **`noOptimizingJVMOptions=true` 时提供“补齐完整 G1 参数”勾选**：勾选才追加文档 §2.1 的 6 项上游默认 G1 参数；默认不勾，避免与上游重复注入。
+6. **Java 版本/位宽可未知**：`resolveJava` 失败时 `javaMajor=0`、`bits=UNKNOWN`，相关规则降级为 WARN 或跳过，不阻断面板打开。
+7. **冲突动作只实现 `remove`**：每条可移除冲突在 UI 上给一个 [移除] 按钮（走 `JvmArgWriter.removeArg`），没有实现“打开上游开关”的跳转（13 的设置面板已有入口）。
+
+### 10.4 相对文档的偏差
+
+| # | 文档 | 实现 | 原因 |
+|---|---|---|---|
+| 1 | i18n “四份 properties” | 三份（英文基座 + zh + zh_CN） | 与 08/09/10 口径统一，其它语言回退基座 |
+| 2 | §3.1.1 只列 4 个类 | 多一个 `JvmWizardStore` | 状态读写独立可测 |
+| 3 | “应用后展示上游生成参数 + 实例参数合并预览” | 预览只展示“向导将写入的片段” | 上游参数由 `DefaultLauncher` 运行时按 Java/内存/架构动态生成，静态无法完整复现；避免给出错误预览 |
+| 4 | 自定义档“用户自由输入” | 自定义只读检测，编辑在 HMCL 实例设置页 | 不在向导里再造一个参数编辑器，避免与上游设置页双写 |
+| 5 | 规则表 8 条 | 11 条（+ZGC Java 版本、32 位、物理内存不足） | DoD 要求 ZGC 前置校验；多出的规则只提示不阻断 |
+| 6 | `JvmPresetWizard` 直接可嵌入 | 需要 14 卡片调用 `setRepository(repo)` 并触发 `refresh()` | 无参构造但仓库由容器注入；14 未实现，故当前无宿主入口 |
+| 7 | “ZGC 建议堆 = min(物理内存-4G, 当前 maxMemory)” | 推荐堆 = 物理内存一半夹在 1–8 GiB，用户可改；ZGC 前置校验独立 | 简化默认值，避免依赖上游 maxMemory 的迁移状态 |
+
+### 10.5 未完成 / 未验证
+
+- 本机无显示环境：GUI 未做真机点击验证（面板仅编译/构建通过）；
+- 14 的 `java-recommend` 卡片未实现，向导当前**没有宿主入口**；14 落地时须在卡片 tab 中 `new JvmPresetWizard()` + `setRepository(repo)`；
+- 12 的语义验收尚未做（12 未实现）；
+- 只读实例、`noJVMOptions=true`、`noOptimizingJVMOptions=true` 三种降级路径只做了代码分支，未做 GUI 演练；
+- 冲突规则中的“移除 GC 后 `-Xms/-Xmx` 不动”行为未做端到端验证（需真实实例）。
+
+### 10.6 下游约束
+
+- 12 复用 `JvmPreset` / `JvmArgValidator` / `JvmMemoryOptions` 时必须保持纯函数签名，不得复制规则；
+- 14 的卡片只负责创建/挂载向导，**不得**绕过 `JvmArgWriter` 直接写 `jvmOptionsProperty()`；
+- 任何新规则必须同步三份 i18n 的 `community.jvm.conflict.<ruleId>`；
+- 13 的设置面板扩展点可挂本向导的入口（可选），但不能成为唯一入口（14 卡片为主入口）。
