@@ -21,14 +21,12 @@
 package org.jackhuang.hmcl.community.ui;
 
 import com.jfoenix.controls.JFXButton;
-import com.jfoenix.controls.JFXPopup;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.stage.Window;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.GameDirectoryManager;
 import org.jackhuang.hmcl.ui.Controllers;
@@ -87,7 +85,7 @@ public final class CommunitySideBar extends VBox {
         homeButton = createButton(SVG.HOME, "community.sidebar.home", this::openHome);
         downloadButton = createButton(SVG.DOWNLOAD, "community.sidebar.download", this::openDownloads);
         settingsButton = createButton(SVG.SETTINGS, "community.sidebar.settings", this::openSettings);
-        otherButton = createButton(SVG.MORE_HORIZ, "community.sidebar.other", this::showOtherMenu);
+        otherButton = createButton(SVG.MORE_HORIZ, "community.sidebar.other", this::openOther);
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
@@ -103,7 +101,7 @@ public final class CommunitySideBar extends VBox {
         boolean home = page == rootPage || (rootPage != null && page == rootPage.getMainPage());
         boolean download = page instanceof DownloadPage;
         boolean settings = page instanceof LauncherSettingsPage;
-        boolean other = !home && !download && !settings;
+        boolean other = page instanceof OtherPage;
 
         setActive(homeButton, home);
         setActive(downloadButton, download);
@@ -173,62 +171,12 @@ public final class CommunitySideBar extends VBox {
         }
     }
 
-    /// 显示“其他”菜单。
-    private void showOtherMenu() {
-        VBox menu = new VBox(2);
-        menu.getStyleClass().add("community-sidebar-menu");
-        // JFXPopup creates a separate scene; attach the community stylesheet to
-        // the popup root so its menu items do not fall back to unreadable
-        // defaults (grey text on a dark popup background).
-        CommunityStyles.apply(menu);
-
-        JFXPopup popup = new JFXPopup(menu);
-        popup.setAutoHide(true);
-
-        addMenuItem(menu, "community.sidebar.other.instances", popup, () ->
-                Controllers.navigate(Controllers.getGameListPage()));
-        addMenuItem(menu, "community.sidebar.other.accounts", popup, () ->
-                Controllers.navigate(Controllers.getAccountListPage()));
-        addMenuItem(menu, "community.sidebar.other.community", popup, () ->
-                CommunitySettingsPanel.open(getWindow()));
-        addMenuItem(menu, "community.sidebar.other.feedback", popup, this::openFeedback);
-        addMenuItem(menu, "community.sidebar.other.about", popup, () ->
-                CommunitySettingsPanel.open(getWindow(), "about"));
-
-        popup.show(otherButton,
-                JFXPopup.PopupVPosition.TOP, JFXPopup.PopupHPosition.RIGHT, 0, 0);
-    }
-
-    /// 添加菜单项。
-    private void addMenuItem(@NotNull VBox menu, @NotNull String key,
-                             @NotNull JFXPopup popup, @NotNull Runnable action) {
-        JFXButton item = new JFXButton(i18n(key));
-        item.getStyleClass().add("community-sidebar-menu-item");
-        // Inline fallback: the popup scene does not inherit the launcher theme,
-        // so keep the label readable even if the stylesheet is unavailable.
-        item.setStyle("-fx-text-fill: #ffffff;");
-        item.setMaxWidth(Double.MAX_VALUE);
-        item.setAlignment(Pos.CENTER_LEFT);
-        item.setOnAction(event -> {
-            popup.hide();
-            action.run();
-        });
-        menu.getChildren().add(item);
-    }
-
-    /// 打开反馈页。
-    private void openFeedback() {
+    /// 打开“其他”页。
+    private void openOther() {
         try {
-            Controllers.getSettingsPage().showFeedback();
-            Controllers.navigate(Controllers.getSettingsPage());
+            Controllers.navigate(OtherPage.getInstance());
         } catch (Throwable e) {
-            LOG.warning("Failed to open feedback page", e);
+            LOG.warning("Failed to open other page", e);
         }
-    }
-
-    /// 当前窗口；`getScene()` 尚不可用时返回 `null`。
-    @Nullable
-    private Window getWindow() {
-        return getScene() == null ? null : getScene().getWindow();
     }
 }

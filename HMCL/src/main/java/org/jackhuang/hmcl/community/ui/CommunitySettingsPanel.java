@@ -20,7 +20,6 @@ package org.jackhuang.hmcl.community.ui;
 import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import javafx.scene.Parent;
-import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToggleButton;
@@ -31,13 +30,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
-import org.jackhuang.hmcl.Metadata;
-import org.jackhuang.hmcl.community.CommunityMetadata;
 import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jackhuang.hmcl.community.migration.OfficialDataImporter;
 import org.jackhuang.hmcl.community.migration.OfficialDataLocator;
-import org.jackhuang.hmcl.community.update.CommunityUpdateDialog;
-import org.jackhuang.hmcl.community.update.CommunityUpdateNotifier;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
@@ -56,7 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
-import java.util.Optional;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
@@ -64,8 +58,7 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 /// 社区版设置面板：首页标题行 [设置] 打开，`DialogPane` 内左侧分组、右侧内容。
 ///
 /// 结构：
-/// - 内置 `dashboard`（重置布局/进入编辑）、`data`（数据目录；导入入口由步骤 06 扩展）、
-///   `about`（版本/基线/更新检查/链接）；
+/// - 内置 `dashboard`（重置布局/进入编辑）、`data`（数据目录；导入入口由步骤 06 扩展）；
 /// - 扩展：`META-INF/services` 登记的 [SettingsSectionProvider]（后续步骤使用）。
 ///
 /// 稳定性：分组内容在首次选中时才构造，单个分组构造失败只影响该分组；
@@ -146,9 +139,6 @@ public final class CommunitySettingsPanel {
         byId.put("data", new SettingsSection(
                 "data", "community.settings.tab.data", 20,
                 CommunitySettingsPanel::buildDataSection));
-        byId.put("about", new SettingsSection(
-                "about", "community.settings.tab.about", 30,
-                CommunitySettingsPanel::buildAboutSection));
 
         ServiceLoader<SettingsSectionProvider> serviceLoader =
                 ServiceLoader.load(SettingsSectionProvider.class, CommunitySettingsPanel.class.getClassLoader());
@@ -461,68 +451,6 @@ public final class CommunitySettingsPanel {
         return new VBox(4, label, value, open);
     }
 
-    /// 构造 `about` 分组。
-    ///
-    /// @return 内容
-    @NotNull
-    private static Parent buildAboutSection() {
-        VBox box = section("community.settings.about.title");
-
-        box.getChildren().addAll(
-                infoRow("community.settings.about.product", CommunityMetadata.fullName()),
-                infoRow("community.settings.about.version", CommunityMetadata.version()),
-                infoRow("community.settings.about.baseline",
-                        CommunityMetadata.baseline() + " (" + shortCommit(CommunityMetadata.baselineCommit()) + ")"),
-                linkRow("community.settings.about.website", CommunityMetadata.WEBSITE));
-
-        if (!CommunityMetadata.sourceUrl().isBlank()) {
-            box.getChildren().add(linkRow("community.settings.about.source", CommunityMetadata.sourceUrl()));
-        }
-        if (!CommunityMetadata.licenseUrl().isBlank()) {
-            box.getChildren().add(linkRow("community.settings.about.license", CommunityMetadata.licenseUrl()));
-        }
-
-        Label thirdParty = new Label(i18n("community.settings.about.third_party"));
-        thirdParty.setWrapText(true);
-        thirdParty.getStyleClass().add("subtitle-label");
-
-        JFXButton check = new JFXButton(i18n("community.update.check"));
-        check.getStyleClass().add("dialog-accept");
-        check.setDisable(!CommunityUpdateNotifier.isConfigured());
-        check.setOnAction(event -> {
-            if (!CommunityUpdateNotifier.isConfigured()) {
-                return;
-            }
-            check.setDisable(true);
-            check.setText(i18n("community.update.checking"));
-            CommunityUpdateNotifier.checkAsync().whenComplete((result, error) ->
-                    Schedulers.javafx().execute(() -> {
-                        check.setDisable(false);
-                        check.setText(i18n("community.update.check"));
-                        if (error != null) {
-                            LOG.warning("Update check failed", error);
-                            return;
-                        }
-                        Optional<CommunityUpdateNotifier.UpdateInfo> info = result == null
-                                ? Optional.empty() : result;
-                        if (info.isPresent()) {
-                            CommunityUpdateDialog.show(info.get());
-                        } else {
-                            Controllers.dialog(i18n("community.update.latest"));
-                        }
-                    }));
-        });
-
-        Label notConfigured = new Label(i18n("community.update.not_configured"));
-        notConfigured.setWrapText(true);
-        notConfigured.getStyleClass().add("subtitle-label");
-        notConfigured.setVisible(!CommunityUpdateNotifier.isConfigured());
-        notConfigured.setManaged(notConfigured.isVisible());
-
-        box.getChildren().addAll(thirdParty, check, notConfigured);
-        return box;
-    }
-
     /// 构造分组标题 + 标题标签。
     ///
     /// @param titleKey 标题 i18n key
@@ -534,42 +462,5 @@ public final class CommunitySettingsPanel {
         VBox box = new VBox(10, title);
         box.setFillWidth(true);
         return box;
-    }
-
-    /// 构造“标签：值”。
-    ///
-    /// @param labelKey 标签 i18n key
-    /// @param value 值
-    /// @return 行节点
-    @NotNull
-    private static VBox infoRow(@NotNull String labelKey, @NotNull String value) {
-        Label label = new Label(i18n(labelKey));
-        label.getStyleClass().add("subtitle-label");
-        Label content = new Label(value);
-        content.setWrapText(true);
-        return new VBox(2, label, content);
-    }
-
-    /// 构造“标签：可点击链接”。
-    ///
-    /// @param labelKey 标签 i18n key
-    /// @param url 链接（非空）
-    /// @return 行节点
-    @NotNull
-    private static VBox linkRow(@NotNull String labelKey, @NotNull String url) {
-        Label label = new Label(i18n(labelKey));
-        label.getStyleClass().add("subtitle-label");
-        Hyperlink link = new Hyperlink(url);
-        link.setOnAction(event -> FXUtils.openLink(url));
-        return new VBox(2, label, link);
-    }
-
-    /// 基线 commit 缩短为前 8 位。
-    ///
-    /// @param commit 完整 commit 或 `unknown`
-    /// @return 短 commit
-    @NotNull
-    private static String shortCommit(@NotNull String commit) {
-        return commit.length() > 8 ? commit.substring(0, 8) : commit;
     }
 }

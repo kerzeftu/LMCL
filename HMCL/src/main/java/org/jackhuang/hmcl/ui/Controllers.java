@@ -41,6 +41,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import org.jackhuang.hmcl.Launcher;
+import org.jackhuang.hmcl.community.ui.OtherPage;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.game.LauncherHelper;
 import org.jackhuang.hmcl.java.JavaManager;
@@ -698,8 +699,8 @@ public final class Controllers {
         if (href.startsWith("hmcl://")) {
             switch (href) {
                 case "hmcl://settings/feedback":
-                    Controllers.getSettingsPage().showFeedback();
-                    Controllers.navigate(Controllers.getSettingsPage());
+                    OtherPage.getInstance().showFeedback();
+                    Controllers.navigate(OtherPage.getInstance());
                     break;
                 case "hmcl://game/launch":
                     var repository = GameDirectoryManager.getSelectedRepository();
