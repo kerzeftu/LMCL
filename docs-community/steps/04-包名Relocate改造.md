@@ -181,7 +181,7 @@ Windows 上还**必须**做一次"裸机双击 exe"：把 `HMCL-<version>.exe` �
 
 1. 在 jar 中打入 `CommunityBootstrap`（我们的包，例如 `com.yourorg.launcher.community.CommunityBootstrap`，**不参与 relocate**）；
 2. 把 `shadowJar.manifest.Main-Class` 改为这个 Bootstrap 类，由它在 `main()` 里：
-   - 设置 `hmcl.update_source.override`、`hmcl.bmclapi.override`、`hmcl.self_integrity_check.disable`、`hmcl.home`/`hmcl.dir` 等系统属性；
+   - 设置 `hmcl.update_source.override`、`hmcl.self_integrity_check.disable`、`hmcl.home`/`hmcl.dir`（下载源由步骤 07 运行时替换 provider，不依赖 `hmcl.bmclapi.override`） 等系统属性；
    - 反射/直接调用 `com.yourorg.launcher.EntryPoint.main(args)`（注意是 **relocate 后的**类名）。
 
 衔接验收：`unzip -p ... META-INF/MANIFEST.MF` 的 `Main-Class` 与本步骤当时的预期一致；两个步骤合并后 `java -jar` 仍能启动。
