@@ -19,6 +19,7 @@ package org.jackhuang.hmcl.community.dashboard;
 
 import javafx.scene.Node;
 import org.jackhuang.hmcl.Metadata;
+import org.jackhuang.hmcl.community.download.CommunityDownloadInstaller;
 import org.jackhuang.hmcl.ui.main.MainPage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
@@ -56,6 +57,13 @@ public final class CommunityDashboard {
     /// @return 面板节点，或 `null` 表示不挂载
     @Nullable
     public static Node mount(@NotNull MainPage mainPage) {
+        // 即使仪表盘被关闭，也要安装自定义下载源（设置面板仍可用）。
+        try {
+            CommunityDownloadInstaller.install();
+        } catch (Throwable e) {
+            LOG.warning("Failed to install community download sources", e);
+        }
+
         if (!Boolean.parseBoolean(System.getProperty(ENABLED_PROPERTY, "true"))) {
             return null;
         }
