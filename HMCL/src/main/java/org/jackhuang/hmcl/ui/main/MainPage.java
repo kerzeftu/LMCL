@@ -304,6 +304,17 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
         getChildren().addAll(updatePane, launchPane);
 
+        // LMCL: community dashboard sits at the bottom of the StackPane; upstream
+        // children (update bubble, launch button) stay on top and keep working.
+        javafx.scene.Node communityDashboard =
+                org.jackhuang.hmcl.community.dashboard.CommunityDashboard.mount(this);
+        if (communityDashboard != null) {
+            getChildren().add(0, communityDashboard);
+            javafx.scene.layout.StackPane.setAlignment(
+                    communityDashboard, javafx.geometry.Pos.TOP_LEFT);
+            javafx.scene.layout.StackPane.setMargin(
+                    communityDashboard, new javafx.geometry.Insets(56, 0, 96, 0));
+        }
     }
 
     private void showUpdateDialog(boolean show) {
