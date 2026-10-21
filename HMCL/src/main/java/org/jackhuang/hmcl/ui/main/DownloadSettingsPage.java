@@ -27,8 +27,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.*;
-import org.jackhuang.hmcl.setting.DownloadSource;
 import org.jackhuang.hmcl.setting.EnumCommonDirectory;
+import org.jackhuang.hmcl.community.download.CommunityDownloadSettingsPane;
 import org.jackhuang.hmcl.setting.ProxyType;
 import org.jackhuang.hmcl.task.FetchTask;
 import org.jackhuang.hmcl.ui.FXUtils;
@@ -43,7 +43,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 
 import static org.jackhuang.hmcl.setting.SettingsManager.settings;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
@@ -61,48 +60,34 @@ public class DownloadSettingsPage extends StackPane {
         scrollPane.setFitToWidth(true);
         getChildren().setAll(scrollPane);
 
+        // LMCL: replace the upstream three-way source selector with the community
+        // primary + mirrors editor. The upstream settings are still read by
+        // DownloadProviders, but CommunityDownloadInstaller overrides the actual
+        // provider chain, so exposing them would only be confusing.
+        {
+            CommunityDownloadSettingsPane communitySources = new CommunityDownloadSettingsPane();
+            communitySources.setPadding(Insets.EMPTY);
+            content.getChildren().addAll(
+                    ComponentList.createComponentListTitle(i18n("community.settings.tab.download")),
+                    communitySources);
+        }
+
+        // The addon source is independent of the Minecraft download provider chain
+        // and has no community replacement yet, so keep the upstream control.
         {
             var downloadSource = new ComponentList();
             downloadSource.getStyleClass().add("card-non-transparent");
-            {
-                Function<DownloadSource, String> converter = source -> switch (source) {
-                    case DEFAULT -> i18n("settings.launcher.download_source.auto");
-                    case OFFICIAL -> i18n("download.provider.official");
-                    case MIRROR -> i18n("download.provider.mirror");
-                };
-                Function<DownloadSource, String> descriptionConverter = source -> {
-                    String bundleKey = switch (source) {
-                        case DEFAULT -> "download.provider.balanced.desc";
-                        case OFFICIAL -> "download.provider.official.desc";
-                        case MIRROR -> "download.provider.mirror.desc";
-                    };
-                    return I18n.hasKey(bundleKey) ? i18n(bundleKey) : null;
-                };
 
-                var versionListSourcePane = new LineSelectButton<DownloadSource>();
-                versionListSourcePane.setTitle(i18n("settings.launcher.version_list_source"));
-                versionListSourcePane.setNullSafeConverter(converter);
-                versionListSourcePane.setDescriptionConverter(descriptionConverter);
-                versionListSourcePane.setItems(DownloadSource.values());
-                versionListSourcePane.valueProperty().bindBidirectional(settings().versionListSourceProperty());
+            var defaultAddonSourcePane = new LineSelectButton<String>();
+            defaultAddonSourcePane.setTitle(i18n("settings.launcher.default_addon_source"));
+            defaultAddonSourcePane.setNullSafeConverter(key -> I18n.i18n("addon." + key));
+            defaultAddonSourcePane.setItems("modrinth", "curseforge");
+            defaultAddonSourcePane.valueProperty().bindBidirectional(settings().defaultAddonSourceProperty());
 
-                var downloadSourcePane = new LineSelectButton<DownloadSource>();
-                downloadSourcePane.setTitle(i18n("settings.launcher.download_source"));
-                downloadSourcePane.setNullSafeConverter(converter);
-                downloadSourcePane.setDescriptionConverter(descriptionConverter);
-                downloadSourcePane.setItems(DownloadSource.values());
-                downloadSourcePane.valueProperty().bindBidirectional(settings().fileDownloadSourceProperty());
-
-                var defaultAddonSourcePane = new LineSelectButton<String>();
-                defaultAddonSourcePane.setTitle(i18n("settings.launcher.default_addon_source"));
-                defaultAddonSourcePane.setNullSafeConverter(key -> I18n.i18n("addon." + key));
-                defaultAddonSourcePane.setItems("modrinth", "curseforge");
-                defaultAddonSourcePane.valueProperty().bindBidirectional(settings().defaultAddonSourceProperty());
-
-                downloadSource.getContent().setAll(versionListSourcePane, downloadSourcePane, defaultAddonSourcePane);
-            }
-
-            content.getChildren().addAll(ComponentList.createComponentListTitle(i18n("settings.launcher.download_source")), downloadSource);
+            downloadSource.getContent().setAll(defaultAddonSourcePane);
+            content.getChildren().addAll(
+                    ComponentList.createComponentListTitle(i18n("settings.launcher.default_addon_source")),
+                    downloadSource);
         }
 
         {
