@@ -80,6 +80,9 @@ public final class JvmPresetWizard extends VBox {
     /// JEP 346 高级选项。
     private final CheckBox memoryOptInBox = new CheckBox(i18n("community.jvm.memory_optin"));
 
+    /// 关闭上游优化参数时，是否由向导补齐完整 G1 参数。
+    private final CheckBox fullG1Box = new CheckBox(i18n("community.jvm.full_g1"));
+
     /// 实例 Java 信息。
     private final Label javaLabel = new Label();
 
@@ -159,7 +162,7 @@ public final class JvmPresetWizard extends VBox {
         heapField.setPrefWidth(100);
         heapField.setPromptText("4096");
         HBox heapRow = new HBox(8, new Label(i18n("community.jvm.heap")), heapField,
-                new Label("MiB"), memoryOptInBox);
+                new Label("MiB"), memoryOptInBox, fullG1Box);
         heapRow.setAlignment(Pos.CENTER_LEFT);
         heapField.textProperty().addListener((obs, old, now) -> {
             if (!updating) {
@@ -167,6 +170,11 @@ public final class JvmPresetWizard extends VBox {
             }
         });
         memoryOptInBox.selectedProperty().addListener((obs, old, now) -> {
+            if (!updating) {
+                refreshDerivedState();
+            }
+        });
+        fullG1Box.selectedProperty().addListener((obs, old, now) -> {
             if (!updating) {
                 refreshDerivedState();
             }
@@ -367,6 +375,13 @@ public final class JvmPresetWizard extends VBox {
         memoryOptInBox.setManaged(mode == JvmPreset.G1);
         memoryOptInBox.setDisable(!hasInstance || mode != JvmPreset.G1);
 
+        GameSettings.Instance setting = hasInstance ? repository.getInstanceGameSettingsOrCreate(currentInstanceId) : null;
+        boolean noOptimizing = setting != null && Boolean.TRUE.equals(setting.noOptimizingJVMOptionsProperty().getValue());
+        boolean showFullG1 = mode == JvmPreset.G1 && noOptimizing;
+        fullG1Box.setVisible(showFullG1);
+        fullG1Box.setManaged(showFullG1);
+        fullG1Box.setDisable(!hasInstance || !showFullG1);
+
         String generated = generatedFor(mode);
         previewLabel.setText(generated.isBlank() ? i18n("community.jvm.preview.empty") : generated);
 
@@ -446,17 +461,30 @@ public final class JvmPresetWizard extends VBox {
         return JvmArgWriter.compose(mode, heapMbOrRecommended(), extra);
     }
 
-    /// 生成 JEP 346 额外参数。
+    /// 生成额外参数（JEP 346 与“补齐完整 G1 参数”）。
     ///
     /// @param mode 档位
     /// @return 参数列表；不适用时为空
     @NotNull
     private List<String> extraArgs(@NotNull JvmPreset mode) {
-        if (mode != JvmPreset.G1 || !memoryOptInBox.isSelected()) {
+        if (mode != JvmPreset.G1) {
             return List.of();
         }
-        JvmMemoryOptions.GenerationResult result = JvmMemoryOptions.generate(javaMajor, "G1", true);
-        return result.args();
+        List<String> args = new ArrayList<>();
+        if (memoryOptInBox.isSelected()) {
+            args.addAll(JvmMemoryOptions.generate(javaMajor, "G1", true).args());
+        }
+        if (fullG1Box.isVisible() && fullG1Box.isSelected()) {
+            args.addAll(List.of(
+                    "-XX:+UseG1GC",
+                    "-XX:G1MixedGCCountTarget=5",
+                    "-XX:G1NewSizePercent=20",
+                    "-XX:G1ReservePercent=20",
+                    "-XX:MaxGCPauseMillis=50",
+                    "-XX:G1HeapRegionSize=32m"
+            ));
+        }
+        return List.copyOf(args);
     }
 
     /// 解析堆输入，非法时回退到推荐值。
