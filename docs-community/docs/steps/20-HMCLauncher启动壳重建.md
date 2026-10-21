@@ -3,6 +3,7 @@
 > **阶段**：阶段一 · 工程底座 ｜ **优先级**：P1 ｜ **工期**：2–5 天
 > **前置**：[步骤 01](01-仓库建立与上游同步机制.md)（镜像/同步方式已定）、[步骤 03](03-产品身份与合规改造.md)（产品名、图标、版本号已定） ｜ **后续**：[步骤 04](04-包名Relocate改造.md)（产物拼接验证）、[步骤 18](18-内存优化P2-发布准备.md)（发布签名）
 > **侵入点**：HMCL 仓库 **0 处**；新增独立 fork 仓库 `HMCLauncher`，通过 `HMCL_LAUNCHER_EXE` 替换构建期 stub
+> **实现状态（2026-10-22）**：源码 fork/品牌字段/CI 已完成（本地 `hmclauncher` 仓库，`8559bfb`）；**Windows 编译与 10 项行为验收待执行**，当前包仍用官方 stub。见 §7。
 
 ---
 
@@ -262,3 +263,66 @@ PY
 - [步骤 18 · 内存优化 P2 · 发布准备](18-内存优化P2-发布准备.md)（签名与白名单）
 - [总纲 §4.4 构建与产物](../00-整体要求.md#44-构建与产物v3164-实测)、[§4.6 启动引导与属性注入](../00-整体要求.md#46-启动引导与属性注入)
 - [总纲 §3 法律与合规要求](../00-整体要求.md#3-法律与合规要求硬约束)
+
+---
+
+## 7. 实现记录（2026-10-22，源码 fork）
+
+### 7.1 当前状态
+
+**源码侧完成，Windows 编译/行为验收未完成**。本机（WSL2）没有 CMake、MSVC、MinGW 或任何 C++ 编译器，`cmake`/`cl`/`g++` 均不可用，因此不能在本机构建 stub；也未把新 stub 换入 `dist/`（当前 home3 包仍使用官方 stub，回退路径有效）。
+
+| 项 | 状态 |
+|---|---|
+| 本地 fork 仓库 | ✅ `/home/kerze/hmclce/hmclauncher`（独立 git，`main`） |
+| 上游基线 | ✅ `da0e0c3b4f01fa0edbaf575d9631f093daf70cd1`（对应 Maven `3.7.0.1`），写入 `UPSTREAM_COMMIT` |
+| 版本注入 | ✅ `CMakeLists.txt` `VERSION 3.16.1000.0`（四段） |
+| 资源品牌字段 | ✅ `HMCL/HMCL.rc.in` 六项 + 版权保留 |
+| 错误文案品牌 | ✅ `HMCL/i18n.cpp` 英文/中文产品名改 LMCL；`HMCL_JAVA_HOME` 环境变量名保持上游 |
+| 自有图标 | ⏳ 待补；当前仍用上游 `HMCL.ico`（占位） |
+| Java 下载页 | ⏳ 待补；当前保留上游 `docs.hmcl.net` |
+| 启动逻辑 | ✅ 未改（Java 查找/参数/自读 jar 尾部） |
+| CI | ✅ 只产 stub，`windows-2022`、`-A Win32`、PE machine 断言、无 ZIP 头断言、tag Release |
+| Windows 构建 + 10 项行为验收 | ⏳ 本机无法执行 |
+
+### 7.2 文件与改动
+
+fork 仓库提交 `8559bfb`：
+
+- `CMakeLists.txt`：`project(... VERSION 3.16.1000.0)`。
+- `HMCL/HMCL.rc.in`：
+  - `CompanyName=LMCL Team`；
+  - `FileDescription=Lumina Minecraft Launcher`；
+  - `InternalName` / `OriginalFilename` = `LMCL.exe`；
+  - `ProductName=LMCL`；
+  - `LegalCopyright` 保留 `Copyright (C) 2025 huangyuhui`，追加 `Modifications Copyright (C) 2026 LMCL Team`；
+  - `STRINGTABLE` 的 `IDS_APP_TITLE`/`IDC_HMCL` 改 `LMCL`；
+  - `VERSIONINFO` 的 `FileVersion`/`ProductVersion` 继续由 `@PROJECT_VERSION@` 注入。
+- `HMCL/i18n.cpp`：4 条英文/中文错误文案中的产品名改 LMCL。
+- `README.md`：补上游基线、修改内容、构建/接入说明、GPLv3 附加条款（原文保留）。
+- `BRANDING.md`：品牌字段清单与待办。
+- `UPSTREAM_COMMIT`：上游基线与 Maven 制品记录。
+- `.github/workflows/build.yml`：只构建 stub；**不** checkout `HMCL-Dev/HMCL`（避免误用上游 jar）；校验 PE machine=0x14c、stub 内无 `PK\x03\x04`；tag 只发布 `HMCLauncher.exe` + `.sha256`。
+- `tools/check_branding.py`：静态品牌/CI 门禁，已通过：
+  `branding check passed: version=3.16.1000.0, RC fields, i18n, CI guard`。
+
+### 7.3 LMCL 仓库接入
+
+- 新增 `lmcl/lib/stub/README.md`：说明产物放置路径、`HMCL_LAUNCHER_EXE` 用法、basename 必须为 `HMCLauncher.exe`、发布前验收。
+- **未提交二进制**：`lib/stub/` 目前只有说明；`HMCL/build.gradle.kts` 的官方 stub 回落逻辑不变。
+- 当前 home3 包仍是官方 stub（454,144 B），不是本 fork 构建产物；新 stub 通过验收前不得替换默认包。
+
+### 7.4 待 Windows 执行的验收
+
+1. `cmake -S . -B build -A Win32 -DCMAKE_BUILD_TYPE=Release` + `cmake --build build --config Release`。
+2. 确认 `build/Release/HMCLauncher.exe` 为 PE machine `0x14c`，且不含 `PK\x03\x04`。
+3. 把 exe 放到 `lmcl/lib/stub/HMCLauncher.exe`，设 `HMCL_LAUNCHER_EXE` 后 `:HMCL:makeExecutables`；按 §3.6 断言 `exe[:len(stub)] == stub`、`exe[len(stub):len(stub)+4] == b'PK\x03\x04'`。
+4. 按 §3.5 跑 10 项行为对等（尤其无 Java 提示、中文路径、`HMCL_JAVA_HOME`、内置 JRE、32 位、英文/中文对话框）。
+5. 干净 Windows 虚拟机双击新 exe；确认 VM 版本链/Bootstrap 属性未被上游 jar 污染。
+6. 记录 stub SHA-256，更新 `BRANDING.md` 的图标/Java 链接状态，再切换默认包。
+
+### 7.5 风险与回退
+
+- 新 stub 未编译、未实机启动：**不替换**当前包；`HMCL_LAUNCHER_EXE` 置空即回官方 stub。
+- 图标/Java 下载页仍是上游占位，发布前必须处理；不影响本轮源码交付。
+- fork 仓库尚无远端；公开源码义务在发布二进制前必须补远端地址与 Release 源码包。
