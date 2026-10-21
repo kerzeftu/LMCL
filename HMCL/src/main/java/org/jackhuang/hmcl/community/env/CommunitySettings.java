@@ -114,6 +114,36 @@ public final class CommunitySettings {
         save();
     }
 
+    /// 读取指定段落；段落不存在时返回空对象。
+    ///
+    /// 返回的是副本，调用方修改不会影响内存中的根对象，写回须调用
+    /// [CommunitySettings#putSection(String, JsonObject)]。
+    ///
+    /// @param name 段落名（顶层键）
+    /// @return 段落副本（永不为 `null`）
+    @NotNull
+    public synchronized JsonObject section(@NotNull String name) {
+        ensureLoaded();
+        if (root.get(name) instanceof JsonObject object) {
+            return object.deepCopy();
+        }
+        return new JsonObject();
+    }
+
+    /// 写入指定段落；`null` 表示删除该段落。写入后立即落盘。
+    ///
+    /// @param name 段落名（顶层键）
+    /// @param section 段落内容，或 `null` 删除
+    public synchronized void putSection(@NotNull String name, @Nullable JsonObject section) {
+        ensureLoaded();
+        if (section == null) {
+            root.remove(name);
+        } else {
+            root.add(name, section.deepCopy());
+        }
+        save();
+    }
+
     /// 确保已从磁盘加载（只读失败时保持空对象）。
     private void ensureLoaded() {
         if (loaded) {
