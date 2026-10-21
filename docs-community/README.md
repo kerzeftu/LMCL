@@ -3,7 +3,7 @@
 > 基于 [HMCL](https://github.com/HMCL-dev/HMCL)（GPLv3）的社区版 Minecraft 启动器开发文档库。
 > 面向中国大陆用户，独立产品身份；核心差异化是**启动保障**（能不能玩上）与**性能优化向导**（玩得顺不顺）。
 >
-> **文档版本 v3.2（2026-10-22）**：基线 **v3.16.4（release/3.16，commit `fbcc1747`）**。已按源码实读重写架构边界与排期，并完成两轮源码核对；HMCLauncher 源码与发布二进制的实测结论见[步骤 20 §2.3](docs/steps/20-HMCLauncher启动壳重建.md) 与[审查记录 §9](docs/审查记录-v3.16.4源码核对.md)。**v2.0 起步骤 07 改为“默认不内置镜像 + 自定义主源/≤5 镜像”**（用户 m03806），见[步骤 07](docs/steps/07-下载源配置.md)；**v2.1 起步骤 08 已实现**（启动钩子契约 + 五项体检 + 体检对话框），实现记录见[步骤 08 §10](docs/steps/08-启动保障-启动前体检.md)；**v2.2 起步骤 09 已实现**（崩溃现场归档 + 历史索引 + 诊断导出面板），实现记录见[步骤 09 §10](docs/steps/09-启动保障-崩溃现场还原.md)；**v2.3 起步骤 10 已实现**（Java 发行版偏好 + 推荐面板 + 设置分组；镜像未部署时按官方 API 运行），实现记录见[步骤 10 §10](docs/steps/10-性能策略-Java发行版默认偏好.md)；**v2.4 起步骤 11 已实现**（JVM 档位向导 + 冲突检测 + 唯一写入口 + 状态存储），实现记录见[步骤 11 §10](docs/steps/11-性能策略-JVM参数预设向导.md)；**v2.5 起步骤 12 已实现**（跨平台内存回收基座 + 设置面板「内存」分组），实现记录见[步骤 12 §10](docs/steps/12-内存优化P0-跨平台基座.md)；**v2.6 起步骤 14 已实现**（六张 P0 卡片 + WidgetProvider 注册 + 启动失败事件修复），实现记录见[步骤 14 §13](docs/steps/14-首页组件化B-P0组件与接入.md)；**v2.7 起步骤 15 已实现**（最近存档/存储/游玩日历/体检四卡 + 游玩打点数据层），实现记录见[步骤 15 §10](docs/steps/15-首页组件化C-P1P2组件与打磨.md)；**v2.8 起步骤 16 已实现**（成功启动自动快照 + 内容寻址对象库 + manifest-only 降级 + 回滚前 pre-restore + 首页快照卡/管理/对比），实现记录见[步骤 16 §10](docs/steps/16-启动保障-实例快照回滚.md)。**v2.9 修复首个 Windows 测试包的启动误迁移**：`CommunityBootstrap` 不再调用 `Main.main`，改为 `checkDirectoryPath() → EntryPoint.main`，消除 `UpdateHandler.isNestedApplication()` 误判导致的 `Signature is missing`，见[步骤 05 §4.1](docs/steps/05-禁用自动更新与更新提示.md)。**v3.0 接管上游“设置 → 下载”页**：`DownloadSettingsPage` 的三档选择器替换为社区主源/镜像编辑器（第 4 处代码侵入，产品 2026-10-22 批准），插件源保留，见[步骤 07](docs/steps/07-下载源配置.md) 与[00 §13 #21](docs/00-整体要求.md#13-已定决策记录)。**v3.1 主页重构**：移除 `RootPage` 的 200 px 文本侧栏，`HomePane` 以顶部导航 + 主列/右栏接管首页（第 5/6 处代码侵入，用户 m07850 批准），见[步骤 21](docs/steps/21-主页重构与侧边栏移除.md)。**v3.2 视觉收口**：新增 `community.css` / `CommunityStyles`，11 个社区根节点接入 5 档类型、状态 pill 与日历 5 档色阶，0 上游 CSS 侵入，见[步骤 19 §10](docs/steps/19-MD3主题完善.md)。
+> **文档版本 v3.3（2026-10-22）**：基线 **v3.16.4（release/3.16，commit `fbcc1747`）**。已按源码实读重写架构边界与排期，并完成两轮源码核对；HMCLauncher 源码与发布二进制的实测结论见[步骤 20 §2.3](docs/steps/20-HMCLauncher启动壳重建.md) 与[审查记录 §9](docs/审查记录-v3.16.4源码核对.md)。**v2.0 起步骤 07 改为“默认不内置镜像 + 自定义主源/≤5 镜像”**（用户 m03806），见[步骤 07](docs/steps/07-下载源配置.md)；**v2.1 起步骤 08 已实现**（启动钩子契约 + 五项体检 + 体检对话框），实现记录见[步骤 08 §10](docs/steps/08-启动保障-启动前体检.md)；**v2.2 起步骤 09 已实现**（崩溃现场归档 + 历史索引 + 诊断导出面板），实现记录见[步骤 09 §10](docs/steps/09-启动保障-崩溃现场还原.md)；**v2.3 起步骤 10 已实现**（Java 发行版偏好 + 推荐面板 + 设置分组；镜像未部署时按官方 API 运行），实现记录见[步骤 10 §10](docs/steps/10-性能策略-Java发行版默认偏好.md)；**v2.4 起步骤 11 已实现**（JVM 档位向导 + 冲突检测 + 唯一写入口 + 状态存储），实现记录见[步骤 11 §10](docs/steps/11-性能策略-JVM参数预设向导.md)；**v2.5 起步骤 12 已实现**（跨平台内存回收基座 + 设置面板「内存」分组），实现记录见[步骤 12 §10](docs/steps/12-内存优化P0-跨平台基座.md)；**v2.6 起步骤 14 已实现**（六张 P0 卡片 + WidgetProvider 注册 + 启动失败事件修复），实现记录见[步骤 14 §13](docs/steps/14-首页组件化B-P0组件与接入.md)；**v2.7 起步骤 15 已实现**（最近存档/存储/游玩日历/体检四卡 + 游玩打点数据层），实现记录见[步骤 15 §10](docs/steps/15-首页组件化C-P1P2组件与打磨.md)；**v2.8 起步骤 16 已实现**（成功启动自动快照 + 内容寻址对象库 + manifest-only 降级 + 回滚前 pre-restore + 首页快照卡/管理/对比），实现记录见[步骤 16 §10](docs/steps/16-启动保障-实例快照回滚.md)。**v2.9 修复首个 Windows 测试包的启动误迁移**：`CommunityBootstrap` 不再调用 `Main.main`，改为 `checkDirectoryPath() → EntryPoint.main`，消除 `UpdateHandler.isNestedApplication()` 误判导致的 `Signature is missing`，见[步骤 05 §4.1](docs/steps/05-禁用自动更新与更新提示.md)。**v3.0 接管上游“设置 → 下载”页**：`DownloadSettingsPage` 的三档选择器替换为社区主源/镜像编辑器（第 4 处代码侵入，产品 2026-10-22 批准），插件源保留，见[步骤 07](docs/steps/07-下载源配置.md) 与[00 §13 #21](docs/00-整体要求.md#13-已定决策记录)。**v3.1 主页重构**：移除 `RootPage` 的 200 px 文本侧栏，`HomePane` 以顶部导航 + 主列/右栏接管首页（第 5/6 处代码侵入，用户 m07850 批准），见[步骤 21](docs/steps/21-主页重构与侧边栏移除.md)。**v3.2 视觉收口**：新增 `community.css` / `CommunityStyles`，11 个社区根节点接入 5 档类型、状态 pill 与日历 5 档色阶，0 上游 CSS 侵入，见[步骤 19 §10](docs/steps/19-MD3主题完善.md)。**v3.3 交互修复与主页改版**：修复公告空壳吞事件/仪表盘置底/卡片裁切；新增全局 64px 图标侧栏（主页/下载/设置/其他），主页改为左账号·游玩信息栏 + 右实例栏并整页滚动；`DecoratorController` 为第 7 处代码侵入，见[步骤 21 §10](docs/steps/21-主页重构与侧边栏移除.md)。
 
 ---
 
@@ -35,7 +35,7 @@
     │   ├── 18-内存优化P2-发布准备.md
     │   ├── 19-MD3主题完善.md
     │   ├── 20-HMCLauncher启动壳重建.md      ← v1.1 新增（fork stub 源码，见步骤 20）
-    │   └── 21-主页重构与侧边栏移除.md       ← v3.1 新增（HomePane，见步骤 21）
+    │   └── 21-主页重构与侧边栏移除.md       ← v3.1 新增 / v3.3 主页改版（全局侧栏，见步骤 21）
     └── 附录/
         ├── 关键类速查与调试参数.md   ← 实施时的高频查表
         ├── CI工作流/                 ← ci.yml / build-release.yml / sync-upstream.yml 原文 + 说明
@@ -44,7 +44,7 @@
 
 **效力层级**：`00-整体要求.md`（总纲）> `steps/*.md`（执行）> `附录/原始资料/`（历史记录，冲突以总纲为准）。
 
-> **迁移状态**：v3.2（v1.1 全量重写 → v1.2/v1.3 一致性收口 → v1.4 第二轮源码核对 → v1.5–v1.9 定名与 03/05/06/13 落地 → v2.0 下载源重设计 → v2.1 步骤 08 落地 → v2.2 步骤 09 落地 → v2.3 步骤 10 落地 → v2.4 步骤 11 落地 → v2.5 步骤 12 落地 → v2.6 步骤 14 落地 → v2.7 步骤 15 落地 → v2.8 步骤 16 落地 → v2.9 启动误迁移修复 → v3.0 下载设置页接管 → v3.1 主页重构/侧栏移除 → v3.2 视觉收口）——总纲、README、21 篇步骤、附录均已按 v3.16.4 源码对齐（阶段/优先级/工期/侵入点以本文件第 3 节与总纲 §4.2 为准）。产品名已定：**Lumina Minecraft Launcher（LMCL）**；本地 git 仓库 `/home/kerze/hmclce/lmcl` 已提交 03/05/06/07/08/09/10/11/12/13/14/15/16/21 的实现（推送前补 `origin`）；当前 Windows 测试包为 `dist/LMCL-3.16.1000-win-x64-home2.zip`；发布前阻塞项仅剩更新域名/托管与商标复核（见 [总纲 §12](docs/00-整体要求.md#12-开放问题)）。
+> **迁移状态**：v3.3（v1.1 全量重写 → v1.2/v1.3 一致性收口 → v1.4 第二轮源码核对 → v1.5–v1.9 定名与 03/05/06/13 落地 → v2.0 下载源重设计 → v2.1 步骤 08 落地 → v2.2 步骤 09 落地 → v2.3 步骤 10 落地 → v2.4 步骤 11 落地 → v2.5 步骤 12 落地 → v2.6 步骤 14 落地 → v2.7 步骤 15 落地 → v2.8 步骤 16 落地 → v2.9 启动误迁移修复 → v3.0 下载设置页接管 → v3.1 主页重构/侧栏移除 → v3.2 视觉收口 → v3.3 交互修复/全局侧栏/主页改版）——总纲、README、21 篇步骤、附录均已按 v3.16.4 源码对齐（阶段/优先级/工期/侵入点以本文件第 3 节与总纲 §4.2 为准）。产品名已定：**Lumina Minecraft Launcher（LMCL）**；本地 git 仓库 `/home/kerze/hmclce/lmcl` 已提交 03/05/06/07/08/09/10/11/12/13/14/15/16/21 的实现（推送前补 `origin`）；当前 Windows 测试包为 `dist/LMCL-3.16.1000-win-x64-home3.zip`（64,446,081 B，SHA-256 `52d9dd6d…`）；发布前阻塞项仅剩更新域名/托管与商标复核（见 [总纲 §12](docs/00-整体要求.md#12-开放问题)）。
 
 ---
 
@@ -87,9 +87,9 @@
 | 17 | [内存优化 P1 · Windows 后台守护](docs/steps/17-内存优化P1-Windows守护进程.md) | 五 | P1 | 2–3 周 | 极窄接口的登录后台守护（HKCU，默认关闭） | ☐ |
 | 18 | [内存优化 P2 · 发布准备](docs/steps/18-内存优化P2-发布准备.md) | 五 | P1 | 1–1.5 周 | 白名单/签名/灰度/回滚预案（或决定不发） | ☐ |
 | 19 | [MD3 主题完善](docs/steps/19-MD3主题完善.md) | 六 | P2 | 1–2 周 | 我们新增界面的视觉收口（零 CSS 侵入） | ◐ `community.css`/11 调用点/日历色阶已落地；GUI 主题矩阵未验 |
-| 21 | [主页重构与侧边栏移除](docs/steps/21-主页重构与侧边栏移除.md) | 四（补丁） | P1 | 0.5–1 周 | 移除 200 px 文本侧栏；`HomePane` 顶部导航 + 主列/右栏接管首页 | ◐ 代码/编译/打包完成，GUI 待 Windows 验收；文档已收口 |
+| 21 | [主页改版与全局侧栏](docs/steps/21-主页重构与侧边栏移除.md) | 四（补丁） | P1 | 1–1.5 周 | 全局 64px 图标侧栏；`HomePane` 左账号·游玩信息栏 + 右实例栏 + 整页滚动 | ◐ 代码/编译/测试/打包完成，GUI 待 Windows 验收 |
 
-**总工期**：关键路径约 **24.5–28.5 周**（单人业余；逐项串行累加约 24.3–33.1 周，仅用于核对），AI 辅助折算约 **20–24 周**。关键路径是"改动外挂化"——推导见 [§6.2 阶段排期](docs/00-整体要求.md#62-阶段排期)。
+**总工期**：关键路径约 **25–29 周**（单人业余；逐项串行累加约 24.8–33.6 周，仅用于核对），AI 辅助折算约 **20–24 周**。关键路径是"改动外挂化"——推导见 [§6.2 阶段排期](docs/00-整体要求.md#62-阶段排期)。
 
 ---
 
@@ -100,10 +100,10 @@
 1. **基座选 HMCL（基线 v3.16.4 / release/3.16）**：BMCLAPI 全链路镜像 + 三模块分层 + 上游已提供 MonetFX token。详见 [§2](docs/00-整体要求.md#2-基座选型已定案)、[§4.1](docs/00-整体要求.md#41-上游分支策略)。
 2. **独立产品名 + 明确标注"基于 HMCL"**：商标状态不明，独立名是唯一零风险解。详见 [步骤 03](docs/steps/03-产品身份与合规改造.md)。
 3. **跟 release 分支，不跟 `main`**：`main` 是 beta 开发分支。详见 [§4.1](docs/00-整体要求.md#41-上游分支策略)。
-4. **代码侵入固定 6 处**：`Metadata.java` / `MainPage.java` / `LauncherHelper.java` / `DownloadSettingsPage.java` / `RootPage.java` / `DecoratorAnimatedPage.java`；构建脚本与资源（i18n、图标、about）单独登记，其余一律新增 package。详见 [§4.2](docs/00-整体要求.md#42-改动策略代码侵入固定-6-处--分级登记)。
+4. **代码侵入固定 7 处**：`Metadata.java` / `MainPage.java` / `LauncherHelper.java` / `DownloadSettingsPage.java` / `RootPage.java` / `DecoratorAnimatedPage.java` / `DecoratorController.java`；构建脚本与资源（i18n、图标、about）单独登记，其余一律新增 package。详见 [§4.2](docs/00-整体要求.md#42-改动策略代码侵入固定-7-处--分级登记)。
 5. **启动引导零源码侵入**：新增 `CommunityBootstrap` 作 `Main-Class`，在 `Metadata` 初始化前注入更新源、数据目录、完整性开关；下载源不走系统属性，由步骤 07 在首页挂载时运行时替换 `DownloadProviderWrapper.setProvider(...)`（用户可在设置里配置主源与镜像）。详见 [§4.6](docs/00-整体要求.md#46-启动引导与属性注入) 与[步骤 07](docs/steps/07-下载源配置.md)。
-6. **首页 `HomePane` + 移除文本侧栏**：`MainPage` 只挂载 `CommunityDashboard`，内部由 `HomePane` 提供顶部导航/运行状态/主列/右栏；`RootPage` 不再渲染 200 px 文本侧栏，入口收进主页。详见 [步骤 21](docs/steps/21-主页重构与侧边栏移除.md) 与 [§13 #22](docs/00-整体要求.md#13-已定决策记录)。
-7. **包名首发不改（No-Go）**：`org.jackhuang.hmcl.*` 保持；relocate 只作为未来 Go 分支，且需新增第 7 处侵入（`CrashReport.java`）。详见 [步骤 04](docs/steps/04-包名Relocate改造.md)。
+6. **首页 `HomePane` + 全局 64px 图标侧栏**：`MainPage` 只挂载 `CommunityDashboard`；`DecoratorController` 把 `navigator` 包进 `HBox(sidebar, navigator)`，侧栏为主页/下载/设置/其他；`HomePane` 左栏账号·游玩记录、右栏实例等，整页滚动。`RootPage` 不再渲染 200 px 文本侧栏。详见 [步骤 21](docs/steps/21-主页重构与侧边栏移除.md) 与 [§13 #23](docs/00-整体要求.md#13-已定决策记录)。
+7. **包名首发不改（No-Go）**：`org.jackhuang.hmcl.*` 保持；relocate 只作为未来 Go 分支，且需新增第 8 处侵入（`CrashReport.java`）。详见 [步骤 04](docs/steps/04-包名Relocate改造.md)。
 8. **Windows 启动壳 fork 重建**：`HMCLauncher` 源码 C++20（32 位，GPLv3+附加条款），用 `HMCL_LAUNCHER_EXE` 换入自有 stub；官方 exe 留作回退。详见 [步骤 20](docs/steps/20-HMCLauncher启动壳重建.md)。
 9. **绝不阻断启动**：任何增强失败都静默降级；L2 内存优化默认关闭，失败即回落 L0；L2 采用 HKCU 登录后守护，不装系统服务。详见 [§5.1](docs/00-整体要求.md#51-绝不阻断启动)、[§5.3](docs/00-整体要求.md#53-权限与安全)。
 10. **不做自动更新，只做提示**：上游更新链路因未签名在联网前必失败；自有 `CommunityUpdateNotifier` 只读 GitHub/Gitee Releases，弹窗只开浏览器、不下载任何文件；仓库未建时留空 = 功能静默。详见 [步骤 05](docs/steps/05-禁用自动更新与更新提示.md)。
@@ -192,6 +192,7 @@
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-22 | v3.3 | **交互修复与主页改版（home3）**：修复公告空壳吞事件（`MainPage` 首页提到最上层、隐藏 `announcementPane`、`updatePane`/`launchPane` 置前）、仪表盘置底与卡片裁切（`HomePane` 只设最小高度、内容自适应、整页 `ScrollPane` 可滚动）；新增全局 64px `CommunitySideBar`（主页/下载/设置/其他 + 其他菜单），`DecoratorController` 包 `HBox(sidebar, navigator)` 成为第 7 处代码侵入；主页改为左信息栏（账号/活动/最近世界）+ 右实例栏（启动/置顶/存储/Java/内存/快照/崩溃/体检/网络）；三份 i18n 各 9 个 `community.sidebar.*`；`:HMCL:compileJava`、`:HMCL:checkTranslations`、community 测试 **132 全绿**、`:HMCL:shadowJar` 10,924,834 B、`:HMCL:makeExecutables` exe 11,378,978 B（stub 454,144 B）；测试包 `dist/LMCL-3.16.1000-win-x64-home3.zip` **64,446,081 B**，SHA-256 `52d9dd6d19fdfd5f9acabc94b05b9ff9681abc3124e19f956c8cad81276eb96e`；GUI 未实机验证 |
 | 2026-10-22 | v3.2 | **视觉收口（步骤 19）**：新增 `community.ui.CommunityStyles`（节点级样式表、幂等、资源缺失只 WARNING）与 `assets/css/community.css`（headline/title/body/label/metric、status pill、日历 5 档、估算虚线框）；11 个社区根节点接入；`HomePane` 问候语改用 `community-headline`、运行状态加语义 pill；日历 class 从 `-community-activity-level-*` 统一为 `community-activity-level-*`。`compileJava`/`checkTranslations`/community 测试 **132 全绿**、`shadowJar`/`makeExecutables` 通过；jar **10,920,997 B**、exe **11,375,141 B**；测试包 `dist/LMCL-3.16.1000-win-x64-home2.zip` **64,173,728 B**，SHA-256 `d5b8f283…`；GUI 主题矩阵未实机验证；home1/fix1/fix2 旧包已删除 |
 | 2026-10-22 | v3.1 | **主页重构与侧栏移除（home1）**：删除 `RootPage.Skin` 的 200 px 文本侧栏，`DecoratorAnimatedPageSkin` 在 `left` 为空时不限宽；新增 `HomePane`（顶部导航 + 主列/右栏 + 账户卡 + 运行状态）接管首页，`DashboardPane` 保留不再挂载；入口收进主页（实例/下载/设置/更多/账户/Terracotta/反馈）；更新提示迁入 `HomePane`。第 5/6 处代码侵入（`RootPage.java`、`DecoratorAnimatedPage.java`，用户 m07850 批准）。community 测试 **132 全绿**、`checkTranslations` 通过；jar **10,918,523 B**、exe **11,372,667 B**；测试包 `dist/LMCL-3.16.1000-win-x64-home1.zip` **64,432,996 B**，SHA-256 `c6759cb1…`；GUI 未实机验证 |
 | 2026-10-22 | v3.0 | **接管上游下载设置页（fix2）**：`DownloadSettingsPage` 删除三档 `DownloadSource` 选择器，改为嵌入 `CommunityDownloadSettingsPane`（主源/镜像/测试/保存），保留 `defaultAddonSource`；这是第 4 处代码侵入（产品批准，00 §4.2/§13 #21）。`compileJava`、`checkTranslations`、community 测试 **132 全绿**；jar 10,907,727 B、exe 11,361,871 B；新包 `dist/LMCL-3.16.1000-win-x64-fix2.zip`（64,147,064 B，SHA-256 `bdae2cb4…`）；`DownloadSettingsPage.class` 已含社区编辑器引用 |
