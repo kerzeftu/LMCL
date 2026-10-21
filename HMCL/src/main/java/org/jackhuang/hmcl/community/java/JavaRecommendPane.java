@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.java;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
@@ -134,6 +135,7 @@ public final class JavaRecommendPane extends VBox {
 
     /// 构造面板（不发网络请求）。
     public JavaRecommendPane() {
+        CommunityStyles.apply(this);
         getStyleClass().add("community-java-recommend");
         setSpacing(8);
 

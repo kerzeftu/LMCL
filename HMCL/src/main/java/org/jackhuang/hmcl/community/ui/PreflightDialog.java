@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.ui;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -121,6 +122,7 @@ public final class PreflightDialog {
             @NotNull PreflightConfig config,
             @Nullable Consumer<Boolean> finish) {
         VBox root = new VBox(12);
+        CommunityStyles.apply(root);
         root.setPadding(new Insets(16));
         root.setPrefWidth(640);
         root.getStyleClass().add("jfx-dialog-layout");

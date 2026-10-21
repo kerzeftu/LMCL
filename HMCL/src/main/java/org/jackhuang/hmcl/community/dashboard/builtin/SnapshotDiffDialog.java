@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.dashboard.builtin;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
@@ -50,6 +51,7 @@ final class SnapshotDiffDialog {
         scroll.setPrefViewportHeight(320);
         VBox root = BuiltinWidgets.dialogRoot(
                 i18n("community.snapshot.compare.title", snapshotId), new VBox(8, status, scroll), 680);
+        CommunityStyles.apply(root);
         Controllers.dialog(root);
 
         SnapshotService.diff(versionId, snapshotId)

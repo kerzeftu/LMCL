@@ -57,7 +57,7 @@ final class BuiltinWidgets {
     @NotNull
     static Label caption(@NotNull String text) {
         Label label = new Label(text);
-        label.getStyleClass().add("subtitle-label");
+        label.getStyleClass().addAll("subtitle-label", "community-label");
         label.setWrapText(false);
         label.setTextOverrun(OverrunStyle.ELLIPSIS);
         label.setMaxWidth(Double.MAX_VALUE);
@@ -83,6 +83,7 @@ final class BuiltinWidgets {
     static Label body(@NotNull String text) {
         Label label = new Label(text);
         label.setWrapText(true);
+        label.getStyleClass().add("community-body");
         label.setMaxWidth(Double.MAX_VALUE);
         label.setMinWidth(0);
         return label;
@@ -151,7 +152,7 @@ final class BuiltinWidgets {
         root.setMaxWidth(width);
 
         Label titleLabel = new Label(title);
-        titleLabel.getStyleClass().add("title-label");
+        titleLabel.getStyleClass().addAll("title-label", "community-title");
 
         JFXButton close = new JFXButton("✕");
         close.getStyleClass().add("dialog-cancel");

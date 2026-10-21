@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.dashboard;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Priority;
@@ -83,12 +84,13 @@ public abstract class DashboardWidget extends VBox {
         this.context = context;
 
         getStyleClass().add("card");
+        CommunityStyles.apply(this);
         setSpacing(8);
         setFillWidth(true);
         setMinHeight(0);
 
         Label title = new Label(i18n(descriptor.nameKey()));
-        title.getStyleClass().add("title-label");
+        title.getStyleClass().addAll("title-label", "community-title");
         title.setWrapText(true);
 
         contentBox.setSpacing(8);
@@ -97,7 +99,7 @@ public abstract class DashboardWidget extends VBox {
         getChildren().addAll(title, contentBox);
         if (descriptor.descriptionKey() != null) {
             Label description = new Label(i18n(descriptor.descriptionKey()));
-            description.getStyleClass().add("subtitle-label");
+            description.getStyleClass().addAll("subtitle-label", "community-label");
             description.setWrapText(true);
             getChildren().add(1, description);
         }

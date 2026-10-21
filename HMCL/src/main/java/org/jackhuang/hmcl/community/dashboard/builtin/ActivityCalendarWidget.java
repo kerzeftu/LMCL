@@ -182,7 +182,7 @@ public final class ActivityCalendarWidget extends DashboardWidget {
                 } else {
                     DayRecord record = data.get(date);
                     int level = levelOf(record);
-                    cell.getStyleClass().add("-community-activity-level-" + level);
+                    cell.getStyleClass().add("community-activity-level-" + level);
                     if (record != null && record.estimatedSeconds() > 0) {
                         cell.getStyleClass().add("community-activity-estimated");
                     }

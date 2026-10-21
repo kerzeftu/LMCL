@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.memory;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
@@ -64,6 +65,7 @@ public final class CommunityMemorySettingsPane extends VBox {
 
     /// 构造内存设置页。
     public CommunityMemorySettingsPane() {
+        CommunityStyles.apply(this);
         setSpacing(10);
         setPadding(new Insets(10));
         setFillWidth(true);

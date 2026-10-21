@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.dashboard.builtin;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -64,6 +65,7 @@ final class SnapshotManagerDialog {
         VBox content = new VBox(8, status, scroll);
         VBox root = BuiltinWidgets.dialogRoot(
                 i18n("community.snapshot.dialog.title", versionId), content, 720);
+        CommunityStyles.apply(root);
         load(versionId, listBox, status, onChange);
         Controllers.dialog(root);
     }

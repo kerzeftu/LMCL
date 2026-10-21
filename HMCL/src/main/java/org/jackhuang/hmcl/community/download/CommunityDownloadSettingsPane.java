@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.download;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTextField;
 import javafx.geometry.Insets;
@@ -90,6 +91,7 @@ public final class CommunityDownloadSettingsPane extends VBox {
 
     /// 构造设置页并从磁盘加载当前配置。
     public CommunityDownloadSettingsPane() {
+        CommunityStyles.apply(this);
         setSpacing(10);
         setPadding(new Insets(10));
         setFillWidth(true);

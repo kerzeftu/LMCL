@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.ui.crash;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.google.gson.JsonObject;
 import com.jfoenix.controls.JFXButton;
 import javafx.geometry.Insets;
@@ -71,6 +72,7 @@ public final class CrashHistoryPane extends VBox {
     private boolean loaded;
 
     public CrashHistoryPane() {
+        CommunityStyles.apply(this);
         getStyleClass().add("community-crash-history");
         setSpacing(6);
         setPadding(new Insets(4));

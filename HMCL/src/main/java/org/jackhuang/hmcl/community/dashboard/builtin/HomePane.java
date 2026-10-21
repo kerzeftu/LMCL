@@ -20,6 +20,7 @@
  */
 package org.jackhuang.hmcl.community.dashboard.builtin;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import javafx.animation.PauseTransition;
 import javafx.beans.value.ChangeListener;
@@ -187,6 +188,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
                 config.prefs(this::markDirty));
 
         getStyleClass().add("community-home");
+        CommunityStyles.apply(this);
         setSpacing(14);
         setFillWidth(true);
         setPadding(new Insets(0, 2, 0, 2));
@@ -318,10 +320,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     @NotNull
     private HBox buildHeader() {
         greeting.setText(greetingText());
-        greeting.getStyleClass().add("title-label");
-        greeting.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        greeting.getStyleClass().addAll("title-label", "community-headline");
 
-        runStatus.getStyleClass().add("subtitle-label");
+        runStatus.getStyleClass().addAll("subtitle-label", "community-label", "community-status", "community-status-idle");
         HBox statusRow = new HBox(8, BuiltinWidgets.caption(i18n("community.home.subtitle")), runStatus);
         statusRow.setAlignment(Pos.CENTER_LEFT);
         VBox titles = new VBox(4, greeting, statusRow);
@@ -435,7 +436,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     @NotNull
     private VBox buildAccountCard() {
         Label title = new Label(i18n("community.home.account.title"));
-        title.getStyleClass().add("title-label");
+        title.getStyleClass().addAll("title-label", "community-title");
 
         AccountAdvancedListItem item = new AccountAdvancedListItem();
         item.accountProperty().bind(Accounts.selectedAccountProperty());
@@ -549,12 +550,16 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         if (disposed) {
             return;
         }
+        runStatus.getStyleClass().removeAll("community-status-ok", "community-status-warn", "community-status-idle");
         if (!launching.isEmpty()) {
             runStatus.setText(i18n("community.home.status.launching", first(launching)));
+            runStatus.getStyleClass().add("community-status-warn");
         } else if (!running.isEmpty()) {
             runStatus.setText(i18n("community.home.status.running", first(running)));
+            runStatus.getStyleClass().add("community-status-ok");
         } else {
             runStatus.setText(i18n("community.home.status.none"));
+            runStatus.getStyleClass().add("community-status-idle");
         }
     }
 

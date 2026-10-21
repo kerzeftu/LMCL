@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.ui;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import javafx.scene.Parent;
 import javafx.scene.control.Hyperlink;
@@ -194,6 +195,7 @@ public final class CommunitySettingsPanel {
     @NotNull
     private static VBox buildRoot(@NotNull List<SettingsSection> sections, @Nullable String initialSectionId) {
         VBox root = new VBox(12);
+        CommunityStyles.apply(root);
         root.getStyleClass().add("jfx-dialog-layout");
         root.setPrefWidth(PANEL_WIDTH);
         root.setMaxWidth(PANEL_WIDTH);

@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.java;
 
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
 import javafx.scene.control.Label;
@@ -37,6 +38,7 @@ public final class CommunityJavaSettingsPane extends VBox {
 
     /// 构造分组内容。
     public CommunityJavaSettingsPane() {
+        CommunityStyles.apply(this);
         getStyleClass().add("community-java-settings");
         setSpacing(8);
 
