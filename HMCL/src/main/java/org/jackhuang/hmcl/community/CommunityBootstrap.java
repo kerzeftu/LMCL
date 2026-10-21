@@ -17,19 +17,26 @@
  */
 package org.jackhuang.hmcl.community;
 
-import org.jackhuang.hmcl.Main;
+import org.jackhuang.hmcl.EntryPoint;
 import org.jackhuang.hmcl.community.crash.CrashArchiveListener;
 import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jackhuang.hmcl.community.java.CommunityJavaMirror;
 import org.jackhuang.hmcl.community.memory.MemoryReclaimer;
 import org.jackhuang.hmcl.community.play.PlayRecordTracker;
 import org.jackhuang.hmcl.community.snapshot.SnapshotService;
+import org.jackhuang.hmcl.util.SwingUtils;
 import org.jetbrains.annotations.NotNullByDefault;
 
 /// LMCL 的进程入口（shadowJar 的 `Main-Class`）。
 ///
-/// 在**任何上游类初始化之前**钉住进程级属性，然后原样转交给上游
-/// [org.jackhuang.hmcl.Main]（保留 `HMCLBoot` 的目录检查与 Java 版本检查）。
+/// 在**任何上游类初始化之前**钉住进程级属性，然后转交给真正的
+/// [org.jackhuang.hmcl.EntryPoint]。
+///
+/// **不能调用** `org.jackhuang.hmcl.Main.main`：上游 `UpdateHandler.isNestedApplication()`
+/// 用“`Main.main` 之后是否还有栈帧”判断是否被旧版启动器嵌套调用；本类作为外层入口
+/// 必然在 `Main.main` 之下，会被误判并触发 `performMigration()`（尝试自更新，
+/// 未签名 jar 直接报 `Signature is missing`）。这里只复刻 `Main` 的路径检查，
+/// Java 版本已由 `HMCLBoot`/本类 class 版本保证 ≥17。
 ///
 /// 为什么需要本类：`Metadata` 在静态初始化时读取 `hmcl.update_source.override`，
 /// 而 `Metadata` 又会被 `EntryPoint.main` 的 `http.agent` 赋值提前触发；
@@ -117,6 +124,45 @@ public final class CommunityBootstrap {
         } catch (Throwable ignored) {
         }
 
-        Main.main(args);
+        checkDirectoryPath();
+        EntryPoint.main(args);
+    }
+
+    /// 复刻上游 `Main.checkDirectoryPath()`：路径中的 `!` 会让 JavaFX 资源加载失败。
+    ///
+    /// 直接调用 `Main.main` 会触发嵌套应用误判，因此只保留这一项必要检查；
+    /// Java 版本检查由 stub 与本类 class 版本（Java 17）共同保证。
+    private static void checkDirectoryPath() {
+        String currentDir = System.getProperty("user.dir", "");
+        String jarPath = thisJarPath();
+        if (!currentDir.contains("!") && (jarPath == null || !jarPath.contains("!"))) {
+            return;
+        }
+
+        String message = "Exclamation mark(!) is not allowed in the working path or the launcher path.\n"
+                + "Working path: " + currentDir + "\n"
+                + "Launcher path: " + jarPath;
+        SwingUtils.initLookAndFeel();
+        System.err.println(message);
+        SwingUtils.showErrorDialog(message);
+        System.exit(1);
+    }
+
+    /// 当前启动器 jar/exe 的路径，取不到时返回 `null`。
+    ///
+    /// @return 路径或 `null`
+    @org.jetbrains.annotations.Nullable
+    private static String thisJarPath() {
+        try {
+            java.security.ProtectionDomain domain = CommunityBootstrap.class.getProtectionDomain();
+            java.security.CodeSource source = domain == null ? null : domain.getCodeSource();
+            if (source == null || source.getLocation() == null) {
+                return null;
+            }
+            return java.nio.file.Paths.get(source.getLocation().toURI())
+                    .toAbsolutePath().normalize().toString();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
