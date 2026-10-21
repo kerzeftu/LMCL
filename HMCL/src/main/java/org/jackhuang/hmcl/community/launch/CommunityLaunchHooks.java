@@ -27,10 +27,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CancellationException;
 
@@ -56,6 +59,9 @@ public final class CommunityLaunchHooks {
     /// 启动状态机，首次使用时创建。
     private static volatile @Nullable LaunchTracker tracker;
 
+    /// 当前启动会话（按实例 id），供 09 等下游在事件回调内同步读取。
+    private static final Map<String, Session> SESSIONS = new ConcurrentHashMap<>();
+
     private CommunityLaunchHooks() {
     }
 
@@ -75,6 +81,31 @@ public final class CommunityLaunchHooks {
             }
         }
         return local;
+    }
+
+    /// 启动会话的只读快照。
+    ///
+    /// `context` 在启动任务链开始执行时可用，`process` 在进程创建后可用；
+    /// 下游监听器必须在事件回调内同步读取，事件返回后会话可能已被清理。
+    ///
+    /// @param repository 实例仓库
+    /// @param context 启动上下文（可能为空）
+    /// @param process 游戏进程（可能为空，例如体检阶段）
+    /// @param startedAt 启动请求时间
+    public record LaunchSession(@NotNull HMCLGameRepository repository,
+                                @Nullable LaunchContext context,
+                                @Nullable ManagedProcess process,
+                                @NotNull Instant startedAt) {
+    }
+
+    /// 返回指定实例当前启动会话的快照；无会话时返回 `null`。
+    ///
+    /// @param versionId 实例 id
+    /// @return 会话快照或 `null`
+    @Nullable
+    public static LaunchSession sessionOf(@NotNull String versionId) {
+        Session session = SESSIONS.get(versionId);
+        return session == null ? null : new LaunchSession(session.repository, session.context, session.process, session.startedAt);
     }
 
     /// 注册事件监听器；重复注册会被忽略。
@@ -132,6 +163,7 @@ public final class CommunityLaunchHooks {
     /// @param versionId 实例 id
     public static void onLaunchRequested(@NotNull HMCLGameRepository repository, @NotNull String versionId) {
         try {
+            SESSIONS.put(versionId, new Session(repository));
             tracker().onLaunchRequested(repository, versionId);
         } catch (Throwable e) {
             LOG.warning("Community launch hook onLaunchRequested failed", e);
@@ -144,6 +176,10 @@ public final class CommunityLaunchHooks {
     /// @param process 游戏进程
     public static void onProcessCreated(@NotNull String versionId, @NotNull ManagedProcess process) {
         try {
+            Session session = SESSIONS.get(versionId);
+            if (session != null) {
+                session.process = process;
+            }
             tracker().onProcessCreated(versionId, process);
         } catch (Throwable e) {
             LOG.warning("Community launch hook onProcessCreated failed", e);
@@ -160,6 +196,8 @@ public final class CommunityLaunchHooks {
             tracker().onProcessExit(versionId, exitCode, exitType);
         } catch (Throwable e) {
             LOG.warning("Community launch hook onProcessExit failed", e);
+        } finally {
+            SESSIONS.remove(versionId);
         }
     }
 
@@ -205,6 +243,10 @@ public final class CommunityLaunchHooks {
     /// @throws CancellationException 任务要求取消本次启动
     public static void runStartupTasksNow(@NotNull LaunchContext context) throws CancellationException {
         try {
+            Session session = SESSIONS.get(context.versionId());
+            if (session != null) {
+                session.context = context;
+            }
             for (LaunchStartupTask task : startupTasks()) {
                 if (!task.isEnabled()) {
                     LOG.info("Skip community startup task " + task.id() + ": " + task.disabledReason());
@@ -272,4 +314,17 @@ public final class CommunityLaunchHooks {
             LOG.warning("Failed to discover community startup tasks", e);
         }
     }
+    /// 可变会话持有者；只在本类内部使用。
+    private static final class Session {
+        private final HMCLGameRepository repository;
+        private final Instant startedAt;
+        private volatile @Nullable LaunchContext context;
+        private volatile @Nullable ManagedProcess process;
+
+        private Session(HMCLGameRepository repository) {
+            this.repository = repository;
+            this.startedAt = Instant.now();
+        }
+    }
+
 }
