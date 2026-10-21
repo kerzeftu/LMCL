@@ -23,6 +23,8 @@ import org.jackhuang.hmcl.Launcher;
 import org.jackhuang.hmcl.auth.*;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorDownloadException;
 import org.jackhuang.hmcl.auth.offline.OfflineAccount;
+import org.jackhuang.hmcl.community.launch.CommunityLaunchHooks;
+import org.jackhuang.hmcl.community.launch.LaunchContext;
 import org.jackhuang.hmcl.download.DefaultDependencyManager;
 import org.jackhuang.hmcl.download.DownloadProvider;
 import org.jackhuang.hmcl.download.LibraryAnalyzer;
@@ -150,6 +152,8 @@ public final class LauncherHelper {
         DefaultDependencyManager dependencyManager = repository.getDependency();
         AtomicReference<Version> version = new AtomicReference<>(MaintainTask.maintain(repository, repository.getResolvedVersion(selectedVersion)));
         Optional<String> gameVersion = repository.getGameVersion(version.get());
+        // community: notify launch hooks before unmark, so a previous abnormal exit can still be read
+        CommunityLaunchHooks.onLaunchRequested(repository, selectedVersion);
         boolean integrityCheck = repository.unmarkVersionLaunchedAbnormally(selectedVersion);
         CountDownLatch launchingLatch = new CountDownLatch(1);
         List<String> javaAgents = new ArrayList<>(0);
@@ -226,6 +230,11 @@ public final class LauncherHelper {
                     }
                 })
                 .thenComposeAsync(() -> logIn(account).withStage("launch.state.logging_in"))
+                // community: run pre-launch community tasks (preflight, snapshot, ...)
+                .thenComposeAsync(authInfo -> CommunityLaunchHooks.runStartupTasks(
+                                new LaunchContext(repository, version.get(), selectedVersion, javaVersionRef.get(),
+                                        setting, gameVersion.orElse(null), scriptFile == null))
+                        .thenComposeAsync(() -> Task.completed(authInfo)))
                 .thenComposeAsync(authInfo -> Task.supplyAsync(() -> {
                     LaunchOptions.Builder launchOptionsBuilder = repository.getLaunchOptions(
                             selectedVersion, javaVersionRef.get(), repository.getBaseDirectory(), javaAgents, javaArguments, scriptFile != null);
@@ -261,6 +270,8 @@ public final class LauncherHelper {
                 }).thenAcceptAsync(process -> { // process is LaunchTask's result
                     if (scriptFile == null) {
                         PROCESSES.add(new WeakReference<>(process));
+                        // community: notify launch hooks about the created process
+                        CommunityLaunchHooks.onProcessCreated(selectedVersion, process);
                         if (launcherVisibility == LauncherVisibility.CLOSE)
                             Launcher.stopApplication();
                         else
@@ -978,6 +989,8 @@ public final class LauncherHelper {
                 }
             }
 
+            // community: notify launch hooks before releasing the launcher
+            CommunityLaunchHooks.onProcessExit(version.getId(), exitCode, exitType);
             launchingLatch.countDown();
 
             if (exitType == ExitType.INTERRUPTED)
