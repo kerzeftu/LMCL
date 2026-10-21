@@ -20,6 +20,7 @@ package org.jackhuang.hmcl.community;
 import org.jackhuang.hmcl.Main;
 import org.jackhuang.hmcl.community.crash.CrashArchiveListener;
 import org.jackhuang.hmcl.community.env.CommunityPaths;
+import org.jackhuang.hmcl.community.java.CommunityJavaMirror;
 import org.jetbrains.annotations.NotNullByDefault;
 
 /// LMCL 的进程入口（shadowJar 的 `Main-Class`）。
@@ -76,6 +77,13 @@ public final class CommunityBootstrap {
         // 显式覆盖（-Dhmcl.dir/-Dhmcl.home/HMCL_LOCAL_HOME/HMCL_USER_HOME）优先，不覆盖。
         if (!Boolean.getBoolean(CommunityPaths.PROP_PATHS_EXPLICIT)) {
             CommunityPaths.applySystemProperties();
+        }
+
+        // Java 列表镜像（步骤 10）：必须在 DiscoFetchJavaListTask 类初始化之前注入；
+        // 镜像未部署（或用户已显式 -D）时不写入，行为与上游一致。
+        try {
+            CommunityJavaMirror.install();
+        } catch (Throwable ignored) {
         }
 
         // 崩溃归档监听器（步骤 09）：只注册回调，不读取任何上游状态；
