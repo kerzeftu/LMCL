@@ -53,6 +53,7 @@ import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
+import org.jackhuang.hmcl.community.ui.OtherPage;
 import org.jackhuang.hmcl.ui.account.AccountAdvancedListItem;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
@@ -80,7 +81,7 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 ///
 /// 与旧 [org.jackhuang.hmcl.community.dashboard.DashboardPane] 的差异：
 /// - 不再使用可拖拽的 12 行网格，而是固定的“主列 + 右栏”分栏；
-/// - 上游 200px 文本侧栏已移除，实例/下载/设置/账户入口全部收进本页；
+/// - 上游 200px 文本侧栏已移除；实例/下载/设置入口在全局 64px 侧栏，账户入口在左栏账户卡（打开“其他 → 账户”）；
 /// - 组件仍由 [WidgetRegistry] 与 [DashboardWidget] 提供，显隐/重置写入
 ///   `dashboard.json`，保留用户已有的 `pinnedInstanceIds` 与 `widgetProps`。
 ///
@@ -101,7 +102,6 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     private static final List<Slot> INSTANCE_SLOTS = List.of(
             new Slot("launch", 168),
             new Slot("pinned-instances", 188),
-            new Slot("storage", 144),
             new Slot("java-recommend", 168),
             new Slot("snapshot", 176),
             new Slot("crash-history", 176),
@@ -135,7 +135,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 左信息栏（账号、游玩记录）。
     private final VBox infoColumn = new VBox(12);
 
-    /// 右实例栏（启动、置顶实例、存储、Java、内存、快照、崩溃、体检、网络）。
+    /// 右实例栏（启动、置顶实例、Java、快照、崩溃、体检、网络）。
     private final VBox instanceColumn = new VBox(12);
 
     /// 运行状态文案。
@@ -318,7 +318,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
     /// 构建顶部：问候与运行状态。
     ///
-    /// 实例/下载/设置/账户入口已迁移到全局 `CommunitySideBar`，页头不再重复放按钮。
+    /// 实例/下载/设置入口在全局 `CommunitySideBar`；账户入口在左栏账户卡（打开“其他 → 账户”）与侧栏。页头不再重复放按钮。
     @NotNull
     private HBox buildHeader() {
         greeting.setText(greetingText());
@@ -432,7 +432,11 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
         AccountAdvancedListItem item = new AccountAdvancedListItem();
         item.accountProperty().bind(Accounts.selectedAccountProperty());
-        item.setOnAction(event -> Controllers.navigate(Controllers.getAccountListPage()));
+        item.setOnAction(event -> {
+            OtherPage page = OtherPage.getInstance();
+            page.showAccounts();
+            Controllers.navigate(page);
+        });
         item.setPrefHeight(48);
 
         VBox card = new VBox(6, title, item);
@@ -452,7 +456,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         }
     }
 
-    /// 组件是否启用；配置中缺失的组件默认启用（兼容旧版 10 卡布局）。
+    /// 组件是否启用；配置中缺失的组件默认启用（兼容旧版 10/11 卡布局）。
     private boolean isEnabled(@NotNull String id) {
         for (DashboardItem item : config.items()) {
             if (item.id().equals(id)) {

@@ -200,6 +200,20 @@ public final class CommunitySettingsPanel {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox header = new HBox(title, spacer, close);
 
+        HBox body = buildBody(sections, initialSectionId);
+
+        root.getChildren().addAll(header, body);
+        return root;
+    }
+
+    /// 构造分组切换区：左侧分组按钮 + 右侧内容。
+    ///
+    /// @param sections 分组
+    /// @param initialSectionId 初始选中分组；`null` 或不存在时选中第一个
+    /// @return 分组区域
+    @NotNull
+    private static HBox buildBody(@NotNull List<SettingsSection> sections,
+                                  @Nullable String initialSectionId) {
         ToggleGroup group = new ToggleGroup();
         VBox tabs = new VBox(4);
         tabs.setMinWidth(150);
@@ -244,8 +258,36 @@ public final class CommunitySettingsPanel {
         HBox body = new HBox(12, tabs, content);
         HBox.setHgrow(content, Priority.ALWAYS);
         VBox.setVgrow(body, Priority.ALWAYS);
+        return body;
+    }
 
-        root.getChildren().addAll(header, body);
+    /// 创建可嵌入页面的设置视图（无对话框标题/关闭按钮）。
+    ///
+    /// 与 [#open(Window, String)] 使用同一组 [SettingsSection]；分组内容仍是
+    /// 首次选中时才构造，失败隔离逻辑相同。
+    ///
+    /// @param sectionId 初始分组 id；`null` 或不存在时选中第一个
+    /// @return 只含分组区域的根节点
+    @NotNull
+    public static Parent createInlineView(@Nullable String sectionId) {
+        FXUtils.checkFxUserThread();
+
+        List<SettingsSection> sections = collectSections();
+        VBox root = new VBox(12);
+        CommunityStyles.apply(root);
+
+        if (sections.isEmpty()) {
+            Label label = new Label(i18n("community.settings.section_failed",
+                    "no settings section available"));
+            label.setWrapText(true);
+            label.getStyleClass().add("subtitle-label");
+            root.getChildren().add(label);
+            return root;
+        }
+
+        HBox body = buildBody(sections, sectionId);
+        VBox.setVgrow(body, Priority.ALWAYS);
+        root.getChildren().add(body);
         return root;
     }
 

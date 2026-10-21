@@ -27,10 +27,10 @@ import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
-/// 内置十张卡片的组件工厂（步骤 14 的 P0 六卡去掉内存卡 + 步骤 15 的 P1/P2 四卡 + 步骤 16 的快照卡）。
+/// 内置九张卡片的组件工厂（步骤 14 的 P0 卡去掉内存/存储卡 + 步骤 15 的 P1/P2 卡 + 步骤 16 的快照卡）。
 ///
 /// 通过 `META-INF/services/org.jackhuang.hmcl.community.dashboard.WidgetProvider` 注册。
-/// 描述顺序与默认布局一致：启动、置顶实例、崩溃历史、Java、网络、快照、最近存档、存储、健康检查、游玩日历。
+/// 描述顺序与默认布局一致：启动、置顶实例、崩溃历史、Java、网络、快照、最近存档、健康检查、游玩日历。
 @NotNullByDefault
 public final class CommunityWidgetsProvider implements WidgetProvider {
 
@@ -55,9 +55,6 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
     /// 最近存档卡 id。
     public static final String ID_RECENT_WORLDS = "recent-worlds";
 
-    /// 存储卡 id。
-    public static final String ID_STORAGE = "storage";
-
     /// 游玩日历卡 id。
     public static final String ID_ACTIVITY_CALENDAR = "activity-calendar";
 
@@ -73,7 +70,6 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
             new DashboardWidgetDescriptor(ID_JAVA, "community.java.title", null, 1, 1, 50),
             new DashboardWidgetDescriptor(ID_NETWORK, "community.network.title", null, 1, 1, 60),
             new DashboardWidgetDescriptor(ID_RECENT_WORLDS, "community.worlds.title", null, 2, 1, 70),
-            new DashboardWidgetDescriptor(ID_STORAGE, "community.storage.title", null, 1, 1, 80),
             new DashboardWidgetDescriptor(ID_HEALTH_CHECK, "community.health.title", null, 1, 1, 90),
             new DashboardWidgetDescriptor(ID_ACTIVITY_CALENDAR, "community.calendar.title", null, 2, 1, 100));
 
@@ -108,7 +104,6 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
             case ID_JAVA -> new JavaRecommendWidget(descriptor, context);
             case ID_NETWORK -> new NetworkWidget(descriptor, context);
             case ID_RECENT_WORLDS -> new RecentWorldsWidget(descriptor, context);
-            case ID_STORAGE -> new StorageWidget(descriptor, context);
             case ID_ACTIVITY_CALENDAR -> new ActivityCalendarWidget(descriptor, context);
             case ID_HEALTH_CHECK -> new HealthCheckWidget(descriptor, context);
             default -> throw new IllegalArgumentException("Unknown dashboard widget id: " + descriptor.id());
