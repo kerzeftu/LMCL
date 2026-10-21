@@ -33,7 +33,8 @@ public final class CommunityWidgetsProviderTest {
     public void providerIsDiscoveredByServiceLoader() {
         WidgetRegistry registry = WidgetRegistry.load();
         for (String id : List.of("launch", "pinned-instances", "memory", "crash-history",
-                "java-recommend", "network")) {
+                "java-recommend", "network", "recent-worlds", "storage",
+                "health-check", "activity-calendar")) {
             assertTrue(registry.isRegistered(id), () -> "missing widget: " + id);
         }
     }
@@ -41,19 +42,21 @@ public final class CommunityWidgetsProviderTest {
     @Test
     public void descriptorsAreOrderedAndValid() {
         List<DashboardWidgetDescriptor> descriptors = new CommunityWidgetsProvider().descriptors();
-        assertEquals(6, descriptors.size());
+        assertEquals(10, descriptors.size());
 
         List<String> ids = descriptors.stream().map(DashboardWidgetDescriptor::id).toList();
         assertEquals(List.of("launch", "pinned-instances", "memory", "crash-history",
-                "java-recommend", "network"), ids);
+                "java-recommend", "network", "recent-worlds", "storage",
+                "health-check", "activity-calendar"), ids);
 
         for (int i = 0; i < descriptors.size(); i++) {
             DashboardWidgetDescriptor descriptor = descriptors.get(i);
             assertTrue(descriptor.isValid(), () -> "invalid descriptor: " + descriptor);
             assertEquals(10 * (i + 1), descriptor.order());
             assertEquals(1, descriptor.defaultRows());
-            assertEquals(i < 2 ? 2 : 1, descriptor.defaultColumns());
             assertTrue(descriptor.nameKey().startsWith("community."));
+            boolean wide = i < 2 || i == 6 || i == 9;
+            assertEquals(wide ? 2 : 1, descriptor.defaultColumns());
         }
     }
 }

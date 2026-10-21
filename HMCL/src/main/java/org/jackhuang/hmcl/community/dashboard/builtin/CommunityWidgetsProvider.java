@@ -27,10 +27,10 @@ import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
-/// 内置六张 P0 卡片的组件工厂（步骤 14）。
+/// 内置十张卡片的组件工厂（步骤 14 的 P0 六卡 + 步骤 15 的 P1/P2 四卡）。
 ///
 /// 通过 `META-INF/services/org.jackhuang.hmcl.community.dashboard.WidgetProvider` 注册。
-/// 描述顺序与默认布局一致：启动、置顶实例、内存、崩溃历史、Java、网络。
+/// 描述顺序与默认布局一致：启动、置顶实例、内存、崩溃历史、Java、网络、最近存档、存储、健康检查、游玩日历。
 @NotNullByDefault
 public final class CommunityWidgetsProvider implements WidgetProvider {
 
@@ -52,6 +52,18 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
     /// 网络卡 id。
     public static final String ID_NETWORK = "network";
 
+    /// 最近存档卡 id。
+    public static final String ID_RECENT_WORLDS = "recent-worlds";
+
+    /// 存储卡 id。
+    public static final String ID_STORAGE = "storage";
+
+    /// 游玩日历卡 id。
+    public static final String ID_ACTIVITY_CALENDAR = "activity-calendar";
+
+    /// 健康检查卡 id。
+    public static final String ID_HEALTH_CHECK = "health-check";
+
     /// 组件描述（不可变，按默认布局顺序）。
     private static final List<DashboardWidgetDescriptor> DESCRIPTORS = List.of(
             new DashboardWidgetDescriptor(ID_LAUNCH, "community.launch.title", null, 2, 1, 10),
@@ -59,7 +71,11 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
             new DashboardWidgetDescriptor(ID_MEMORY, "community.memory.title", null, 1, 1, 30),
             new DashboardWidgetDescriptor(ID_CRASH, "community.crash.title", null, 1, 1, 40),
             new DashboardWidgetDescriptor(ID_JAVA, "community.java.title", null, 1, 1, 50),
-            new DashboardWidgetDescriptor(ID_NETWORK, "community.network.title", null, 1, 1, 60));
+            new DashboardWidgetDescriptor(ID_NETWORK, "community.network.title", null, 1, 1, 60),
+            new DashboardWidgetDescriptor(ID_RECENT_WORLDS, "community.worlds.title", null, 2, 1, 70),
+            new DashboardWidgetDescriptor(ID_STORAGE, "community.storage.title", null, 1, 1, 80),
+            new DashboardWidgetDescriptor(ID_HEALTH_CHECK, "community.health.title", null, 1, 1, 90),
+            new DashboardWidgetDescriptor(ID_ACTIVITY_CALENDAR, "community.calendar.title", null, 2, 1, 100));
 
     /// 构造 provider。
     public CommunityWidgetsProvider() {
@@ -91,6 +107,10 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
             case ID_CRASH -> new CrashHistoryWidget(descriptor, context);
             case ID_JAVA -> new JavaRecommendWidget(descriptor, context);
             case ID_NETWORK -> new NetworkWidget(descriptor, context);
+            case ID_RECENT_WORLDS -> new RecentWorldsWidget(descriptor, context);
+            case ID_STORAGE -> new StorageWidget(descriptor, context);
+            case ID_ACTIVITY_CALENDAR -> new ActivityCalendarWidget(descriptor, context);
+            case ID_HEALTH_CHECK -> new HealthCheckWidget(descriptor, context);
             default -> throw new IllegalArgumentException("Unknown dashboard widget id: " + descriptor.id());
         };
     }

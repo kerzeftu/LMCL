@@ -133,6 +133,12 @@ public final class DashboardPane extends VBox
         if (config.firstRun() && config.items().isEmpty() && !registry.isEmpty()) {
             config.setItems(defaultItems());
             persist();
+        } else if (!config.readOnly() && !config.items().isEmpty()
+                && config.updatedAt().equals(java.time.Instant.EPOCH)) {
+            // 旧版 dashboard.json 没有 updatedAt：升级时补入新组件；写入后 updatedAt 生效，
+            // 之后用户隐藏的组件不会再被自动加回。
+            appendMissingDefaults();
+            persist();
         }
 
         this.context = new DashboardContext(
@@ -259,6 +265,23 @@ public final class DashboardPane extends VBox
         } catch (Throwable e) {
             return null;
         }
+    }
+
+    /// 向旧配置追加当前注册但缺失的组件（仅限没有 updatedAt 的旧文件）。
+    private void appendMissingDefaults() {
+        List<DashboardItem> items = new ArrayList<>(config.items());
+        int order = items.stream().mapToInt(DashboardItem::order).max().orElse(0) + 10;
+        List<DashboardWidgetDescriptor> descriptors = new ArrayList<>(registry.all());
+        descriptors.sort(Comparator.comparingInt(DashboardWidgetDescriptor::order));
+        for (DashboardWidgetDescriptor descriptor : descriptors) {
+            if (items.stream().anyMatch(item -> item.id().equals(descriptor.id()))) {
+                continue;
+            }
+            items.add(new DashboardItem(descriptor.id(), true, order,
+                    descriptor.defaultColumns(), descriptor.defaultRows()));
+            order += 10;
+        }
+        config.setItems(items);
     }
 
     /// 默认布局：按描述符 `order` 排列，全部启用、使用默认跨度。
