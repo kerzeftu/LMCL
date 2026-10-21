@@ -1,0 +1,133 @@
+name: Sync Upstream
+
+# 定时检测上游 HMCL 更新，尝试自动合并并开 PR。
+# 合并成功 -> 开 PR（由 ci.yml 验证能否编译）
+# 合并冲突 -> 开 issue 并列出冲突文件，人工处理
+#
+# 注意：GitHub 会停用 60 天无任何提交的仓库的定时任务。
+
+on:
+  schedule:
+    # 每天 UTC 18:17（北京时间次日 02:17）跑一次
+    - cron: '17 18 * * *'
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: '上游分支或 tag'
+        required: true
+        default: 'release/3.16'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 配置 Git 身份
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: 拉取上游
+        run: |
+          git remote add upstream https://github.com/HMCL-dev/HMCL.git 2>/dev/null || true
+          git fetch upstream --prune --tags --force
+
+      - name: 尝试合并
+        id: merge
+        env:
+          UPSTREAM_REF: ${{ inputs.upstream_ref || 'release/3.16' }}
+        run: |
+          set -e
+          git rev-parse --verify "upstream/$UPSTREAM_REF" >/dev/null 2>&1 || {
+            echo "::error::上游引用 upstream/$UPSTREAM_REF 不存在"
+            exit 1
+          }
+
+          NEW_SHA=$(git rev-parse "upstream/$UPSTREAM_REF")
+          BASE_SHA=$(git merge-base HEAD "$NEW_SHA")
+
+          if [ "$NEW_SHA" = "$BASE_SHA" ]; then
+            echo "已是最新，无需同步"
+            echo "status=uptodate" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SHORT=$(git rev-parse --short "$NEW_SHA")
+          BRANCH="sync/upstream-$(date -u +%Y%m%d%H%M)"
+
+          # 同步操作一律基于 main 起新分支
+          git switch -c "$BRANCH"
+
+          if git merge --no-edit -m "chore: merge upstream $UPSTREAM_REF ($SHORT)" "$NEW_SHA"; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            # 先记录冲突文件，再中止
+            git diff --name-only --diff-filter=U > /tmp/conflicts.txt || true
+            git merge --abort
+            echo "status=conflict" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 无论是否冲突都推上去，方便人工接手
+          git push -u origin "$BRANCH"
+          {
+            echo "branch=$BRANCH"
+            echo "sha=$NEW_SHA"
+            echo "short=$SHORT"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 创建同步 PR
+        if: steps.merge.outputs.status == 'clean'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_REF: ${{ inputs.upstream_ref || 'release/3.16' }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "${{ steps.merge.outputs.branch }}" \
+            --title "chore: 同步上游 $UPSTREAM_REF (${{ steps.merge.outputs.short }})" \
+            --body "自动同步自 HMCL-dev/HMCL 的 \`$UPSTREAM_REF\`（${{ steps.merge.outputs.sha }}）。
+
+          请等待下方 CI 构建通过后合并。合并后可在 build-release 工作流中打标签发布。"
+
+      - name: 冲突时开 issue
+        if: steps.merge.outputs.status == 'conflict'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_REF: ${{ inputs.upstream_ref || 'release/3.16' }}
+        run: |
+          {
+            echo "## ⚠️ 上游同步发生冲突"
+            echo ""
+            echo "自动合并 \`HMCL-dev/HMCL@$UPSTREAM_REF\`（\`${{ steps.merge.outputs.short }}\`）时出现冲突，需人工处理。"
+            echo ""
+            echo "- 分支：\`${{ steps.merge.outputs.branch }}\`"
+            echo ""
+            echo "### 冲突文件"
+            echo '```'
+            cat /tmp/conflicts.txt
+            echo '```'
+            echo ""
+            echo "处理：\`git checkout ${{ steps.merge.outputs.branch }} && git merge upstream/$UPSTREAM_REF\` 解决后推送即可。"
+          } > /tmp/body.md
+
+          gh issue create \
+            --title "上游同步冲突 $(date -u +%F)" \
+            --body-file /tmp/body.md \
+            --label "upstream-sync" || \
+          gh issue create \
+            --title "上游同步冲突 $(date -u +%F)" \
+            --body-file /tmp/body.md

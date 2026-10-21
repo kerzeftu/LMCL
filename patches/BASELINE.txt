@@ -1,0 +1,6 @@
+upstream_ref=release/3.16
+baseline_tag=v3.16.4
+upstream_sha=fbcc17472f08e877d60d6b715734e8054e9e61ee
+synced_at=2026-10-21
+# 本地开发期：origin（LMCL fork）尚未建立；upstream 指向 HMCL-dev/HMCL。
+# 推送前把 upstream 保留、新增 origin=<our-fork>，再执行 git push -u origin main。

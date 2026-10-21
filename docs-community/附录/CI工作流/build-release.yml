@@ -1,0 +1,125 @@
+name: Build and Release
+
+# 打标签时构建并发布到 GitHub Releases。
+# 触发方式二选一：
+#   1. 推送 tag：git tag v3.16.1000 && git push --tags
+#   2. 手动运行（workflow_dispatch），填入标签名
+#
+# 只用一个 ubuntu runner：HMCL 的 makeExecutables 是把 jar 内的
+# assets/HMCLauncher.exe / .sh 拼到 jar 前面，纯文件拼接、不依赖目标平台，
+# 因此 Linux 单机即可同时产出 jar / exe / sh / deb，
+# 无需为 macOS(10x 计费) 和 Windows(2x 计费) 支付额外 Actions 分钟数。
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '发布标签，如 v3.16.1000'
+        required: true
+        type: string
+      prerelease:
+        description: '标记为预发布'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17 (含 JavaFX)
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          java-package: 'jdk+fx'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-cleanup: never
+
+      - name: 解析版本与标签
+        id: meta
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          # v3.16.1000 -> 3.16.1000
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "构建标签 $TAG，Gradle 版本 $VERSION"
+
+      - name: Build
+        run: xvfb-run --auto-servernum ./gradlew clean build --no-daemon --parallel -Pversion="${{ steps.meta.outputs.version }}"
+        env:
+          JAVA_TOOL_OPTIONS: -Djava.awt.headless=true
+          MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
+          MICROSOFT_AUTH_SECRET: ${{ secrets.MICROSOFT_AUTH_SECRET }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+
+      - name: 收集产物并改发行名
+        run: |
+          mkdir -p dist
+          VERSION="${{ steps.meta.outputs.version }}"
+          cp HMCL/build/libs/HMCL-*.jar dist/ 2>/dev/null || true
+          cp HMCL/build/libs/HMCL-*.exe dist/ 2>/dev/null || true
+          cp HMCL/build/libs/HMCL-*.sh  dist/ 2>/dev/null || true
+          cp HMCL/build/libs/HMCL-*.deb dist/ 2>/dev/null || true
+          # 内部名 HMCL-<version>.<ext> → 发行名 LMCL-<version>-<arch>.<ext>
+          for ext in jar exe sh deb; do
+            src="dist/HMCL-$VERSION.$ext"
+            if [ -f "$src" ]; then
+              case "$ext" in
+                exe) arch=win-x86 ;;
+                deb) arch=all ;;
+                *)   arch=any ;;
+              esac
+              mv "$src" "dist/LMCL-$VERSION-$arch.$ext"
+            fi
+          done
+          ls -lh dist
+
+      - name: 生成校验和
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # 如需同步到自有存储（对象存储 / 服务器），在此加一步，例如：
+      # - name: 上传到 COS
+      #   run: |
+      #     pip install coscmd
+      #     coscmd config -a ${{ secrets.COS_ID }} -s ${{ secrets.COS_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
+      #     coscmd upload -r dist/ /hmcl/${{ steps.meta.outputs.tag }}/
+
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
+          files: |
+            dist/*
+          prerelease: ${{ inputs.prerelease || false }}
+          generate_release_notes: true
+          body: |
+            基于 HMCL-dev/HMCL 构建的社区版本。
+
+            | 文件 | 适用平台 |
+            |---|---|
+            | `LMCL-*-any.jar` | 任意（需 Java 17+） |
+            | `LMCL-*-win-x86.exe` | Windows（32 位壳，64 位系统可运行） |
+            | `LMCL-*-any.sh` | Linux / FreeBSD |
+            | `LMCL-*-all.deb` | Debian / Ubuntu |
+
+            校验：`SHA256SUMS.txt`
+
+            本项目为 HMCL 的修改版本，依据 GPLv3 第 7 条已修改名称/版本号以区别于原版。
