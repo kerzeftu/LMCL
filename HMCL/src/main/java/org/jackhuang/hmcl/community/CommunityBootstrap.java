@@ -23,6 +23,7 @@ import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jackhuang.hmcl.community.java.CommunityJavaMirror;
 import org.jackhuang.hmcl.community.memory.MemoryReclaimer;
 import org.jackhuang.hmcl.community.play.PlayRecordTracker;
+import org.jackhuang.hmcl.community.snapshot.SnapshotService;
 import org.jetbrains.annotations.NotNullByDefault;
 
 /// LMCL 的进程入口（shadowJar 的 `Main-Class`）。
@@ -106,6 +107,13 @@ public final class CommunityBootstrap {
         // 以免首页日历先读到旧数据。只读写本地 JSON，失败不阻塞启动。
         try {
             PlayRecordTracker.recoverNow();
+        } catch (Throwable ignored) {
+        }
+
+        // 实例快照（步骤 16）：清理上次强杀留下的临时目录与无引用对象；
+        // 只读本地目录，失败不阻塞启动。
+        try {
+            SnapshotService.cleanupAtStartup();
         } catch (Throwable ignored) {
         }
 
