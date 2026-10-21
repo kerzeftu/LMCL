@@ -114,9 +114,6 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 主列/信息栏间距（像素）。
     private static final int COLUMN_GAP = 16;
 
-    /// 内容底部留白；v3.5 起改为 0，让卡片可以贴住页面底边。
-    private static final int BOTTOM_PADDING = 0;
-
     /// 首页。
     private final MainPage mainPage;
 
@@ -144,8 +141,11 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 问候语。
     private final Label greeting = new Label();
 
-    /// 当前页的滚动容器。
-    private final ScrollPane scroll = new ScrollPane();
+    /// 左信息栏独立滚动容器。
+    private final ScrollPane infoScroll = new ScrollPane();
+
+    /// 右实例栏独立滚动容器。
+    private final ScrollPane instanceScroll = new ScrollPane();
 
     /// 落盘防抖。
     private final PauseTransition saveDebounce = new PauseTransition(Duration.seconds(1));
@@ -184,7 +184,6 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
                 this::hideWidget,
                 config.prefs(this::markDirty));
 
-        getStyleClass().add("community-home");
         CommunityStyles.apply(this);
         setSpacing(12);
         setFillWidth(true);
@@ -202,7 +201,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         });
 
         getChildren().add(buildHeader());
-        getChildren().add(buildScroll());
+        getChildren().add(buildColumns());
 
         rebuildBody();
 
@@ -333,25 +332,41 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         return header;
     }
 
-    /// 构建滚动区域（只执行一次）。
+    /// 构建左右两条独立滚动的列（只执行一次）。
     @NotNull
-    private ScrollPane buildScroll() {
+    private HBox buildColumns() {
         infoColumn.setFillWidth(true);
-        infoColumn.setPrefWidth(INFO_WIDTH);
         infoColumn.setMinWidth(300);
         infoColumn.setMaxWidth(380);
 
         instanceColumn.setFillWidth(true);
         instanceColumn.setMinWidth(0);
-        HBox.setHgrow(instanceColumn, Priority.ALWAYS);
 
-        scroll.setFitToWidth(true);
-        scroll.setPannable(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scroll.getStyleClass().addAll("edge-to-edge", "community-home-scroll");
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        return scroll;
+        configureColumnScroll(infoScroll, INFO_WIDTH);
+        configureColumnScroll(instanceScroll, Region.USE_COMPUTED_SIZE);
+        HBox.setHgrow(instanceScroll, Priority.ALWAYS);
+
+        infoScroll.setContent(infoColumn);
+        instanceScroll.setContent(instanceColumn);
+
+        HBox columns = new HBox(COLUMN_GAP, infoScroll, instanceScroll);
+        columns.setFillHeight(true);
+        columns.setAlignment(Pos.TOP_LEFT);
+        VBox.setVgrow(columns, Priority.ALWAYS);
+        return columns;
+    }
+
+    /// 配置单列滚动：垂直滚动、无横向滚动、内容随视口宽度调整。
+    private void configureColumnScroll(@NotNull ScrollPane pane, double prefWidth) {
+        pane.setFitToWidth(true);
+        pane.setPannable(true);
+        pane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        pane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        pane.setPrefWidth(prefWidth);
+        pane.setMinWidth(300);
+        pane.setMaxWidth(prefWidth == Region.USE_COMPUTED_SIZE ? Double.MAX_VALUE : 420);
+        pane.setMaxHeight(Double.MAX_VALUE);
+        pane.getStyleClass().add("edge-to-edge");
     }
 
     /// 重建左信息栏与右实例栏。
@@ -381,17 +396,13 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
             instanceColumn.getChildren().add(empty);
         }
 
-        HBox body = new HBox(COLUMN_GAP, infoColumn, instanceColumn);
-        body.setAlignment(Pos.TOP_LEFT);
-        body.setPadding(new Insets(0, 0, BOTTOM_PADDING, 0));
-        body.getStyleClass().add("community-home-body");
-        scroll.setContent(body);
+        // 左右列分别作为两个 ScrollPane 的内容，互不影响滚动位置。
     }
 
     /// 添加一个组件；未启用/未登记时跳过。
     ///
     /// 槽位高度只是最小高度：内容更长时组件按自身 `prefHeight` 增高，
-    /// 避免固定高度裁掉按钮/文字；页面滚动由外层 `ScrollPane` 负责。
+    /// 避免固定高度裁掉按钮/文字；各列滚动由所属 `ScrollPane` 负责。
     private void addWidget(@NotNull VBox column, @NotNull String id, double minHeight) {
         if (!isEnabled(id)) {
             return;

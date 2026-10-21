@@ -129,18 +129,3 @@
     -fx-text-fill: -monet-on-surface;
     -fx-padding: 8 14 8 14;
 }
-
-
-/* Home page: solid surface instead of the upstream translucent gray, so the
-   page reads as one flat canvas; the scroll pane and its viewport stay
-   transparent and the vertical scrollbar sits at the far right edge. */
-.community-home {
-    -fx-background-color: -monet-surface;
-    -fx-background-insets: 0;
-}
-
-.community-home-scroll,
-.community-home-scroll > .viewport {
-    -fx-background-color: transparent;
-    -fx-background-insets: 0;
-}

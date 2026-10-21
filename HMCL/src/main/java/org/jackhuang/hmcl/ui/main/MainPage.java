@@ -312,6 +312,10 @@ public final class MainPage extends StackPane implements DecoratorPage {
         javafx.scene.Node communityDashboard =
                 org.jackhuang.hmcl.community.dashboard.CommunityDashboard.mount(this);
         if (communityDashboard != null) {
+            // v3.6: remove the upstream 20px page padding so the community home
+            // can really reach the top/bottom edges; the floating launch button
+            // is repositioned by StackPane alignment and stays above it.
+            setPadding(javafx.geometry.Insets.EMPTY);
             getChildren().add(communityDashboard);
             javafx.scene.layout.StackPane.setAlignment(
                     communityDashboard, javafx.geometry.Pos.TOP_LEFT);
