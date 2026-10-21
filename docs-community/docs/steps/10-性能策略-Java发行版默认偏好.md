@@ -173,7 +173,7 @@ community.java.error.list_failed / .install_failed
 | 2 | Bootstrap 注入 + 配置项 + 单测（不覆盖显式 -D） | 0.5 |
 | 3 | 推荐面板 UI（列表/偏好/回退） | 1.5 |
 | 4 | 一键安装（下载 + `getInstallJavaTask` + 进度/错误） | 1 |
-| 5 | i18n + 文档口径审查（4 份 properties） | 0.5 |
+| 5 | i18n + 文档口径审查（3 份 properties） | 0.5 |
 | 6 | 联调：镜像不可用、无偏好平台构建、已安装重复检测 | 0.5 |
 
 ---

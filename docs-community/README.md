@@ -3,7 +3,7 @@
 > 基于 [HMCL](https://github.com/HMCL-dev/HMCL)（GPLv3）的社区版 Minecraft 启动器开发文档库。
 > 面向中国大陆用户，独立产品身份；核心差异化是**启动保障**（能不能玩上）与**性能优化向导**（玩得顺不顺）。
 >
-> **文档版本 v2.6（2026-10-21）**：基线 **v3.16.4（release/3.16，commit `fbcc1747`）**。已按源码实读重写架构边界与排期，并完成两轮源码核对；HMCLauncher 源码与发布二进制的实测结论见[步骤 20 §2.3](docs/steps/20-HMCLauncher启动壳重建.md) 与[审查记录 §9](docs/审查记录-v3.16.4源码核对.md)。**v2.0 起步骤 07 改为“默认不内置镜像 + 自定义主源/≤5 镜像”**（用户 m03806），见[步骤 07](docs/steps/07-下载源配置.md)；**v2.1 起步骤 08 已实现**（启动钩子契约 + 五项体检 + 体检对话框），实现记录见[步骤 08 §10](docs/steps/08-启动保障-启动前体检.md)；**v2.2 起步骤 09 已实现**（崩溃现场归档 + 历史索引 + 诊断导出面板），实现记录见[步骤 09 §10](docs/steps/09-启动保障-崩溃现场还原.md)；**v2.3 起步骤 10 已实现**（Java 发行版偏好 + 推荐面板 + 设置分组；镜像未部署时按官方 API 运行），实现记录见[步骤 10 §10](docs/steps/10-性能策略-Java发行版默认偏好.md)；**v2.4 起步骤 11 已实现**（JVM 档位向导 + 冲突检测 + 唯一写入口 + 状态存储），实现记录见[步骤 11 §10](docs/steps/11-性能策略-JVM参数预设向导.md)；**v2.5 起步骤 12 已实现**（跨平台内存回收基座 + 设置面板「内存」分组），实现记录见[步骤 12 §10](docs/steps/12-内存优化P0-跨平台基座.md)；**v2.6 起步骤 14 已实现**（六张 P0 卡片 + WidgetProvider 注册 + 启动失败事件修复），实现记录见[步骤 14 §13](docs/steps/14-首页组件化B-P0组件与接入.md)。
+> **文档版本 v2.7（2026-10-21）**：基线 **v3.16.4（release/3.16，commit `fbcc1747`）**。已按源码实读重写架构边界与排期，并完成两轮源码核对；HMCLauncher 源码与发布二进制的实测结论见[步骤 20 §2.3](docs/steps/20-HMCLauncher启动壳重建.md) 与[审查记录 §9](docs/审查记录-v3.16.4源码核对.md)。**v2.0 起步骤 07 改为“默认不内置镜像 + 自定义主源/≤5 镜像”**（用户 m03806），见[步骤 07](docs/steps/07-下载源配置.md)；**v2.1 起步骤 08 已实现**（启动钩子契约 + 五项体检 + 体检对话框），实现记录见[步骤 08 §10](docs/steps/08-启动保障-启动前体检.md)；**v2.2 起步骤 09 已实现**（崩溃现场归档 + 历史索引 + 诊断导出面板），实现记录见[步骤 09 §10](docs/steps/09-启动保障-崩溃现场还原.md)；**v2.3 起步骤 10 已实现**（Java 发行版偏好 + 推荐面板 + 设置分组；镜像未部署时按官方 API 运行），实现记录见[步骤 10 §10](docs/steps/10-性能策略-Java发行版默认偏好.md)；**v2.4 起步骤 11 已实现**（JVM 档位向导 + 冲突检测 + 唯一写入口 + 状态存储），实现记录见[步骤 11 §10](docs/steps/11-性能策略-JVM参数预设向导.md)；**v2.5 起步骤 12 已实现**（跨平台内存回收基座 + 设置面板「内存」分组），实现记录见[步骤 12 §10](docs/steps/12-内存优化P0-跨平台基座.md)；**v2.6 起步骤 14 已实现**（六张 P0 卡片 + WidgetProvider 注册 + 启动失败事件修复），实现记录见[步骤 14 §13](docs/steps/14-首页组件化B-P0组件与接入.md)；**v2.7 起步骤 15 已实现**（最近存档/存储/游玩日历/体检四卡 + 游玩打点数据层），实现记录见[步骤 15 §10](docs/steps/15-首页组件化C-P1P2组件与打磨.md)。
 
 ---
 
@@ -43,7 +43,7 @@
 
 **效力层级**：`00-整体要求.md`（总纲）> `steps/*.md`（执行）> `附录/原始资料/`（历史记录，冲突以总纲为准）。
 
-> **迁移状态**：v2.6（v1.1 全量重写 → v1.2/v1.3 一致性收口 → v1.4 第二轮源码核对 → v1.5–v1.9 定名与 03/05/06/13 落地 → v2.0 下载源重设计 → v2.1 步骤 08 落地 → v2.2 步骤 09 落地 → v2.3 步骤 10 落地 → v2.4 步骤 11 落地 → v2.5 步骤 12 落地 → v2.6 步骤 14 落地）——总纲、README、20 篇步骤、附录均已按 v3.16.4 源码对齐（阶段/优先级/工期/侵入点以本文件第 3 节与总纲 §4.2 为准）。产品名已定：**Lumina Minecraft Launcher（LMCL）**；本地 git 仓库 `/home/kerze/hmclce/lmcl` 已提交 03/05/06/07/08/09/10/11/12/13/14 的实现（推送前补 `origin`）；发布前阻塞项仅剩更新域名/托管与商标复核（见 [总纲 §12](docs/00-整体要求.md#12-开放问题)）。
+> **迁移状态**：v2.7（v1.1 全量重写 → v1.2/v1.3 一致性收口 → v1.4 第二轮源码核对 → v1.5–v1.9 定名与 03/05/06/13 落地 → v2.0 下载源重设计 → v2.1 步骤 08 落地 → v2.2 步骤 09 落地 → v2.3 步骤 10 落地 → v2.4 步骤 11 落地 → v2.5 步骤 12 落地 → v2.6 步骤 14 落地 → v2.7 步骤 15 落地）——总纲、README、20 篇步骤、附录均已按 v3.16.4 源码对齐（阶段/优先级/工期/侵入点以本文件第 3 节与总纲 §4.2 为准）。产品名已定：**Lumina Minecraft Launcher（LMCL）**；本地 git 仓库 `/home/kerze/hmclce/lmcl` 已提交 03/05/06/07/08/09/10/11/12/13/14/15 的实现（推送前补 `origin`）；发布前阻塞项仅剩更新域名/托管与商标复核（见 [总纲 §12](docs/00-整体要求.md#12-开放问题)）。
 
 ---
 
@@ -79,9 +79,9 @@
 | 10 | [性能策略 · Java 发行版偏好](docs/steps/10-性能策略-Java发行版默认偏好.md) | 三 | P0 | 1 周 | 默认偏好 Zulu，可一键改回；推荐面板 + 设置分组 | ◐ 已编译（[§10](docs/steps/10-性能策略-Java发行版默认偏好.md)），镜像未部署、卡片已接（14）、GUI 未验 |
 | 11 | [性能策略 · JVM 参数预设向导](docs/steps/11-性能策略-JVM参数预设向导.md) | 三 | P0 | 1.5–2 周 | 分档预设 + 冲突检测 | ◐ |
 | 12 | [内存优化 P0 · 跨平台基座](docs/steps/12-内存优化P0-跨平台基座.md) | 三 | P1 | 1 周 | 跨平台内存回收基座（`System.gc()` + 自适应）+ 指标 + 设置面板「内存」 | ◐ 回收器/设置分组已编译（[§10](docs/steps/12-内存优化P0-跨平台基座.md)），卡片已接（14），三平台与 GUI 未验 |
-| 13 | [首页组件化 A · 框架](docs/steps/13-首页组件化A-框架搭建.md) | 四 | P1 | 2–3 周 | 组件注册表 + 布局持久化（挂载进 `MainPage`） | ◐ 框架/设置面板/更新提示已编译（[§10](docs/steps/13-首页组件化A-框架搭建.md)），P0 卡片已接（14）、P1/P2 待 15，GUI 未验 |
+| 13 | [首页组件化 A · 框架](docs/steps/13-首页组件化A-框架搭建.md) | 四 | P1 | 2–3 周 | 组件注册表 + 布局持久化（挂载进 `MainPage`） | ◐ 框架/设置面板/更新提示已编译（[§10](docs/steps/13-首页组件化A-框架搭建.md)），P0 卡片已接（14）、P1/P2 已接（15），GUI 未验 |
 | 14 | [首页组件化 B · P0 组件](docs/steps/14-首页组件化B-P0组件与接入.md) | 四 | P1 | 2–3 周 | 启动 / 置顶 / 内存 / 崩溃 / Java / 网络 六卡接入 | ◐ 六卡/Provider/失败复位已编译（[§13](docs/steps/14-首页组件化B-P0组件与接入.md)），GUI 未验 |
-| 15 | [首页组件化 C · P1P2 组件](docs/steps/15-首页组件化C-P1P2组件与打磨.md) | 四 | P2 | 1.5–2 周 | 最近世界 / 存储 / 活动日历 / 体检四卡 + 打磨 | ☐ |
+| 15 | [首页组件化 C · P1P2 组件](docs/steps/15-首页组件化C-P1P2组件与打磨.md) | 四 | P2 | 1.5–2 周 | 最近世界 / 存储 / 活动日历 / 体检四卡 + 打磨 | ◐ 四卡/数据层/Provider 已编译（[§10](docs/steps/15-首页组件化C-P1P2组件与打磨.md)），GUI 未验 |
 | 16 | [启动保障 · 实例快照回滚](docs/steps/16-启动保障-实例快照回滚.md) | 五 | P0 | 2 周 | 成功启动自动快照 + 首页快照卡 + 一键回滚 | ☐ |
 | 17 | [内存优化 P1 · Windows 后台守护](docs/steps/17-内存优化P1-Windows守护进程.md) | 五 | P1 | 2–3 周 | 极窄接口的登录后台守护（HKCU，默认关闭） | ☐ |
 | 18 | [内存优化 P2 · 发布准备](docs/steps/18-内存优化P2-发布准备.md) | 五 | P1 | 1–1.5 周 | 白名单/签名/灰度/回滚预案（或决定不发） | ☐ |
@@ -190,6 +190,7 @@
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-21 | v2.7 | **步骤 15 已落地**：新增 `community.play`（`PlayRecordStore` 数据层：schema 1、400 天裁剪、12 h 截断、原子写/损坏隔离；`PlayRecordTracker`：08 事件串行链、阈值判定、残留会话估算恢复）与 `community.dashboard.builtin` 四卡（recent-worlds / storage / activity-calendar / health-check + Provider 扩到 10 个 descriptor）；`ActivityCalendarWidget` 5 档 CSS 类与 `community-activity-estimated`（CSS 归 19）、`HealthCheckWidget` 只读 `last.json`/复查、`StorageWidget` 复用 `MemoryStatusBar`、`RecentWorldsWidget` quick-play；`DashboardPane.appendMissingDefaults()` 仅对无 `updatedAt` 布局追加；3 份语言各 47 个新 key；`:HMCL:compileJava`、`:HMCL:checkTranslations`、community 测试 **120 全绿**、`shadowJar` 10,830,395 B；文档 15 §10/14 §5.2/19 CSS 同步 |
 | 2026-10-21 | v2.6 | **步骤 14 已落地**：新增 `community.dashboard.builtin`（`BuiltinWidgets` + 启动/置顶/内存/崩溃/Java/网络六卡 + `CommunityWidgetsProvider` + `META-INF/services`）；`DashboardConfig.firstRun` 修复“用户清空后回升默认布局”；启动卡只调 `Versions.launch` 并只信 08 事件；崩溃卡按高度显示 2/4 条；内存卡紧凑单行指标；41 个 i18n key ×3；修复启动任务失败 session 残留（08 §10.7：`LAUNCH_FAILED` + `LauncherHelper` 锚点 E）；`:HMCL:compileJava`、`:HMCL:checkTranslations`、community 测试 **108 全绿**、`shadowJar` 10,775,759 B；文档 14 §13/08 §10.7/00 §13 #11 同步 |
 | 2026-10-21 | v2.5 | **步骤 12 已落地**：新增 `community.memory`（`MemoryReclaimer` 单例守护调度、`MemoryMetrics`、`MemoryBaseSettings`、`CommunityMemorySettingsPane`、`CommunityMemorySettingsProvider`）；6 个触发条件（开关/游戏稳定运行/间隔/可归还量/启动保护/`DisableExplicitGC`）、慢回收 ×3 降频（上限 60 分钟）、连续两次 >1s 自动停用（`autoDisabled` + `pause_too_long`）；手动归还 60s 冷却；设置存 `community-settings.json` 的 `memoryBase` 段并保留未知字段；Bootstrap 注册回收器，设置面板新增「内存」分组（ORDER=16）；3 份语言各 21 个 key。`compileJava` 通过，community 测试 **102 个全绿**（本步新增 20），`shadowJar` 10,733,144 B 且 `Main-Class` 未变；`ec7c55e6f` → `1c16cc329`。12 §10 记录 7 条偏差、限制与 DoD 状态（三平台/GUI 未验） |
 | 2026-10-21 | v2.4 | **步骤 11 已落地**：新增 `community.jvm`（`JvmPreset`/`JvmMemoryOptions`/`JvmArgValidator`/`JvmArgWriter`/`JvmWizardStore`/`JvmPresetWizard`），11 条冲突规则（文档 8 条 + ZGC 版本/位宽/小堆/物理内存）、唯一写入口走 `GameSettings.Instance.jvmOptionsProperty()`、状态存 `community-settings.json` 的 `jvmWizard` 段；`noOptimizingJVMOptions=true` 时提供“补齐完整 G1 参数”勾选；3 份语言各 47 个 `community.jvm.*` key。`compileJava` 通过，community 测试 **82 个全绿**，`shadowJar` 10,711,716 B 且 `Main-Class` 未变；`f51e38183`/`a54a05502` → `35c42aa11`。11 §10 记录 API、7 条偏差与下游约束 |
