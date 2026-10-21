@@ -32,16 +32,20 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.community.CommunityMetadata;
+import org.jackhuang.hmcl.community.migration.OfficialDataImporter;
+import org.jackhuang.hmcl.community.migration.OfficialDataLocator;
 import org.jackhuang.hmcl.community.update.CommunityUpdateDialog;
 import org.jackhuang.hmcl.community.update.CommunityUpdateNotifier;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
+import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -312,7 +316,7 @@ public final class CommunitySettingsPanel {
         return box;
     }
 
-    /// 构造 `data` 分组；旧数据导入入口由步骤 06 追加。
+    /// 构造 `data` 分组：展示两个根目录、扫描官方 HMCL 数据、显式导入（步骤 06）。
     ///
     /// @return 内容
     @NotNull
@@ -326,15 +330,97 @@ public final class CommunitySettingsPanel {
                 pathRow("community.settings.data.path.local", local),
                 pathRow("community.settings.data.path.user", user));
 
+        Label status = new Label(i18n("community.settings.data.scanning"));
+        status.setWrapText(true);
+        status.getStyleClass().add("subtitle-label");
+
+        JFXButton rescan = new JFXButton(i18n("community.settings.data.rescan"));
+        rescan.getStyleClass().add("dialog-accept");
         JFXButton importButton = new JFXButton(i18n("community.settings.data.import"));
-        importButton.setDisable(true);
         importButton.getStyleClass().add("dialog-accept");
+        importButton.setDisable(true);
         Label importHelp = new Label(i18n("community.settings.data.import.help"));
         importHelp.setWrapText(true);
         importHelp.getStyleClass().add("subtitle-label");
 
-        box.getChildren().addAll(importButton, importHelp);
+        box.getChildren().addAll(status, new HBox(8, rescan, importButton), importHelp);
+
+        // 当前可供导入的来源（最后一个检测到的目录）。
+        Path[] detected = new Path[1];
+
+        Runnable refresh = () -> {
+            status.setText(i18n("community.settings.data.scanning"));
+            importButton.setDisable(true);
+            Schedulers.io().execute(() -> {
+                OfficialDataLocator.ScanResult result = OfficialDataLocator.scan();
+                Schedulers.javafx().execute(() -> {
+                    if (result.detected() && !result.sources().isEmpty()) {
+                        detected[0] = result.sources().get(result.sources().size() - 1);
+                        status.setText(i18n("community.settings.data.detected", detected[0].toString()));
+                        importButton.setDisable(false);
+                    } else {
+                        detected[0] = null;
+                        status.setText(i18n("community.settings.data.not_detected"));
+                    }
+                });
+            });
+        };
+
+        rescan.setOnAction(event -> refresh.run());
+        importButton.setOnAction(event -> {
+            Path source = detected[0];
+            if (source == null) {
+                return;
+            }
+            MessageDialogPane pane = new MessageDialogPane.Builder(
+                    i18n("community.settings.data.confirm", source.toString()),
+                    i18n("community.settings.data.title"),
+                    MessageDialogPane.MessageType.QUESTION)
+                    .addAction(i18n("community.settings.data.import"), () -> runImport(source, importButton, status))
+                    .addCancel(i18n("community.dashboard.cancel"), null)
+                    .build();
+            Controllers.dialog(pane);
+        });
+
+        refresh.run();
         return box;
+    }
+
+    /// 在 IO 线程执行导入，完成后回到 FX 线程展示结果。
+    ///
+    /// @param source       官方数据根
+    /// @param importButton 导入按钮（期间禁用）
+    /// @param status       状态标签
+    private static void runImport(@NotNull Path source,
+                                  @NotNull JFXButton importButton,
+                                  @NotNull Label status) {
+        importButton.setDisable(true);
+        status.setText(i18n("community.settings.data.importing"));
+        Schedulers.io().execute(() -> {
+            try {
+                OfficialDataImporter.ImportResult result = OfficialDataImporter.importDefaults(source);
+                Schedulers.javafx().execute(() -> {
+                    importButton.setDisable(false);
+                    String text = i18n("community.settings.data.imported",
+                            result.copied(), result.skipped());
+                    if (!result.warnings().isEmpty()) {
+                        text += "\n" + String.join("\n", result.warnings());
+                    }
+                    status.setText(text);
+                    Controllers.dialog(new MessageDialogPane.Builder(
+                            text, i18n("community.settings.data.title"),
+                            MessageDialogPane.MessageType.INFO)
+                            .ok(null)
+                            .build());
+                });
+            } catch (IOException | RuntimeException e) {
+                LOG.warning("Failed to import HMCL data from " + source, e);
+                Schedulers.javafx().execute(() -> {
+                    importButton.setDisable(false);
+                    status.setText(i18n("community.settings.data.import_failed"));
+                });
+            }
+        });
     }
 
     /// 构造一条“路径 + 打开目录”行。

@@ -18,6 +18,7 @@
 package org.jackhuang.hmcl.community;
 
 import org.jackhuang.hmcl.Main;
+import org.jackhuang.hmcl.community.env.CommunityPaths;
 import org.jetbrains.annotations.NotNullByDefault;
 
 /// LMCL 的进程入口（shadowJar 的 `Main-Class`）。
@@ -68,6 +69,12 @@ public final class CommunityBootstrap {
             // 外部 -D 覆盖一律无效（见步骤 05 §4.2）。
             System.setProperty(PROP_UPDATE_SOURCE, CommunityMetadata.WEBSITE + UPDATE_SOURCE_PATH);
             System.setProperty(PROP_DISABLE_INTEGRITY, "false");
+        }
+
+        // 路径属性必须同样早于 Metadata 初始化（步骤 06）：计算 LMCL 自己的两个数据根。
+        // 显式覆盖（-Dhmcl.dir/-Dhmcl.home/HMCL_LOCAL_HOME/HMCL_USER_HOME）优先，不覆盖。
+        if (!Boolean.getBoolean(CommunityPaths.PROP_PATHS_EXPLICIT)) {
+            CommunityPaths.applySystemProperties();
         }
 
         Main.main(args);
