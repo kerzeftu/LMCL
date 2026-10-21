@@ -142,7 +142,7 @@ public record Preference(@Nullable DiscoJavaDistribution distribution, boolean m
 ### 3.4 与步骤 08 体检的联动
 
 - 体检的 `java.compat` 检查只做"已选 Java 是否满足版本要求"，**不推荐发行版**（避免启动路径耦合网络）；
-- 若体检发现"无合适 Java"，提示文案附带按钮"打开 Java 推荐面板"：点击后滚动定位/展开 14 的 `java-recommend` 卡片（不新增根导航、不改 `RootPage`）；
+- 若体检发现"无合适 Java"，提示文案附带按钮"打开 Java 推荐面板"：点击后滚动定位/展开 14 的 `java-recommend` 卡片（不新增根导航；入口由 v3.1 的 `HomePane` 提供）；
 - 不在启动链上发起任何 Java 列表网络请求。
 
 ### 3.5 新增 i18n key
