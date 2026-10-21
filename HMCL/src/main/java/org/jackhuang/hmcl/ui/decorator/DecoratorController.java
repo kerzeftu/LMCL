@@ -27,6 +27,7 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorDnD;
+import org.jackhuang.hmcl.community.ui.CommunitySideBar;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.DialogUtils;
@@ -46,16 +47,23 @@ import static org.jackhuang.hmcl.ui.FXUtils.onEscPressed;
 public class DecoratorController {
     private final Decorator decorator;
     private final Navigator navigator;
+    private final CommunitySideBar sidebar;
 
     public DecoratorController(Stage stage, Node mainPage) {
         decorator = new Decorator(stage);
         decorator.titleTransparentProperty().bind(Themes.titleBarTransparentProperty());
 
+        sidebar = new CommunitySideBar();
         navigator = new Navigator();
         navigator.setOnNavigated(this::onNavigated);
         navigator.init(mainPage);
+        sidebar.setActive(mainPage);
 
-        decorator.getContent().setAll(navigator);
+        HBox shell = new HBox(sidebar, navigator);
+        shell.setFillHeight(true);
+        HBox.setHgrow(navigator, Priority.ALWAYS);
+        navigator.setMaxWidth(Double.MAX_VALUE);
+        decorator.getContent().setAll(shell);
         decorator.onCloseNavButtonActionProperty().set(e -> close());
         decorator.onBackNavButtonActionProperty().set(e -> back());
         decorator.onRefreshNavButtonActionProperty().set(e -> refresh());
@@ -176,6 +184,8 @@ public class DecoratorController {
     private void onNavigated(Navigator.NavigationEvent event) {
         if (event.getSource() != this.navigator) return;
         Node to = event.getNode();
+
+        sidebar.setActive(to);
 
         if (to instanceof Refreshable) {
             decorator.canRefreshProperty().bind(((Refreshable) to).refreshableProperty());

@@ -304,16 +304,30 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
         getChildren().addAll(updatePane, launchPane);
 
-        // LMCL: community dashboard sits at the bottom of the StackPane; upstream
-        // children (update bubble, launch button) stay on top and keep working.
+        // LMCL: the community home must be the topmost child, otherwise the
+        // full-size announcement overlay (kept by upstream after closing) swallows
+        // mouse events for every community card. The update bubble and launch
+        // button live in the top/bottom strips outside the home's margins, so they
+        // are brought back to front explicitly and stay usable.
         javafx.scene.Node communityDashboard =
                 org.jackhuang.hmcl.community.dashboard.CommunityDashboard.mount(this);
         if (communityDashboard != null) {
-            getChildren().add(0, communityDashboard);
+            getChildren().add(communityDashboard);
             javafx.scene.layout.StackPane.setAlignment(
                     communityDashboard, javafx.geometry.Pos.TOP_LEFT);
             javafx.scene.layout.StackPane.setMargin(
                     communityDashboard, new javafx.geometry.Insets(56, 0, 96, 0));
+
+            // The nightly announcement is an upstream full-screen overlay whose
+            // empty content still has pickOnBounds=true; the community home
+            // replaces it, so disable it instead of leaving an invisible shield.
+            if (announcementPane != null) {
+                announcementPane.setVisible(false);
+                announcementPane.setManaged(false);
+            }
+
+            updatePane.toFront();
+            launchPane.toFront();
         }
     }
 

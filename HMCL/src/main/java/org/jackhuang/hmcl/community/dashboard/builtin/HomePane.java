@@ -29,13 +29,11 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.stage.Window;
 import javafx.util.Duration;
 import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.community.dashboard.DashboardConfig;
@@ -54,10 +52,7 @@ import org.jackhuang.hmcl.community.update.CommunityUpdateNotifier;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.task.Schedulers;
-import org.jackhuang.hmcl.terracotta.TerracottaMetadata;
 import org.jackhuang.hmcl.ui.Controllers;
-import org.jackhuang.hmcl.ui.FXUtils;
-import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.account.AccountAdvancedListItem;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
@@ -97,28 +92,31 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 更新提示只尝试一次（与旧 `DashboardPane` 的静态去重一致）。
     private static final AtomicBoolean UPDATE_PROMPTED = new AtomicBoolean();
 
-    /// 主列组件及固定高度（像素）。
-    private static final List<Slot> MAIN_SLOTS = List.of(
+    /// 左信息栏组件及最小高度（像素）。
+    private static final List<Slot> INFO_SLOTS = List.of(
+            new Slot("activity-calendar", 318),
+            new Slot("recent-worlds", 272));
+
+    /// 右实例栏组件及最小高度（像素）。
+    private static final List<Slot> INSTANCE_SLOTS = List.of(
             new Slot("launch", 168),
             new Slot("pinned-instances", 188),
-            new Slot("recent-worlds", 272),
             new Slot("storage", 144),
-            new Slot("java-recommend", 168));
-
-    /// 右栏组件及固定高度（像素）。
-    private static final List<Slot> RAIL_SLOTS = List.of(
-            new Slot("activity-calendar", 318),
+            new Slot("java-recommend", 168),
             new Slot("memory", 158),
+            new Slot("snapshot", 176),
             new Slot("crash-history", 176),
             new Slot("health-check", 154),
-            new Slot("network", 142),
-            new Slot("snapshot", 176));
+            new Slot("network", 142));
 
-    /// 右栏宽度（像素）。
-    private static final int RAIL_WIDTH = 340;
+    /// 左信息栏宽度（像素）。
+    private static final int INFO_WIDTH = 340;
 
-    /// 主列/右栏间距（像素）。
+    /// 主列/信息栏间距（像素）。
     private static final int COLUMN_GAP = 16;
+
+    /// 内容底部留白，避免最后一张卡贴住滚动区边缘。
+    private static final int BOTTOM_PADDING = 24;
 
     /// 首页。
     private final MainPage mainPage;
@@ -135,11 +133,11 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 当前已创建的组件。
     private final Map<String, DashboardWidget> widgets = new LinkedHashMap<>();
 
-    /// 主列。
-    private final VBox mainColumn = new VBox(12);
+    /// 左信息栏（账号、游玩记录）。
+    private final VBox infoColumn = new VBox(12);
 
-    /// 右栏。
-    private final VBox railColumn = new VBox(12);
+    /// 右实例栏（启动、置顶实例、存储、Java、内存、快照、崩溃、体检、网络）。
+    private final VBox instanceColumn = new VBox(12);
 
     /// 运行状态文案。
     private final Label runStatus = new Label();
@@ -316,7 +314,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         Controllers.dialog(root);
     }
 
-    /// 构建顶部：问候、运行状态、页面入口、账户与设置。
+    /// 构建顶部：问候与运行状态。
+    ///
+    /// 实例/下载/设置/账户入口已迁移到全局 `CommunitySideBar`，页头不再重复放按钮。
     @NotNull
     private HBox buildHeader() {
         greeting.setText(greetingText());
@@ -327,36 +327,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         statusRow.setAlignment(Pos.CENTER_LEFT);
         VBox titles = new VBox(4, greeting, statusRow);
 
-        JFXButton instances = BuiltinWidgets.borderButton(i18n("community.home.nav.instances"), this::openInstances);
-        JFXButton download = BuiltinWidgets.borderButton(i18n("community.home.nav.download"), this::openDownloads);
-        JFXButton settings = BuiltinWidgets.borderButton(i18n("community.home.nav.settings"), this::openLauncherSettings);
-
-        MenuButton more = new MenuButton(i18n("community.home.nav.more"));
-        more.getStyleClass().add("dialog-cancel");
-        more.getItems().addAll(
-                menuItem("community.home.more.community", this::openCommunitySettings),
-                menuItem("community.home.more.launcher", this::openLauncherSettings),
-                menuItem("community.home.more.terracotta", this::openTerracotta),
-                menuItem("community.home.more.feedback", this::openFeedback));
-
-        HBox nav = new HBox(6, instances, download, settings, more);
-        nav.setAlignment(Pos.CENTER_RIGHT);
-
-        AccountAdvancedListItem accountItem = new AccountAdvancedListItem();
-        accountItem.accountProperty().bind(Accounts.selectedAccountProperty());
-        accountItem.setOnAction(event -> openAccounts());
-        accountItem.setPrefWidth(220);
-        accountItem.setMinWidth(170);
-        accountItem.setMaxWidth(240);
-        accountItem.setPrefHeight(46);
-
-        JFXButton communitySettings = new JFXButton();
-        communitySettings.setGraphic(SVG.SETTINGS.createIcon(18));
-        communitySettings.getStyleClass().add("dialog-cancel");
-        communitySettings.setOnAction(event -> openCommunitySettings());
-        FXUtils.installFastTooltip(communitySettings, i18n("community.home.more.community"));
-
-        HBox header = new HBox(10, titles, BuiltinWidgets.spacer(), nav, accountItem, communitySettings);
+        HBox header = new HBox(10, titles, BuiltinWidgets.spacer());
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(0, 0, 2, 0));
         return header;
@@ -365,14 +336,17 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 构建滚动区域（只执行一次）。
     @NotNull
     private ScrollPane buildScroll() {
-        mainColumn.setFillWidth(true);
-        HBox.setHgrow(mainColumn, Priority.ALWAYS);
-        railColumn.setFillWidth(true);
-        railColumn.setPrefWidth(RAIL_WIDTH);
-        railColumn.setMinWidth(300);
-        railColumn.setMaxWidth(380);
+        infoColumn.setFillWidth(true);
+        infoColumn.setPrefWidth(INFO_WIDTH);
+        infoColumn.setMinWidth(300);
+        infoColumn.setMaxWidth(380);
+
+        instanceColumn.setFillWidth(true);
+        instanceColumn.setMinWidth(0);
+        HBox.setHgrow(instanceColumn, Priority.ALWAYS);
 
         scroll.setFitToWidth(true);
+        scroll.setPannable(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scroll.getStyleClass().add("edge-to-edge");
@@ -380,7 +354,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         return scroll;
     }
 
-    /// 重建主列与右栏。
+    /// 重建左信息栏与右实例栏。
     private void rebuildBody() {
         for (DashboardWidget widget : widgets.values()) {
             try {
@@ -390,32 +364,34 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
             }
         }
         widgets.clear();
-        mainColumn.getChildren().clear();
-        railColumn.getChildren().clear();
+        infoColumn.getChildren().clear();
+        instanceColumn.getChildren().clear();
 
-        railColumn.getChildren().add(buildAccountCard());
-
-        for (Slot slot : MAIN_SLOTS) {
-            addWidget(mainColumn, slot.id(), slot.height());
+        infoColumn.getChildren().add(buildAccountCard());
+        for (Slot slot : INFO_SLOTS) {
+            addWidget(infoColumn, slot.id(), slot.height());
         }
-        for (Slot slot : RAIL_SLOTS) {
-            addWidget(railColumn, slot.id(), slot.height());
+        for (Slot slot : INSTANCE_SLOTS) {
+            addWidget(instanceColumn, slot.id(), slot.height());
         }
 
-        if (mainColumn.getChildren().isEmpty() && widgets.isEmpty()) {
+        if (instanceColumn.getChildren().isEmpty()) {
             Label empty = BuiltinWidgets.body(i18n("community.home.empty"));
             empty.getStyleClass().add("subtitle-label");
-            mainColumn.getChildren().add(empty);
+            instanceColumn.getChildren().add(empty);
         }
 
-        HBox body = new HBox(COLUMN_GAP, mainColumn, railColumn);
+        HBox body = new HBox(COLUMN_GAP, infoColumn, instanceColumn);
         body.setAlignment(Pos.TOP_LEFT);
-        body.setPadding(new Insets(0, 0, 16, 0));
+        body.setPadding(new Insets(0, 0, BOTTOM_PADDING, 0));
         scroll.setContent(body);
     }
 
     /// 添加一个组件；未启用/未登记时跳过。
-    private void addWidget(@NotNull VBox column, @NotNull String id, double height) {
+    ///
+    /// 槽位高度只是最小高度：内容更长时组件按自身 `prefHeight` 增高，
+    /// 避免固定高度裁掉按钮/文字；页面滚动由外层 `ScrollPane` 负责。
+    private void addWidget(@NotNull VBox column, @NotNull String id, double minHeight) {
         if (!isEnabled(id)) {
             return;
         }
@@ -423,8 +399,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         if (widget == null) {
             return;
         }
-        widget.setPrefHeight(height);
-        widget.setMinHeight(height);
+        widget.setMinHeight(minHeight);
+        widget.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        widget.setMaxHeight(Region.USE_PREF_SIZE);
         widget.setMaxWidth(Double.MAX_VALUE);
         widgets.put(id, widget);
         column.getChildren().add(widget);
@@ -440,12 +417,13 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
         AccountAdvancedListItem item = new AccountAdvancedListItem();
         item.accountProperty().bind(Accounts.selectedAccountProperty());
-        item.setOnAction(event -> openAccounts());
+        item.setOnAction(event -> Controllers.navigate(Controllers.getAccountListPage()));
         item.setPrefHeight(48);
 
         VBox card = new VBox(6, title, item);
         card.getStyleClass().add("card");
-        card.setPrefWidth(RAIL_WIDTH - 8);
+        card.setMaxWidth(Double.MAX_VALUE);
+        card.setMinHeight(Region.USE_PREF_SIZE);
         return card;
     }
 
@@ -592,73 +570,10 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         });
     }
 
-    /// 打开实例管理。
-    private void openInstances() {
-        Controllers.navigate(Controllers.getGameListPage());
-    }
-
-    /// 打开下载页。
-    private void openDownloads() {
-        Controllers.getDownloadPage().showGameDownloads();
-        Controllers.navigate(Controllers.getDownloadPage());
-    }
-
-    /// 打开启动器设置。
-    private void openLauncherSettings() {
-        try {
-            HMCLGameRepository repository = currentRepository();
-            if (repository != null) {
-                Controllers.getSettingsPage().showGameSettings(repository);
-            }
-            Controllers.navigate(Controllers.getSettingsPage());
-        } catch (Throwable e) {
-            LOG.warning("Failed to open launcher settings", e);
-        }
-    }
-
-    /// 打开账户列表。
-    private void openAccounts() {
-        Controllers.navigate(Controllers.getAccountListPage());
-    }
-
-    /// 打开社区设置面板。
-    private void openCommunitySettings() {
-        CommunitySettingsPanel.open(getWindow());
-    }
-
-    /// 打开多人游戏；未加载 provider 时给出与上游一致的提示。
-    private void openTerracotta() {
-        if (TerracottaMetadata.PROVIDER != null) {
-            Controllers.navigate(Controllers.getTerracottaPage());
-        } else {
-            Controllers.dialog(i18n("terracotta.unsupported"), null, MessageDialogPane.MessageType.WARNING);
-        }
-    }
-
-    /// 打开反馈页。
-    private void openFeedback() {
-        Controllers.getSettingsPage().showFeedback();
-        Controllers.navigate(Controllers.getSettingsPage());
-    }
-
-    /// 当前窗口；`getScene()` 尚不可用时返回 `null`。
-    @Nullable
-    private Window getWindow() {
-        return getScene() == null ? null : getScene().getWindow();
-    }
-
-    /// 创建菜单项。
-    @NotNull
-    private static MenuItem menuItem(@NotNull String key, @NotNull Runnable action) {
-        MenuItem item = new MenuItem(i18n(key));
-        item.setOnAction(event -> action.run());
-        return item;
-    }
-
-    /// 主列/右栏中的一个组件位。
+    /// 左信息栏/右实例栏中的一个组件位。
     ///
     /// @param id 组件 id
-    /// @param height 固定高度（像素）
+    /// @param height 最小高度（像素）
     private record Slot(@NotNull String id, double height) {
     }
     /// 启动时检查一次更新（仅当配置了仓库）；只提示、不下载。

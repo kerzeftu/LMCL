@@ -86,3 +86,46 @@
     -fx-border-style: dashed;
     -fx-border-radius: 3;
 }
+
+/* Global 64px icon sidebar (Axolotl-inspired). */
+.community-sidebar {
+    -fx-background-color: -monet-surface-container-low;
+    -fx-border-color: transparent -monet-outline-variant transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.community-sidebar-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 999;
+    -fx-padding: 0;
+}
+
+.community-sidebar-button .svg {
+    -fx-fill: -monet-on-surface-variant;
+}
+
+.community-sidebar-button:hover {
+    -fx-background-color: -monet-surface-container-high;
+}
+
+.community-sidebar-button.active {
+    -fx-background-color: -monet-primary-container;
+}
+
+.community-sidebar-button.active .svg {
+    -fx-fill: -monet-on-primary-container;
+}
+
+.community-sidebar-menu {
+    -fx-background-color: -monet-surface-container-high;
+    -fx-background-radius: 8;
+    -fx-padding: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 12, 0.2, 0, 4);
+}
+
+.community-sidebar-menu-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-text-fill: -monet-on-surface;
+    -fx-padding: 8 14 8 14;
+}
