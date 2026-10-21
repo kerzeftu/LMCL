@@ -177,6 +177,10 @@ public final class CommunitySideBar extends VBox {
     private void showOtherMenu() {
         VBox menu = new VBox(2);
         menu.getStyleClass().add("community-sidebar-menu");
+        // JFXPopup creates a separate scene; attach the community stylesheet to
+        // the popup root so its menu items do not fall back to unreadable
+        // defaults (grey text on a dark popup background).
+        CommunityStyles.apply(menu);
 
         JFXPopup popup = new JFXPopup(menu);
         popup.setAutoHide(true);
@@ -200,6 +204,9 @@ public final class CommunitySideBar extends VBox {
                              @NotNull JFXPopup popup, @NotNull Runnable action) {
         JFXButton item = new JFXButton(i18n(key));
         item.getStyleClass().add("community-sidebar-menu-item");
+        // Inline fallback: the popup scene does not inherit the launcher theme,
+        // so keep the label readable even if the stylesheet is unavailable.
+        item.setStyle("-fx-text-fill: #ffffff;");
         item.setMaxWidth(Double.MAX_VALUE);
         item.setAlignment(Pos.CENTER_LEFT);
         item.setOnAction(event -> {

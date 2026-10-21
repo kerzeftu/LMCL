@@ -116,16 +116,23 @@
     -fx-fill: -monet-on-primary-container;
 }
 
+/* The "other" menu lives in its own JFXPopup scene, so theme variables such
+   as -monet-* are not guaranteed there. Use literal dark/white colours. */
 .community-sidebar-menu {
-    -fx-background-color: -monet-surface-container-high;
+    -fx-background-color: #26272b;
     -fx-background-radius: 8;
     -fx-padding: 6;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 12, 0.2, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.38), 14, 0.2, 0, 4);
 }
 
 .community-sidebar-menu-item {
     -fx-background-color: transparent;
     -fx-background-radius: 6;
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: #ffffff;
     -fx-padding: 8 14 8 14;
+}
+
+.community-sidebar-menu-item:hover,
+.community-sidebar-menu-item:focused {
+    -fx-background-color: rgba(255, 255, 255, 0.14);
 }

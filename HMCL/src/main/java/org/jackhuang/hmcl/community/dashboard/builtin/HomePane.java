@@ -114,6 +114,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 主列/信息栏间距（像素）。
     private static final int COLUMN_GAP = 16;
 
+    /// 主页四周留白（像素）；避免卡片/滚动条紧贴窗口边框。
+    private static final Insets HOME_PADDING = new Insets(10, 12, 12, 12);
+
     /// 首页。
     private final MainPage mainPage;
 
@@ -188,7 +191,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         setSpacing(12);
         setFillWidth(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        setPadding(Insets.EMPTY);
+        setPadding(HOME_PADDING);
 
         if (!config.readOnly() && config.items().isEmpty()) {
             config.setItems(defaultItems());
