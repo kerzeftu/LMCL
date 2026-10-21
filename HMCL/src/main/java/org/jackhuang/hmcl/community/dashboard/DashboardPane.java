@@ -130,7 +130,7 @@ public final class DashboardPane extends VBox
         this.registry = WidgetRegistry.load();
 
         // 首次启动：没有配置文件时写入默认布局；已存在但用户清空时保持清空。
-        if (config.items().isEmpty() && !registry.isEmpty()) {
+        if (config.firstRun() && config.items().isEmpty() && !registry.isEmpty()) {
             config.setItems(defaultItems());
             persist();
         }

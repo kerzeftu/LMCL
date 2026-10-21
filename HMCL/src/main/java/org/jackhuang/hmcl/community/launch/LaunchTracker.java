@@ -203,6 +203,25 @@ public final class LaunchTracker {
         emit(LaunchEvent.exit(exitEventKind(exitType), versionId, exitCode, exitType, alive, session.gameVersion));
     }
 
+    /// 处理“启动任务链失败”（游戏进程尚未创建）。
+    ///
+    /// 失败与会话移除是同一个动作：否则首页启动卡会一直停留在“启动中”。
+    ///
+    /// @param versionId 实例 id
+    public void onLaunchFailed(@NotNull String versionId) {
+        Session session = sessions.remove(versionId);
+        if (session != null) {
+            synchronized (session) {
+                session.exited = true;
+            }
+            if (session.thresholdFuture != null) {
+                session.thresholdFuture.cancel(false);
+                session.thresholdFuture = null;
+            }
+        }
+        emit(LaunchEvent.of(LaunchEventKind.LAUNCH_FAILED, versionId));
+    }
+
     /// 返回该实例是否有正在进行的启动（未退出）。
     ///
     /// @param versionId 实例 id
