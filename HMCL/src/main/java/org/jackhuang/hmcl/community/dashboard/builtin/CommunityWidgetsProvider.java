@@ -27,12 +27,15 @@ import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
-/// 内置十张卡片的组件工厂（步骤 14 的 P0 六卡 + 步骤 15 的 P1/P2 四卡）。
+/// 内置十一张卡片的组件工厂（步骤 14 的 P0 六卡 + 步骤 15 的 P1/P2 四卡 + 步骤 16 的快照卡）。
 ///
 /// 通过 `META-INF/services/org.jackhuang.hmcl.community.dashboard.WidgetProvider` 注册。
 /// 描述顺序与默认布局一致：启动、置顶实例、内存、崩溃历史、Java、网络、最近存档、存储、健康检查、游玩日历。
 @NotNullByDefault
 public final class CommunityWidgetsProvider implements WidgetProvider {
+
+    /// 快照卡 id。
+    public static final String ID_SNAPSHOT = "snapshot";
 
     /// 启动卡 id。
     public static final String ID_LAUNCH = "launch";
@@ -70,6 +73,7 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
             new DashboardWidgetDescriptor(ID_PINNED, "community.pinned.title", null, 2, 1, 20),
             new DashboardWidgetDescriptor(ID_MEMORY, "community.memory.title", null, 1, 1, 30),
             new DashboardWidgetDescriptor(ID_CRASH, "community.crash.title", null, 1, 1, 40),
+            new DashboardWidgetDescriptor(ID_SNAPSHOT, "community.snapshot.title", null, 2, 1, 45),
             new DashboardWidgetDescriptor(ID_JAVA, "community.java.title", null, 1, 1, 50),
             new DashboardWidgetDescriptor(ID_NETWORK, "community.network.title", null, 1, 1, 60),
             new DashboardWidgetDescriptor(ID_RECENT_WORLDS, "community.worlds.title", null, 2, 1, 70),
@@ -105,6 +109,7 @@ public final class CommunityWidgetsProvider implements WidgetProvider {
             case ID_PINNED -> new PinnedInstancesWidget(descriptor, context);
             case ID_MEMORY -> new MemoryWidget(descriptor, context);
             case ID_CRASH -> new CrashHistoryWidget(descriptor, context);
+            case ID_SNAPSHOT -> new SnapshotWidget(descriptor, context);
             case ID_JAVA -> new JavaRecommendWidget(descriptor, context);
             case ID_NETWORK -> new NetworkWidget(descriptor, context);
             case ID_RECENT_WORLDS -> new RecentWorldsWidget(descriptor, context);
