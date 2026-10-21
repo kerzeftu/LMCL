@@ -1,6 +1,10 @@
-# 步骤 22 · 其他页与“关于 LMCL”（第一阶段）
+# 步骤 22 · 其他页与“关于 LMCL”（v3.9 六 tab 完整版）
 
-> **阶段** 四（补丁） ｜ **优先级** P1 ｜ **工期** 0.5 周（约 4 人日） ｜ **前置** [21](21-主页重构与侧边栏移除.md) ｜ **后续** 阶段 E（账户/实例/社区设置内嵌，待另立步骤） ｜ **侵入点** `LauncherSettingsPage.java`（第 8 处）、`Controllers.java`（第 9 处）
+> **阶段** 四（补丁） ｜ **优先级** P1 ｜ **工期** 1 周（第一阶段 4 人日 + 阶段 E 约 2 人日） ｜ **前置** [21](21-主页重构与侧边栏移除.md) ｜ **后续** — ｜ **侵入点** `LauncherSettingsPage.java`（第 8 处）、`Controllers.java`（第 9 处）；阶段 E 无新增上游侵入
+>
+> **状态**：v3.9 六 tab 已实现并编译验证；GUI 未在 Windows 实机验证。
+>
+> **v3.9 变更（2026-10-22）**：第一阶段只做帮助/反馈/关于；用户 m10461 要求继续完成阶段 E 并移除主页 storage/memory，现将账户、实例、社区设置也内嵌为 tab，页面共六个 tab；设置页仍只保留五个 tab。
 
 ## 1. 目标
 
@@ -14,7 +18,11 @@
 4. `hmcl://settings/feedback` 等站内链接仍能打开反馈 tab，不出现死链；
 5. “关于 LMCL”包含产品信息、开发人员“指尖的宇宙 kerze”、上游 HMCL 全部致谢条目、捐赠者空态、更新检查与法律信息；
 6. 关于页读取 `thanks.json`、`lmcl-donors.json` 走 IO 线程，不阻塞 FX；
-7. 编译、翻译检查与 community 测试通过；GUI 需在 Windows 实机补验。
+7. 六 tab 均可切换：账户、实例、社区设置、帮助、反馈、关于 LMCL；
+8. 账户/实例内嵌可操作列表，实例页可切换游戏目录、新建实例、导入整合包、打开全局游戏设置；
+9. 社区设置以 `CommunitySettingsPanel.createInlineView(...)` 内嵌，不弹独立对话框；
+10. 主页固定槽位移除 storage/memory，共 9 卡；
+11. 编译、翻译检查与 community 测试通过；GUI 需在 Windows 实机补验。
 
 ## 2. 背景与用户决定
 
@@ -36,14 +44,15 @@ User said (m10129)：
 
 | 问题 | 决定 | 理由 |
 |---|---|---|
-| 第一阶段范围 | 只做帮助 / 反馈 / 关于 LMCL | 用户明确不接受“点击跳转完整页”，账户/实例/社区设置需先拆 Pane，暂缓 |
+| 第一阶段范围 | 帮助 / 反馈 / 关于 LMCL | 用户 m10129 批准先交付第一阶段 |
+| 阶段 E（v3.9） | 账户、实例、社区设置内嵌为 tab；内嵌页隐藏上游 200px 左侧导航 | 用户 m10461 要求继续完成；用户不接受“点击跳转完整页” |
 | 二级菜单 | 200 px `AdvancedListBox` + `TabHeader` | 与设置页/下载页一致，HMCL 原生视觉 |
 | 关于页数据 | 运行时读上游 `/assets/about/thanks.json`，不复制名单 | 上游新增贡献者后重新构建即可同步；避免双份真相 |
 | 捐赠者 | `assets/about/lmcl-donors.json` 空数组 + 空态文案，无按钮 | 用户要求“预留位置”，暂不加入口 |
 | 图标 | 暂用 `/assets/img/icon.png` | 用户后续提供 LMCL 图标再替换 |
 | 设置页 | 删除 help/feedback/about 三个 tab 和左侧支持分组 | 统一入口，避免两套关于页 |
 | 站内反馈链接 | `Controllers` 直接 `OtherPage.getInstance().showFeedback()` 后导航 | 只改设置页会被第二次 `navigate(getSettingsPage())` 覆盖 |
-| 账户/实例/社区设置 | 本阶段不做 | 最终必须内嵌 tab，需另立阶段 E |
+| 账户/实例/社区设置 | v3.9 内嵌 tab | 见 §3.1A；`AccountListPage`/`GameListPage` 只嵌入，不修改上游源码 |
 
 ## 3. 实现
 
@@ -53,12 +62,57 @@ User said (m10129)：
 
 - `@NotNullByDefault public final class OtherPage extends DecoratorAnimatedPage implements DecoratorPage, PageAware`；
 - 单例 `getInstance()`，只在 FX 线程创建；
-- 三个 `TabHeader.Tab`：`helpTab`（`HelpPage`）、`feedbackTab`（`FeedbackPage`）、`aboutTab`（`AboutLMCLPage`）；
-- `tab.select(aboutTab)` 作为默认 tab；
-- 左侧 `AdvancedListBox`：`startCategory("支持")`，三个 `addNavigationDrawerTab(...)`，`FXUtils.setLimitWidth(sideBar, 200)`；
-- `setLeft(sideBar); setCenter(transitionPane);`
-- `showHelp()/showFeedback()/showAbout()` 供站内链接/外部调用；
+- 六个 `TabHeader.Tab`：`accountsTab`（`AccountsPane`）、`instancesTab`（`InstancesPane`）、`communityTab`（`CommunitySettingsView`）、`helpTab`（`HelpPage`）、`feedbackTab`（`FeedbackPage`）、`aboutTab`（`AboutLMCLPage`）；
+- `tab.select(accountsTab)` 作为默认 tab；
+- 左侧 `AdvancedListBox` 两个分类：
+  - 管理：账户、实例、社区设置；
+  - 支持：帮助、反馈、关于 LMCL；
+- `FXUtils.setLimitWidth(sideBar, 200); setLeft(sideBar); setCenter(transitionPane);`
+- `showAccounts()/showInstances()/showCommunitySettings()/showHelp()/showFeedback()/showAbout()` 供站内链接/外部调用；
 - `onPageShown()/onPageHidden()` 转发给 `TabHeader`，保证 tab 生命周期。
+
+### 3.1A 内嵌账户、实例、社区设置（v3.9 阶段 E）
+
+#### `AccountsPane`
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/AccountsPane.java`
+
+- `public final class AccountsPane extends VBox`；`private final AccountListPage page = new AccountListPage();`
+- 隐藏上游页面自带导航：`page.getLeft().setManaged(false); page.getLeft().setVisible(false);`；列表填满：`page.setMaxSize(MAX_VALUE, MAX_VALUE); VBox.setVgrow(page, ALWAYS);`
+- 绑定上游模型：`page.accountsProperty().bindContent(Accounts.getAccounts())`、`page.selectedAccountProperty().bindBidirectional(Accounts.selectedAccountProperty())`、`page.authServersProperty().bindContentBidirectional(SettingsManager.getAuthlibInjectorServers())`；
+- 顶部工具栏（`FXUtils.newBorderButton`）：Microsoft 登录、离线登录、认证服务器 `MenuButton`；
+- 认证服务器菜单在 `setOnShowing` 时重建：每个服务器对应 `CreateAccountPane(server)`，分隔线，`account.injector.add` 打开 `AddAuthlibInjectorServerPane`；
+- 写保护：账户只读时走 `Controllers.confirmBackupAndOverwrite`；认证服务器只读时提示 `account.injector.readonly`。
+
+#### `InstancesPane`
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/InstancesPane.java`
+
+- `public final class InstancesPane extends VBox`；`private final GameListPage page = new GameListPage();`
+- 同样隐藏 `page.getLeft()`（游戏目录列表）并让 `GameList` 填满；
+- 顶部工具栏四个按钮：
+  - `install.new_game` → `Versions::addNewGame`；
+  - `install.modpack` → `Versions::importModpack`；
+  - `game_directory.manage` → `Controllers.navigate(new GameDirectoryPage(null))`；
+  - `settings.type.global.manage` → `page::modifyGlobalGameSettings`。
+
+#### `CommunitySettingsView`
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunitySettingsView.java`
+
+- `public final class CommunitySettingsView extends VBox`；
+- 标题 `community.settings.title` + `CommunitySettingsPanel.createInlineView(null)`；
+- `VBox.setVgrow(body, ALWAYS)`；不包 `DialogPane`，不弹窗。
+
+#### 支撑改动
+
+`CommunitySettingsPanel` 把原 `buildRoot` 的分组切换区抽成 `buildBody(List<SettingsSection>, @Nullable String initialSectionId)`，新增：
+
+```java
+public static Parent createInlineView(@Nullable String sectionId)
+```
+
+`createInlineView` 只在 FX 线程调用，执行 `collectSections()`、`CommunityStyles.apply(root)`、`buildBody`，返回可直接嵌入的 `HBox`。
 
 ### 3.2 “关于 LMCL”
 
@@ -127,12 +181,14 @@ navigate(OtherPage.getInstance());
 
 ### 3.6 i18n
 
-三份语言各新增 17 个 key：
+三份语言各新增 21 个 key：
 
 ```
 community.other.title
 community.other.category.support
 community.other.tab.help / feedback / about
+community.other.category.manage
+community.other.tab.accounts / instances / community
 community.about.title
 community.about.version_line
 community.about.developers
@@ -154,6 +210,9 @@ community.about.upstream.statement
 新增：
 
 - `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/OtherPage.java`
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/AccountsPane.java`（v3.9）
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/InstancesPane.java`（v3.9）
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunitySettingsView.java`（v3.9）
 - `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/about/AboutLMCLPage.java`
 - `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/about/AboutData.java`
 - `HMCL/src/main/resources/assets/about/lmcl-donors.json`
@@ -164,11 +223,14 @@ community.about.upstream.statement
 - `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunitySideBar.java`
 - `HMCL/src/main/java/org/jackhuang/hmcl/ui/main/LauncherSettingsPage.java`
 - `HMCL/src/main/java/org/jackhuang/hmcl/ui/Controllers.java`
-- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunitySettingsPanel.java`（删除 about 分组及构造入口）
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunitySettingsPanel.java`（删除 about 分组；v3.9 抽出 `buildBody` 并新增 `createInlineView`）
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/dashboard/builtin/HomePane.java`（v3.9：移除 storage 槽位；账户卡打开 `OtherPage.showAccounts()`）
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/dashboard/builtin/CommunityWidgetsProvider.java`（v3.9：注销 storage，9 卡）
+- 删除 `HMCL/src/main/java/org/jackhuang/hmcl/community/dashboard/builtin/StorageWidget.java`、`MemoryWidget.java`
 - 三份 `HMCL/src/main/resources/assets/lang/I18N*.properties`
 - `HMCL/src/main/resources/assets/css/community.css`（删除已废弃 popup 菜单规则）
 
-不改：`HelpPage`、`FeedbackPage`、`AboutPage`、`GameListPage`、`AccountListPage`。
+不改：`HelpPage`、`FeedbackPage`、`AboutPage`、`GameListPage`、`AccountListPage`（内嵌只隐藏 left，不修改源码）。
 
 ## 5. 验证
 
@@ -199,34 +261,67 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 
 | 文件 | 大小 | SHA-256 |
 |---|---|---|
-| `HMCL/build/libs/HMCL-3.16.1000.jar` | 11,168,252 B | `f9d599f6de461910ac03200e28740b5e11413bcaffaac6419f57c5bedf41c8ff` |
-| `HMCL/build/libs/HMCL-3.16.1000.exe` | 12,369,404 B | `3bde4127ee3c42eae26ea944faa2f5ba5af65df02391543299d3f3d532ef257b` |
+| `HMCL/build/libs/HMCL-3.16.1000.jar` | 11,165,823 B | `433f4fdae5d2e7bc5a5c11791a77e3cd4ac64fea06ffcdd37add0de8579c02d2` |
+| `HMCL/build/libs/HMCL-3.16.1000.exe` | 12,366,975 B | `4a34eef1411914137b932c136c691b317ad7479043402b02e7a3a32e5a24cdbd` |
 | stub | 1,201,152 B | `89b58fa02a12363051ec05ae344527b27734787582f2049c8d953482aa22b617` |
 
 断言：`exe[:len(stub)] == stub`、`exe[len(stub):] == jar`、`Main-Class=org.jackhuang.hmcl.community.CommunityBootstrap`。
 
-测试包：`dist/LMCL-3.16.1000-win-x64-other1.zip`，64,896,960 B，SHA-256 `6391112eba4774787464752e39d1cf060ba26997feb1bc73785df271f0a36ea0`。
+测试包：`dist/LMCL-3.16.1000-win-x64-other2.zip`，65,157,579 B，SHA-256 `f66c993f2a4d40e84d9511060fca876bb59e6feb1a7efe71235d14587d7b9c88`；旧 `other1` 已删除。
 
 ### 5.3 手工验收（Windows 实机，待补）
 
 - [ ] 双击 `LMCL.exe` 启动，Java 查找正常；
 - [ ] 左侧“其他”进入独立页，不弹菜单；主页/下载/设置 active 状态正确；
-- [ ] 三个 tab 切换，帮助/反馈内容可滚动；
-- [ ] 设置页只有五个 tab，默认 tab 正常；
+- [ ] 六个 tab 切换；账户列表可添加 Microsoft/离线账户，认证服务器菜单可打开；
+- [ ] 实例页可切换游戏目录、新建实例、导入整合包、打开全局游戏设置；
+- [ ] 内嵌账户/实例页在 1280×720 与 1920×1080 下无横向溢出，隐藏的 200px 导航不占位；
+- [ ] 社区设置 tab 内嵌显示 dashboard/data/download/java/memory 分组，不弹独立对话框；
+- [ ] 设置页只有游戏/Java/设置/个性化/下载五个 tab，默认 tab 正常；
 - [ ] `hmcl://settings/feedback` 或帮助页内的反馈链接打开“其他 → 反馈”；
 - [ ] 关于页：产品信息、开发人员、致谢全量、捐赠者空态、更新检查、法律信息；
-- [ ] 1280×720 与 1920×1080 无横向溢出；
+- [ ] 主页只有 9 卡，无 storage/memory；账户卡点击打开“其他 → 账户”；
 - [ ] 深色/浅色主题下头像与文字可读；
 - [ ] 返回主页/下载/设置后再次进入“其他”，tab 状态正常。
+
+## 6A. v3.9 阶段 E 实现记录（2026-10-22，m10461）
+
+### 6A.1 交付
+
+- `OtherPage` 六 tab：账户、实例、社区设置、帮助、反馈、关于 LMCL；默认账户；200 px 菜单分“管理/支持”。
+- `AccountsPane`：内嵌 `AccountListPage`（隐藏 left），绑定账户/选中账户/认证服务器；工具栏 Microsoft/离线/认证服务器菜单。
+- `InstancesPane`：内嵌 `GameListPage`（隐藏 left）；工具栏新建实例/导入整合包/游戏目录/全局游戏设置。
+- `CommunitySettingsView`：内嵌 `CommunitySettingsPanel.createInlineView(null)`。
+- `CommunitySettingsPanel`：抽出 `buildBody(List<SettingsSection>, @Nullable String)`，`buildRoot` 与 `createInlineView` 共用。
+- 主页：`HomePane` 删除 storage 槽位（9 卡），首页账户卡打开 `OtherPage.showAccounts()`；`CommunityWidgetsProvider` 注销 storage；删除 `StorageWidget.java`/`MemoryWidget.java`。
+- i18n：三份各新增 `community.other.category.manage`、`community.other.tab.accounts/instances/community`。
+
+### 6A.2 验证
+
+- `:HMCL:compileJava` 通过（仅 3 条既有 JavaFX `--add-exports` 警告）；
+- `:HMCL:checkTranslations` 通过；
+- community 测试 **135 / 0 failures / 0 errors / 0 skipped**；
+- `:HMCL:makeExecutables` 成功：jar **11,165,823 B**（`433f4fd…`）、exe **12,366,975 B**（`4a34eef1…`）、stub **1,201,152 B**（`89b58fa0…`）；`exe[:len(stub)]==stub`、`exe[len(stub):]==jar`；
+- `other2` zip **65,157,579 B**，SHA-256 `f66c993f…`；320 entries、`testzip=None`。
+
+### 6A.3 偏差
+
+1. `AccountListPage`/`GameListPage` 未改源码，只隐藏其 `left`；依赖上游 private skin 与固定 center 结构，上游升级需重新验证。
+2. 实例页目录菜单在 `selectedRepositoryProperty` 变化时重建；新建目录后需重新打开菜单刷新。
+3. 账户页认证服务器菜单每次 `setOnShowing` 重建，未做搜索/分组。
+4. 独立设置对话框 `CommunitySettingsPanel.open(...)` 仍保留，供侧栏齿轮/下载源按钮使用；内嵌视图与其共享 `buildBody`。
+5. GUI 未在 Windows 实机验证。
 
 ## 6. 实现偏差与已知问题
 
 1. 关于页致谢标题实际为“HMCL 贡献者致谢”，未使用方案里的“HMCL 项目与贡献者”；含义相近，但把社区伙伴也归入“贡献者”。
 2. 未在 Windows 实机验证；WSL2 无 DISPLAY/Wine，因此 GUI 层全部未点验。
 3. 图标仍为上游 `/assets/img/icon.png`；用户提供 LMCL 图标后需替换。
-4. 账户、实例、社区设置的内嵌 tab 未实现；本阶段不提供点击跳转，入口仍由主页与既有页面承担。
-5. `AboutLMCLPage` 的远程头像仍可能在 FX 线程 `new Image(url)`（与上游 `AboutPage` 相同）；当前 `thanks.json` 以内置资源为主，若未来出现远程头像需改为异步加载。
-6. `CommunitySettingsPanel` 删除 about 分组后，社区设置对话框不再提供源码/许可证入口；关于信息统一在 `OtherPage`。
+4. 账户、实例、社区设置的内嵌 tab 已在 v3.9 实现；`AccountListPage`/`GameListPage` 未修改源码，内嵌时只隐藏其 left 导航。
+5. 内嵌页依赖上游页面的私有 skin 与构造行为；上游升级若把 left 改为懒创建或改变 center 结构，需重新验证（当前基线 v3.16.4）。
+6. 实例页的目录切换菜单在 `GameDirectoryManager.selectedRepositoryProperty()` 变化时重建；新建目录后需重新打开菜单才刷新。
+7. `AboutLMCLPage` 的远程头像仍可能在 FX 线程 `new Image(url)`（与上游 `AboutPage` 相同）；当前 `thanks.json` 以内置资源为主，若未来出现远程头像需改为异步加载。
+8. `CommunitySettingsPanel` 删除 about 分组后，社区设置对话框不再提供源码/许可证入口；关于信息统一在 `OtherPage`。
 
 ## 7. 风险与回退
 
@@ -238,7 +333,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 | 远程头像阻塞 FX | 低 | 当前资源以内置路径为主；后续如需远程头像，改为 `Schedulers.io()` 预加载 |
 | 设置页默认 tab 改变 | 低 | 仍默认 game；实机确认 |
 
-回退：删除 `OtherPage`/`about` 包与 `lmcl-donors.json`，恢复 `CommunitySideBar.showOtherMenu()` 与设置页三个 tab，删除 `Controllers` 的反馈改道；代码侵入回到 7 处。测试包可回退到 `dist/LMCL-3.16.1000-win-x64-home3.zip`。
+回退：删除 `OtherPage`/`about` 包、`AccountsPane`/`InstancesPane`/`CommunitySettingsView` 与 `lmcl-donors.json`，恢复 `CommunitySideBar.showOtherMenu()` 与设置页三个 tab，删除 `Controllers` 的反馈改道；代码侵入回到 7 处。测试包可回退到 `dist/LMCL-3.16.1000-win-x64-home3.zip`。
 
 ## 8. 关联
 
@@ -246,4 +341,4 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 - [步骤 13 §3.10](13-首页组件化A-框架搭建.md)：`CommunitySettingsPanel` 扩展点（本步删除 about 分组）；
 - [步骤 19](19-MD3主题完善.md)：`CommunityStyles`；本页使用 HMCL 原生组件风格，未强制挂 `community.css`；
 - 方案：[修复方案-其他页面与关于LMCL.md](../修复方案-其他页面与关于LMCL.md)；
-- 代码提交与验证记录见[审查记录 §34](../审查记录-v3.16.4源码核对.md)。
+- 代码提交与验证记录见[审查记录 §34/§35](../审查记录-v3.16.4源码核对.md)。

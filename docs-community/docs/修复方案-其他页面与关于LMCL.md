@@ -1,10 +1,10 @@
 # 其他页面与“关于 LMCL”重构方案
 
-> 状态：**第一阶段已实施（2026-10-22，m10129）**。实现记录见[步骤 22](steps/22-其他页面与关于LMCL.md) §6 与[审查记录 §34](审查记录-v3.16.4源码核对.md)；测试包 `dist/LMCL-3.16.1000-win-x64-other1.zip`。
+> 状态：**阶段 E 已实施（2026-10-22，m10461）**。实现记录见[步骤 22](steps/22-其他页面与关于LMCL.md) §3.1A/§6A 与[审查记录 §35](审查记录-v3.16.4源码核对.md)；测试包 `dist/LMCL-3.16.1000-win-x64-other2.zip`。
 >
-> 2026-10-22 已按 m10063 调整为“第一阶段只做帮助/反馈/关于”，账户/实例/社区设置内嵌延后。
+> 2026-10-22 已按 m10063 调整为“第一阶段只做帮助/反馈/关于”，账户/实例/社区设置内嵌延后；同日 m10461 要求继续，阶段 E 已落地为六 tab。
 >
-> 目标版本：v3.8（第一阶段已交付）
+> 目标版本：v3.9（六 tab 完整版）
 >
 > 基线：v3.16.4 / `fbcc17472f08e877d60d6b715734e8054e9e61ee`
 >
@@ -859,3 +859,13 @@ HMCL/src/main/java/org/jackhuang/hmcl/ui/account/AccountListPage.java
 - 使用交叉编译 stub 构建：jar **11,168,252 B**（`f9d599f6…`）、exe **12,369,404 B**（`3bde4127…`）、stub **1,201,152 B**（`89b58fa0…`）；`exe[:len(stub)]==stub`、`exe[len(stub):]==jar`。
 - `other1` zip **64,896,960 B**，SHA-256 `6391112eba4774787464752e39d1cf060ba26997feb1bc73785df271f0a36ea0`；320 entries、`testzip=None`。
 - 代码提交 `43d689abf`；文档与 `docs-community/` 已同步并提交，详见[审查记录 §34](审查记录-v3.16.4源码核对.md)。
+
+### 15.4 阶段 E（v3.9，m10461）
+
+- `OtherPage` 扩为账户/实例/社区设置/帮助/反馈/关于六 tab，默认账户；200 px 菜单分“管理/支持”。
+- `AccountsPane`：内嵌 `AccountListPage`，隐藏 left，绑定 `Accounts`/`SettingsManager` 的账户、选中账户、认证服务器；顶部 Microsoft/离线/认证服务器菜单。
+- `InstancesPane`：内嵌 `GameListPage`，隐藏 left；顶部新建实例、导入整合包、游戏目录管理、全局游戏设置。
+- `CommunitySettingsView`：`CommunitySettingsPanel.createInlineView(null)` 内嵌。
+- `HomePane` 移除 `storage` 槽位；`CommunityWidgetsProvider` 9 卡；`StorageWidget.java`/`MemoryWidget.java` 删除；主页账户卡打开 `OtherPage.showAccounts()`。
+- 验证：compile/checkTranslations 通过；community 测试 135/0；jar 11,165,823 B、exe 12,366,975 B；`other2` 65,157,579 B / `f66c993f…`。
+- 未验证：Windows GUI 六 tab、内嵌页缩放、9 卡滚动。
