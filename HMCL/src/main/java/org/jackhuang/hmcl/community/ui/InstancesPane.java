@@ -40,7 +40,7 @@ import org.jetbrains.annotations.NotNullByDefault;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
-/// “其他 → 实例”内嵌页：实例列表 + 新建/导入/游戏目录/全局设置工具栏。
+/// “管理 → 实例”内嵌页：实例列表 + 新建/导入/游戏目录/全局设置工具栏。
 ///
 /// 复用上游 [GameListPage] 的 center 列表，隐藏其左侧 200 px 游戏目录导航；
 /// 游戏目录选择改为顶部 [MenuButton]，因此切换目录、新建目录仍可用。

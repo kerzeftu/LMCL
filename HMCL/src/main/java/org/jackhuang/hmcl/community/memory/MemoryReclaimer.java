@@ -172,6 +172,26 @@ public final class MemoryReclaimer {
         return true;
     }
 
+    /// 在游戏进程创建前执行一次内存优化。
+    ///
+    /// 与 [MemoryReclaimer#reclaimNow()] 不同，本方法绕过手动回收的 60 秒冷却，也不要求
+    /// 自动回收已开启；只要 JVM 未禁用显式 GC 且回收器未关闭，就同步执行一次 `System.gc()`。
+    /// 失败只记录日志，不抛出异常。
+    ///
+    /// @return 是否真正执行了回收
+    public synchronized boolean optimizeForLaunch() {
+        if (shutdown.get() || explicitGcDisabled) {
+            return false;
+        }
+        try {
+            doReclaim("launch");
+            return true;
+        } catch (Throwable e) {
+            LOG.warning(LOG_PREFIX + " launch-time reclaim failed", e);
+            return false;
+        }
+    }
+
     /// 开启或关闭自动回收；重新开启会清除自动停用状态。
     public void setEnabled(boolean enabled) {
         MemoryBaseSettings current = settings();

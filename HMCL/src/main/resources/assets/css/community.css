@@ -116,3 +116,12 @@
     -fx-fill: -monet-on-primary-container;
 }
 
+
+/* Semantic inline text roles; use these instead of per-node setStyle. */
+.community-hint {
+    -fx-text-fill: -monet-on-surface-variant;
+}
+
+.community-warning {
+    -fx-text-fill: -monet-tertiary;
+}

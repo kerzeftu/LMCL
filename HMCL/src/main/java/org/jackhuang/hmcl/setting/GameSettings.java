@@ -593,6 +593,19 @@ public sealed abstract class GameSettings extends ObservableSetting {
         return disableAutoGameOptions;
     }
 
+    /// Property name for optimizing launcher memory before game launch.
+    public static final String PROPERTY_MEMORY_OPTIMIZATION_ON_LAUNCH = "memoryOptimizationOnLaunch";
+
+    /// If `true`, the launcher reclaims reclaimable heap before the game process starts.
+    @SerializedName(PROPERTY_MEMORY_OPTIMIZATION_ON_LAUNCH)
+    private final InheritableProperty<Boolean> memoryOptimizationOnLaunch =
+            newInheritableProperty(PROPERTY_MEMORY_OPTIMIZATION_ON_LAUNCH, true);
+
+    /// Returns the launch-time memory optimization property.
+    public InheritableProperty<Boolean> memoryOptimizationOnLaunchProperty() {
+        return memoryOptimizationOnLaunch;
+    }
+
     /// Property name for customized game arguments.
     public static final String PROPERTY_GAME_ARGS = "gameArguments";
 

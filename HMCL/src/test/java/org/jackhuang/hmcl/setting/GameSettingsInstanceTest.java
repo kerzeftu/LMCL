@@ -80,6 +80,45 @@ public final class GameSettingsInstanceTest {
         assertEquals(Renderer.Vulkan.LAVAPIPE, deserialized.vulkanRendererProperty().getValue());
     }
 
+    /// Tests that launch-time memory optimization defaults to enabled.
+    @Test
+    public void memoryOptimizationDefaultsToEnabled() {
+        GameSettings.Instance instance = new GameSettings.Instance();
+        assertTrue(instance.memoryOptimizationOnLaunchProperty().getValue());
+    }
+
+    /// Tests that the preset value is inherited and an instance override wins.
+    @Test
+    public void memoryOptimizationCanBeInheritedAndOverridden() {
+        GameSettings.Preset preset = new GameSettings.Preset(
+                GameSettingsPresetID.parse("game-settings-preset:123e4567-e89b-12d3-a456-426614174000"));
+        preset.memoryOptimizationOnLaunchProperty().setValue(false);
+
+        assertEquals(Boolean.FALSE, GameSettings.resolve(preset, null)
+                .getInheritable(GameSettings::memoryOptimizationOnLaunchProperty));
+
+        GameSettings.Instance instance = new GameSettings.Instance();
+        instance.memoryOptimizationOnLaunchProperty().setValue(true);
+        instance.getOverrideProperties().add(GameSettings.PROPERTY_MEMORY_OPTIMIZATION_ON_LAUNCH);
+        assertEquals(Boolean.TRUE, GameSettings.resolve(preset, instance)
+                .getInheritable(GameSettings::memoryOptimizationOnLaunchProperty));
+    }
+
+    /// Tests that the launch-time memory optimization value round-trips through settings JSON.
+    @Test
+    public void roundTripsMemoryOptimizationSetting() {
+        GameSettings.Instance instance = new GameSettings.Instance();
+        instance.memoryOptimizationOnLaunchProperty().setValue(false);
+
+        String serialized = LauncherSettings.SETTINGS_GSON.toJson(instance, GameSettings.Instance.class);
+        JsonObject jsonObject = JsonParser.parseString(serialized).getAsJsonObject();
+        assertFalse(jsonObject.get(GameSettings.PROPERTY_MEMORY_OPTIMIZATION_ON_LAUNCH).getAsBoolean());
+
+        GameSettings.Instance deserialized =
+                LauncherSettings.SETTINGS_GSON.fromJson(serialized, GameSettings.Instance.class);
+        assertFalse(deserialized.memoryOptimizationOnLaunchProperty().getValue());
+    }
+
     /// Tests that legacy default Java selections are migrated to automatic selection.
     @ParameterizedTest
     @CsvSource({

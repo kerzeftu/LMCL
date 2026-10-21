@@ -36,6 +36,7 @@ import org.jackhuang.hmcl.community.launch.CommunityLaunchHooks;
 import org.jackhuang.hmcl.community.launch.LaunchEvent;
 import org.jackhuang.hmcl.community.launch.LaunchEventListener;
 import org.jackhuang.hmcl.community.launch.LaunchEventKind;
+import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.game.Version;
 import org.jackhuang.hmcl.game.World;
@@ -103,7 +104,7 @@ public final class RecentWorldsWidget extends DashboardWidget {
     protected Node createContent() {
         empty.setVisible(false);
         partial.setVisible(false);
-        partial.setStyle("-fx-text-fill: -monet-tertiary;");
+        partial.getStyleClass().add("community-warning");
 
         HBox footer = new HBox(8, allButton, BuiltinWidgets.spacer(), refreshButton);
         footer.setAlignment(Pos.CENTER_LEFT);
@@ -271,7 +272,9 @@ public final class RecentWorldsWidget extends DashboardWidget {
         if (repository != null && selected != null) {
             openWorldList(selected);
         } else {
-            Controllers.navigate(new org.jackhuang.hmcl.ui.versions.GameListPage());
+            ManagementPage page = ManagementPage.getInstance();
+            page.showInstances();
+            Controllers.navigate(page);
         }
     }
 

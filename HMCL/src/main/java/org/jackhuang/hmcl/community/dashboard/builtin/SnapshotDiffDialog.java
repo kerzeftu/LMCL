@@ -49,7 +49,7 @@ final class SnapshotDiffDialog {
         ScrollPane scroll = new ScrollPane(content);
         scroll.setFitToWidth(true);
         scroll.setPrefViewportHeight(320);
-        VBox root = BuiltinWidgets.dialogRoot(
+        org.jackhuang.hmcl.ui.construct.DialogPane root = BuiltinWidgets.dialogRoot(
                 i18n("community.snapshot.compare.title", snapshotId), new VBox(8, status, scroll), 680);
         CommunityStyles.apply(root);
         Controllers.dialog(root);

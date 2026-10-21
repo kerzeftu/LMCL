@@ -297,7 +297,7 @@ public final class PinnedInstancesWidget extends DashboardWidget {
         VBox body = new VBox(8, BuiltinWidgets.caption("community.pinned.dialog.hint", MAX_PINNED), tools, scroll);
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        VBox root = BuiltinWidgets.dialogRoot(
+        org.jackhuang.hmcl.ui.construct.DialogPane root = BuiltinWidgets.dialogRoot(
                 i18n("community.pinned.dialog.title"), body, 440);
         JFXButton ok = BuiltinWidgets.raisedButton(i18n("button.ok"), () -> {
             context.prefs().setPinnedInstanceIds(List.copyOf(order));

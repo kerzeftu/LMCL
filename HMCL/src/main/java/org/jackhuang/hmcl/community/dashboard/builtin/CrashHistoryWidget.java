@@ -237,7 +237,7 @@ public final class CrashHistoryWidget extends DashboardWidget {
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
         VBox body = new VBox(8, scroll);
-        VBox root = BuiltinWidgets.dialogRoot(i18n("community.crash.title"), body, 680);
+        org.jackhuang.hmcl.ui.construct.DialogPane root = BuiltinWidgets.dialogRoot(i18n("community.crash.title"), body, 680);
         JFXButton close = BuiltinWidgets.borderButton(i18n("community.crash.action.close"),
                 () -> root.fireEvent(new org.jackhuang.hmcl.ui.construct.DialogCloseEvent()));
         body.getChildren().add(BuiltinWidgets.dialogActions(close));

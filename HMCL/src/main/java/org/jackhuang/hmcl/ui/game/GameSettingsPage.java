@@ -460,6 +460,11 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
             launcherSettings.getContent().add(disableAutoGameOptionsPane);
             disableAutoGameOptionsPane.setTitle(i18n("settings.launcher.disable_auto_game_options"));
 
+            var memoryOptimizationPane = createInheritableBooleanButton(GameSettings::memoryOptimizationOnLaunchProperty);
+            launcherSettings.getContent().add(memoryOptimizationPane);
+            memoryOptimizationPane.setTitle(i18n("settings.launcher.memory_optimization_on_launch"));
+            memoryOptimizationPane.setSubtitle(i18n("settings.launcher.memory_optimization_on_launch.subtitle"));
+
             // Game Window Setting
             var windowTypeSublist = new ComponentSublist();
             gameSettings.getContent().add(windowTypeSublist);

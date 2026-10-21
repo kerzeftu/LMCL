@@ -18,7 +18,6 @@
 package org.jackhuang.hmcl.community.dashboard.builtin;
 
 import com.jfoenix.controls.JFXButton;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -30,6 +29,7 @@ import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.game.Version;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
+import org.jackhuang.hmcl.ui.construct.DialogPane;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 
@@ -133,36 +133,34 @@ final class BuiltinWidgets {
         return spacer;
     }
 
-    /// 创建对话框根节点：标题行 + 关闭按钮 + 内容。
+    /// 创建符合上游 `DialogPane` 视觉的对话框骨架。
     ///
-    /// 调用方应使用 `Controllers.dialog(root)` 展示；关闭按钮会触发
-    /// [DialogCloseEvent]，由上游装饰器负责真正关闭。
+    /// 标题、进度条与动作栏由上游 `DialogPane` 提供；调用方把业务按钮放进
+    /// content 底部，保持现有交互不变。默认的确定/取消动作被移除，避免重复。
     ///
     /// @param title 标题
     /// @param content 内容节点
     /// @param width 对话框宽度
-    /// @return 根节点
+    /// @return 对话框
     @NotNull
-    static VBox dialogRoot(@NotNull String title, @NotNull Node content, double width) {
-        VBox root = new VBox(10);
-        root.getStyleClass().add("jfx-dialog-layout");
-        root.setPadding(new Insets(10));
+    static DialogPane dialogRoot(@NotNull String title, @NotNull Node content, double width) {
+        DialogPane root = new DialogPane() {
+            @Override
+            protected void onAccept() {
+                fireEvent(new DialogCloseEvent());
+            }
+
+            @Override
+            protected void onCancel() {
+                fireEvent(new DialogCloseEvent());
+            }
+        };
+        root.setTitle(title);
+        root.setBody(content);
+        root.setActions();
         root.setPrefWidth(width);
         root.setMinWidth(Math.min(width, 480));
         root.setMaxWidth(width);
-
-        Label titleLabel = new Label(title);
-        titleLabel.getStyleClass().addAll("title-label", "community-title");
-
-        JFXButton close = new JFXButton("✕");
-        close.getStyleClass().add("dialog-cancel");
-        close.setOnAction(event -> root.fireEvent(new DialogCloseEvent()));
-
-        HBox header = new HBox(8, titleLabel, spacer(), close);
-        header.setAlignment(Pos.CENTER_LEFT);
-
-        root.getChildren().addAll(header, content);
-        VBox.setVgrow(content, Priority.ALWAYS);
         return root;
     }
 

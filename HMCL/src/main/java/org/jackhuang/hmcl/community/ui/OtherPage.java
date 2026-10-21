@@ -43,13 +43,11 @@ import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 /// “其他”页：与下载、设置并列的独立页面，左侧为 HMCL 风格二级菜单。
 ///
 /// 分组：
-/// - 管理：[AccountsPane]（账户内嵌）、[InstancesPane]（实例内嵌）、
-///   [CommunitySettingsView]（社区设置内嵌）；
+/// - 工具：内存优化；
 /// - 支持：帮助、反馈、关于 LMCL。
 ///
-/// 账户/实例直接内嵌可操作列表，不提供“点击后跳转完整页”的临时入口；
-/// 上游页面自带的 200 px 左侧导航在内嵌时隐藏，操作入口由本页或内嵌页
-/// 顶部工具栏提供。
+/// 账户与实例已迁到 [ManagementPage]；社区设置入口已移除，相关功能分散到
+/// 下载设置、主页组件与各 tab 内。
 ///
 /// 线程：单例构造与页面切换均在 FX 线程。
 @NotNullByDefault
@@ -61,31 +59,24 @@ public final class OtherPage extends DecoratorAnimatedPage implements DecoratorP
             State.fromTitle(i18n("community.other.title")));
 
     private final TransitionPane transitionPane = new TransitionPane();
-    private final TabHeader.Tab<AccountsPane> accountsTab = new TabHeader.Tab<>("communityAccountsPage");
-    private final TabHeader.Tab<InstancesPane> instancesTab = new TabHeader.Tab<>("communityInstancesPage");
-    private final TabHeader.Tab<CommunitySettingsView> communityTab = new TabHeader.Tab<>("communitySettingsPage");
+    private final TabHeader.Tab<MemoryOptimizationView> memoryTab = new TabHeader.Tab<>("communityMemoryOptimizationPage");
     private final TabHeader.Tab<HelpPage> helpTab = new TabHeader.Tab<>("communityHelpPage");
     private final TabHeader.Tab<FeedbackPage> feedbackTab = new TabHeader.Tab<>("communityFeedbackPage");
     private final TabHeader.Tab<AboutLMCLPage> aboutTab = new TabHeader.Tab<>("communityAboutPage");
     private final TabHeader tab;
 
     private OtherPage() {
-        accountsTab.setNodeSupplier(AccountsPane::new);
-        instancesTab.setNodeSupplier(InstancesPane::new);
-        communityTab.setNodeSupplier(CommunitySettingsView::new);
+        memoryTab.setNodeSupplier(MemoryOptimizationView::new);
         helpTab.setNodeSupplier(HelpPage::new);
         feedbackTab.setNodeSupplier(FeedbackPage::new);
         aboutTab.setNodeSupplier(AboutLMCLPage::new);
 
-        tab = new TabHeader(transitionPane, accountsTab, instancesTab, communityTab,
-                helpTab, feedbackTab, aboutTab);
-        tab.select(accountsTab);
+        tab = new TabHeader(transitionPane, memoryTab, helpTab, feedbackTab, aboutTab);
+        tab.select(memoryTab);
 
         AdvancedListBox sideBar = new AdvancedListBox()
-                .startCategory(i18n("community.other.category.manage").toUpperCase(Locale.ROOT))
-                .addNavigationDrawerTab(tab, accountsTab, i18n("community.other.tab.accounts"), SVG.PERSON, SVG.PERSON)
-                .addNavigationDrawerTab(tab, instancesTab, i18n("community.other.tab.instances"), SVG.GAMEPAD, SVG.GAMEPAD)
-                .addNavigationDrawerTab(tab, communityTab, i18n("community.other.tab.community"), SVG.SETTINGS, SVG.SETTINGS_FILL)
+                .startCategory(i18n("community.other.category.tools").toUpperCase(Locale.ROOT))
+                .addNavigationDrawerTab(tab, memoryTab, i18n("community.other.tab.memory"), SVG.TUNE, SVG.TUNE)
                 .startCategory(i18n("community.other.category.support").toUpperCase(Locale.ROOT))
                 .addNavigationDrawerTab(tab, helpTab, i18n("community.other.tab.help"), SVG.HELP, SVG.HELP_FILL)
                 .addNavigationDrawerTab(tab, feedbackTab, i18n("community.other.tab.feedback"), SVG.FEEDBACK, SVG.FEEDBACK_FILL)
@@ -108,19 +99,9 @@ public final class OtherPage extends DecoratorAnimatedPage implements DecoratorP
         return instance;
     }
 
-    /// 选中账户 tab。
-    public void showAccounts() {
-        tab.select(accountsTab, false);
-    }
-
-    /// 选中实例 tab。
-    public void showInstances() {
-        tab.select(instancesTab, false);
-    }
-
-    /// 选中社区设置 tab。
-    public void showCommunitySettings() {
-        tab.select(communityTab, false);
+    /// 选中内存优化 tab。
+    public void showMemoryOptimization() {
+        tab.select(memoryTab, false);
     }
 
     /// 选中帮助 tab。

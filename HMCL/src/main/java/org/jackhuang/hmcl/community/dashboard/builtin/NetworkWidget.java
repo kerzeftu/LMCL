@@ -27,7 +27,8 @@ import org.jackhuang.hmcl.community.dashboard.DashboardWidget;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidgetDescriptor;
 import org.jackhuang.hmcl.community.download.CommunityDownloadSource;
 import org.jackhuang.hmcl.community.download.CommunityDownloadSources;
-import org.jackhuang.hmcl.community.ui.CommunitySettingsPanel;
+import org.jackhuang.hmcl.ui.Controllers;
+import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 
@@ -104,10 +105,12 @@ public final class NetworkWidget extends DashboardWidget {
                 sources.mirrors().size(), CommunityDownloadSources.MAX_MIRRORS));
     }
 
-    /// 打开下载源设置。
+    /// 打开设置页的“下载”tab。
     private void openSettings() {
         try {
-            CommunitySettingsPanel.open(null, "download");
+            LauncherSettingsPage page = Controllers.getSettingsPage();
+            page.showDownloadSettings();
+            Controllers.navigate(page);
         } catch (Throwable e) {
             LOG.warning("Failed to open download settings", e);
             errorLabel.setVisible(true);

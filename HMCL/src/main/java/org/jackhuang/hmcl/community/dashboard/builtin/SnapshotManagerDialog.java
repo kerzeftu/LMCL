@@ -63,7 +63,7 @@ final class SnapshotManagerDialog {
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
         VBox content = new VBox(8, status, scroll);
-        VBox root = BuiltinWidgets.dialogRoot(
+        org.jackhuang.hmcl.ui.construct.DialogPane root = BuiltinWidgets.dialogRoot(
                 i18n("community.snapshot.dialog.title", versionId), content, 720);
         CommunityStyles.apply(root);
         load(versionId, listBox, status, onChange);

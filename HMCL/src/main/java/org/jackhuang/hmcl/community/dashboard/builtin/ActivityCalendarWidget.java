@@ -92,7 +92,7 @@ public final class ActivityCalendarWidget extends DashboardWidget {
         grid.setHgap(CELL_GAP);
         grid.setVgap(CELL_GAP);
         grid.setAlignment(Pos.CENTER_LEFT);
-        hint.setStyle("-fx-text-fill: -monet-on-surface-variant;");
+        hint.getStyleClass().add("community-hint");
 
         footer = new HBox(8, hint, BuiltinWidgets.spacer(),
                 BuiltinWidgets.borderButton(i18n("community.calendar.settings"), this::openSettings));

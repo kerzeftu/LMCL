@@ -1,1 +1,2 @@
 org.jackhuang.hmcl.community.preflight.PreflightStartupTask
+org.jackhuang.hmcl.community.memory.MemoryLaunchOptimizationTask

@@ -83,6 +83,11 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
         tab.select(gameTab, false);
     }
 
+    /// 选中“下载”设置 tab；主页网络卡使用。
+    public void showDownloadSettings() {
+        tab.select(downloadTab, false);
+    }
+
     @Override
     public ReadOnlyObjectProperty<State> stateProperty() {
         return state.getReadOnlyProperty();

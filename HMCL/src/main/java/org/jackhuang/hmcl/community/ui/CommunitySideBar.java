@@ -64,6 +64,9 @@ public final class CommunitySideBar extends VBox {
     /// 下载按钮。
     private final JFXButton downloadButton;
 
+    /// 管理按钮。
+    private final JFXButton managementButton;
+
     /// 设置按钮。
     private final JFXButton settingsButton;
 
@@ -84,13 +87,14 @@ public final class CommunitySideBar extends VBox {
 
         homeButton = createButton(SVG.HOME, "community.sidebar.home", this::openHome);
         downloadButton = createButton(SVG.DOWNLOAD, "community.sidebar.download", this::openDownloads);
+        managementButton = createButton(SVG.LISTS, "community.sidebar.management", this::openManagement);
         settingsButton = createButton(SVG.SETTINGS, "community.sidebar.settings", this::openSettings);
         otherButton = createButton(SVG.MORE_HORIZ, "community.sidebar.other", this::openOther);
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        getChildren().addAll(homeButton, downloadButton, settingsButton, spacer, otherButton);
+        getChildren().addAll(homeButton, downloadButton, managementButton, settingsButton, spacer, otherButton);
     }
 
     /// 根据当前页面更新选中态；由 `DecoratorController#onNavigated` 调用。
@@ -100,11 +104,13 @@ public final class CommunitySideBar extends VBox {
         RootPage rootPage = Controllers.getRootPage();
         boolean home = page == rootPage || (rootPage != null && page == rootPage.getMainPage());
         boolean download = page instanceof DownloadPage;
+        boolean management = page instanceof ManagementPage;
         boolean settings = page instanceof LauncherSettingsPage;
         boolean other = page instanceof OtherPage;
 
         setActive(homeButton, home);
         setActive(downloadButton, download);
+        setActive(managementButton, management);
         setActive(settingsButton, settings);
         setActive(otherButton, other);
     }
@@ -151,6 +157,15 @@ public final class CommunitySideBar extends VBox {
             Controllers.navigate(Controllers.getDownloadPage());
         } catch (Throwable e) {
             LOG.warning("Failed to open download page", e);
+        }
+    }
+
+    /// 打开“管理”页（账户 / 实例）。
+    private void openManagement() {
+        try {
+            Controllers.navigate(ManagementPage.getInstance());
+        } catch (Throwable e) {
+            LOG.warning("Failed to open management page", e);
         }
     }
 

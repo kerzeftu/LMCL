@@ -32,10 +32,10 @@ import org.jackhuang.hmcl.community.dashboard.DashboardWidgetDescriptor;
 import org.jackhuang.hmcl.community.launch.CommunityLaunchHooks;
 import org.jackhuang.hmcl.community.launch.LaunchEvent;
 import org.jackhuang.hmcl.community.launch.LaunchEventKind;
+import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.community.launch.LaunchEventListener;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.game.Version;
-import org.jackhuang.hmcl.ui.versions.GameListPage;
 import org.jackhuang.hmcl.ui.versions.Versions;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jetbrains.annotations.NotNull;
@@ -339,10 +339,12 @@ public final class LaunchWidget extends DashboardWidget {
         }
     }
 
-    /// 打开实例列表页。
+    /// 打开“管理 → 实例”。
     private static void openInstanceList() {
         try {
-            navigate(new GameListPage());
+            ManagementPage page = ManagementPage.getInstance();
+            page.showInstances();
+            navigate(page);
         } catch (Throwable e) {
             LOG.warning("Failed to open instance list", e);
         }

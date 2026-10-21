@@ -53,7 +53,7 @@ import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
-import org.jackhuang.hmcl.community.ui.OtherPage;
+import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.ui.account.AccountAdvancedListItem;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
@@ -81,7 +81,7 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 ///
 /// 与旧 [org.jackhuang.hmcl.community.dashboard.DashboardPane] 的差异：
 /// - 不再使用可拖拽的 12 行网格，而是固定的“主列 + 右栏”分栏；
-/// - 上游 200px 文本侧栏已移除；实例/下载/设置入口在全局 64px 侧栏，账户入口在左栏账户卡（打开“其他 → 账户”）；
+/// - 上游 200px 文本侧栏已移除；实例/下载/设置入口在全局 64px 侧栏，账户与实例管理入口在左栏账户卡（打开“管理”页）；
 /// - 组件仍由 [WidgetRegistry] 与 [DashboardWidget] 提供，显隐/重置写入
 ///   `dashboard.json`，保留用户已有的 `pinnedInstanceIds` 与 `widgetProps`。
 ///
@@ -289,7 +289,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         listScroll.setPrefHeight(360);
 
         VBox content = new VBox(8, BuiltinWidgets.caption(i18n("community.home.widgets.hint")), listScroll);
-        VBox root = BuiltinWidgets.dialogRoot(i18n("community.home.widgets.title"), content, 520);
+        org.jackhuang.hmcl.ui.construct.DialogPane root = BuiltinWidgets.dialogRoot(i18n("community.home.widgets.title"), content, 520);
 
         JFXButton cancel = BuiltinWidgets.borderButton(i18n("community.dashboard.cancel"),
                 () -> root.fireEvent(new DialogCloseEvent()));
@@ -318,7 +318,8 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
     /// 构建顶部：问候与运行状态。
     ///
-    /// 实例/下载/设置入口在全局 `CommunitySideBar`；账户入口在左栏账户卡（打开“其他 → 账户”）与侧栏。页头不再重复放按钮。
+    /// 实例/下载/设置入口在全局 `CommunitySideBar`；账户入口在左栏账户卡（打开 `ManagementPage` 的账户页）。
+    /// 页头右侧只保留“自定义”按钮，用于首页组件显隐设置，避免与全局导航重复。
     @NotNull
     private HBox buildHeader() {
         greeting.setText(greetingText());
@@ -329,7 +330,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         statusRow.setAlignment(Pos.CENTER_LEFT);
         VBox titles = new VBox(4, greeting, statusRow);
 
-        HBox header = new HBox(10, titles, BuiltinWidgets.spacer());
+        JFXButton customizeButton = BuiltinWidgets.borderButton(
+                i18n("community.home.customize"), this::startEditing);
+        HBox header = new HBox(10, titles, BuiltinWidgets.spacer(), customizeButton);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(0, 0, 2, 0));
         return header;
@@ -433,7 +436,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         AccountAdvancedListItem item = new AccountAdvancedListItem();
         item.accountProperty().bind(Accounts.selectedAccountProperty());
         item.setOnAction(event -> {
-            OtherPage page = OtherPage.getInstance();
+            ManagementPage page = ManagementPage.getInstance();
             page.showAccounts();
             Controllers.navigate(page);
         });

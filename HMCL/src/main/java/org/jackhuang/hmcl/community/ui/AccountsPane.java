@@ -42,7 +42,7 @@ import org.jetbrains.annotations.NotNullByDefault;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
-/// “其他 → 账户”内嵌页：账户列表 + 新增账户工具栏。
+/// “管理 → 账户”内嵌页：账户列表 + 新增账户工具栏。
 ///
 /// 复用上游 [AccountListPage] 的列表皮肤，但隐藏其左侧 200 px 导航，
 /// 由本页顶部工具栏提供 Microsoft/离线/认证服务器入口；不新增上游侵入。

@@ -146,7 +146,7 @@ public final class JavaRecommendWidget extends DashboardWidget {
         VBox.setVgrow(tabs, Priority.ALWAYS);
 
         VBox body = new VBox(8, tabs);
-        VBox root = BuiltinWidgets.dialogRoot(i18n("community.java.card.dialog"), body, 760);
+        org.jackhuang.hmcl.ui.construct.DialogPane root = BuiltinWidgets.dialogRoot(i18n("community.java.card.dialog"), body, 760);
         JFXButton close = BuiltinWidgets.borderButton(i18n("button.ok"),
                 () -> root.fireEvent(new DialogCloseEvent()));
         body.getChildren().add(BuiltinWidgets.dialogActions(close));
