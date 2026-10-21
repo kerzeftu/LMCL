@@ -30,11 +30,20 @@ public final class CommunityMetadata {
     private CommunityMetadata() {
     }
 
-    /// 源码仓库地址；发布前替换为真实 URL。
-    public static final String SOURCE_URL = "https://github.com/lmcl-dev/lmcl"; // TODO(lmcl): 仓库定案后替换
+    /// 官网地址（发布域名，见步骤 03）。
+    public static final String WEBSITE = "https://www.kerzeftu.top/lmcl";
 
-    /// GPLv3 附加条款文件在仓库内的地址；发布前与 `SOURCE_URL` 同批替换。
-    public static final String LICENSE_URL = SOURCE_URL + "/blob/main/LICENSE-ADDITIONAL-TERMS.md";
+    /// 源码仓库地址。仓库尚未创建，留空表示"未配置"；UI 必须对空串隐藏链接而不是渲染空 href。
+    public static final String SOURCE_URL = "";
+
+    /// GPLv3 附加条款地址。与 `SOURCE_URL` 同批配置；空串表示未配置。
+    public static final String LICENSE_URL = "";
+
+    /// GitHub 仓库（`owner/repo`）。仓库尚未创建，留空表示未配置。
+    public static final String GITHUB_REPO = "";
+
+    /// Gitee 仓库（`owner/repo`）。仓库尚未创建，留空表示未配置。
+    public static final String GITEE_REPO = "";
 
     /// 产品名（来自 `Metadata.NAME`）。
     public static String productName() {

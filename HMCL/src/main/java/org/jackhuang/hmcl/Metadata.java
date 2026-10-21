@@ -50,10 +50,12 @@ public final class Metadata {
     public static final int MINIMUM_SUPPORTED_JAVA_VERSION = 17;
     public static final int RECOMMENDED_JAVA_VERSION = 21;
 
-    public static final String PUBLISH_URL = "https://lmcl.example"; // TODO(lmcl): 域名定案后替换（与 hmcl.update_source.override 同一批）
+    public static final String PUBLISH_URL = "https://www.kerzeftu.top/lmcl";
     public static final String DOWNLOAD_URL = PUBLISH_URL + "/download";
     public static final String HMCL_UPDATE_URL = System.getProperty("hmcl.update_source.override", PUBLISH_URL + "/api/update_link");
-    public static final String MANUAL_UPDATE_URL = "https://lmcl.example/releases"; // TODO(lmcl): 仓库/Releases 页定案后替换
+    /// 手工更新入口。正式仓库（GitHub/Gitee）创建后改为 Releases 页；在此之前指向官网下载页。
+    /// TODO(lmcl): 仓库定案后替换。
+    public static final String MANUAL_UPDATE_URL = PUBLISH_URL;
 
     public static final String DOCS_URL = "https://docs.hmcl.net";
     public static final String CONTACT_URL = DOCS_URL + "/help.html";
