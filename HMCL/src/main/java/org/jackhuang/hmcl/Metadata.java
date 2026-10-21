@@ -15,6 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/*
+ * Modified by LMCL team on 2026-10-21:
+ *   - product name and publish URLs changed to LMCL
+ * See the repository commit history for full details.
+ */
 package org.jackhuang.hmcl;
 
 import org.jackhuang.hmcl.util.StringUtils;
@@ -33,8 +39,8 @@ public final class Metadata {
     private Metadata() {
     }
 
-    public static final String NAME = "HMCL";
-    public static final String FULL_NAME = "Hello Minecraft! Launcher";
+    public static final String NAME = "LMCL";
+    public static final String FULL_NAME = "Lumina Minecraft Launcher";
     public static final String VERSION = System.getProperty("hmcl.version.override", JarUtils.getAttribute("hmcl.version", "@develop@"));
 
     public static final String TITLE = NAME + " " + VERSION;
@@ -44,10 +50,10 @@ public final class Metadata {
     public static final int MINIMUM_SUPPORTED_JAVA_VERSION = 17;
     public static final int RECOMMENDED_JAVA_VERSION = 21;
 
-    public static final String PUBLISH_URL = "https://hmcl.huangyuhui.net";
+    public static final String PUBLISH_URL = "https://lmcl.example"; // TODO(lmcl): 域名定案后替换（与 hmcl.update_source.override 同一批）
     public static final String DOWNLOAD_URL = PUBLISH_URL + "/download";
     public static final String HMCL_UPDATE_URL = System.getProperty("hmcl.update_source.override", PUBLISH_URL + "/api/update_link");
-    public static final String MANUAL_UPDATE_URL = "https://github.com/HMCL-dev/HMCL/releases";
+    public static final String MANUAL_UPDATE_URL = "https://lmcl.example/releases"; // TODO(lmcl): 仓库/Releases 页定案后替换
 
     public static final String DOCS_URL = "https://docs.hmcl.net";
     public static final String CONTACT_URL = DOCS_URL + "/help.html";

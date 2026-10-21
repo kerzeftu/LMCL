@@ -159,6 +159,8 @@ val hmclProperties = buildList {
         add("hmcl.version.hash" to it)
     }
     add("hmcl.version.type" to versionType)
+    add("hmcl.community.baseline" to (System.getenv("UPSTREAM_BASELINE") ?: "v3.16.4"))
+    add("hmcl.community.baseline.commit" to (System.getenv("UPSTREAM_BASELINE_COMMIT") ?: "fbcc17472f08e877d60d6b715734e8054e9e61ee"))
     add("hmcl.microsoft.auth.id" to microsoftAuthId)
     add("hmcl.curseforge.apikey" to curseForgeApiKey)
     add("hmcl.authlib-injector.version" to libs.authlib.injector.get().version!!)
