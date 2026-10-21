@@ -96,6 +96,12 @@ public class SnapshotCoreTest {
     }
 
     @Test
+    public void listingMissingStoreReturnsEmpty() throws Exception {
+        SnapshotStore store = new SnapshotStore(temp.resolve("absent"));
+        assertTrue(store.list("missing").isEmpty());
+    }
+
+    @Test
     public void hashCachePersistsAndInvalidatesOnMtime() throws Exception {
         Path file = temp.resolve("mods/a.jar");
         Files.createDirectories(file.getParent());
