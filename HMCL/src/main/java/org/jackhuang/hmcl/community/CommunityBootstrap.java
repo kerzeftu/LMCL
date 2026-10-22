@@ -27,6 +27,9 @@ import org.jackhuang.hmcl.community.snapshot.SnapshotService;
 import org.jackhuang.hmcl.util.SwingUtils;
 import org.jetbrains.annotations.NotNullByDefault;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 /// LMCL 的进程入口（shadowJar 的 `Main-Class`）。
 ///
 /// 在**任何上游类初始化之前**钉住进程级属性，然后转交给真正的
@@ -52,6 +55,16 @@ public final class CommunityBootstrap {
 
     /// 上游 `IntegrityChecker` 读取的自完整性校验开关，见 `IntegrityChecker.java:48`。
     private static final String PROP_DISABLE_INTEGRITY = "hmcl.self_integrity_check.disable";
+
+    /// 上游 `Metadata` 读取的依赖缓存目录属性名；设置后 `SelfDependencyPatcher`
+    /// 会在该目录下查找 `<平台>/openjfx`，不再弹窗下载 JavaFX。
+    private static final String PROP_DEPENDENCIES_DIR = "hmcl.dependencies.dir";
+
+    /// 上游 `Metadata` 读取的依赖缓存目录环境变量名。
+    private static final String ENV_DEPENDENCIES_DIR = "HMCL_DEPENDENCIES_DIR";
+
+    /// 发行包随附的 JavaFX 依赖目录名（相对启动器目录）。
+    private static final String BUNDLED_DEPENDENCIES_DIR_NAME = "dependencies";
 
     /// 开发逃生口：本机调试时才允许外部 `-D` 覆盖上面两个属性，示例：
     /// `-Dhmcl.community.dev=true -Dhmcl.self_integrity_check.disable=true`。
@@ -88,6 +101,11 @@ public final class CommunityBootstrap {
         if (!Boolean.getBoolean(CommunityPaths.PROP_PATHS_EXPLICIT)) {
             CommunityPaths.applySystemProperties();
         }
+
+        // 随包 JavaFX 依赖：发行包在启动器目录放 dependencies/windows-x86_64/openjfx，
+        // 必须在 Metadata/SelfDependencyPatcher 初始化之前把依赖根指向随包目录，
+        // 否则首次启动会弹出下载 JavaFX 的窗口。显式 -D/HMCL_DEPENDENCIES_DIR 优先。
+        applyBundledDependencies();
 
         // Java 列表镜像（步骤 10）：必须在 DiscoFetchJavaListTask 类初始化之前注入；
         // 镜像未部署（或用户已显式 -D）时不写入，行为与上游一致。
@@ -126,6 +144,29 @@ public final class CommunityBootstrap {
 
         checkDirectoryPath();
         EntryPoint.main(args);
+    }
+
+    /// 把“随包 JavaFX 依赖目录”写入 `hmcl.dependencies.dir`。
+    ///
+    /// 只在启动器目录下存在 `dependencies/` 且没有显式覆盖时生效；失败静默，
+    /// 不阻塞启动（没有随包依赖时仍沿用上游的首次启动下载逻辑）。
+    private static void applyBundledDependencies() {
+        if (System.getProperty(PROP_DEPENDENCIES_DIR) != null
+                || System.getenv(ENV_DEPENDENCIES_DIR) != null) {
+            return;
+        }
+
+        try {
+            Path bundled = CommunityPaths.launcherDirectory()
+                    .resolve(BUNDLED_DEPENDENCIES_DIR_NAME)
+                    .toAbsolutePath()
+                    .normalize();
+            if (Files.isDirectory(bundled)) {
+                System.setProperty(PROP_DEPENDENCIES_DIR, bundled.toString());
+            }
+        } catch (Throwable ignored) {
+            // 目录推断失败时保持上游默认行为，不阻塞启动。
+        }
     }
 
     /// 复刻上游 `Main.checkDirectoryPath()`：路径中的 `!` 会让 JavaFX 资源加载失败。
