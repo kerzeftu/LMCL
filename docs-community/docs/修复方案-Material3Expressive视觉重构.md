@@ -1488,9 +1488,9 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 - `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` **153 / 0 failures / 0 errors / 0 skipped**；全量 `:HMCL:test` **263 / 0 failures / 0 errors / 2 skipped**；`:HMCL:checkTranslations` 通过；
 - `:HMCL:makeExecutables` 成功：jar **11,785,366 B** SHA-256 `e0ed2f50ce1005f7fdb3b7e88f122215ddc54f7071180794b35f8b197a4f0c04`；exe **12,986,518 B** SHA-256 `82ce6ac847a175fc3eccfb8633a5036e5d6ced27c37a1216c55ac39b541199a5`；stub **1,201,152 B** `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`、PK 偏移 1,201,152；jar 含 376 个 `org/glavo/m3fx/` class；
 - 相对 v3.15 的 jar `11,220,705 B`，增量 **+563,049 B**，低于 Go/No-Go 的 2 MB 门槛；
-- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike4.zip` **66,010,237 B** SHA-256 `c33b55b3cc1b0201b0d9e35a4cfe27c1bb29c289bd6b1563b1e28ff394a09711`；323 entries、`testzip=None`；含 `run-m3-spike.bat`、`THIRD-PARTY-NOTICES.txt`、`jre-x64/bin/java.exe`；
+- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike5.zip` **66,010,554 B** SHA-256 `b4c19498666aa92ce0037b17b13f8c50a94d264e7a9b2bc56101b5ac95abc730`；323 entries、`testzip=None`；含 `run-m3-spike.bat`、`THIRD-PARTY-NOTICES.txt`、`jre-x64/bin/java.exe`；
 - 本机 `:HMCL:run` 无法完成 GUI 启动：`/home/kerze/.local/share/LMCL: Read-only file system`，且 WSL2 无 X11（`AWTError: Can't connect to X11 window server using ':0'`）。这是运行环境限制，不是编译/依赖错误；
-- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike4` 测试包完成；
+- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike5` 测试包完成；
 - 代码提交 `73e3438ba feat(24): M3 Expressive phase 0 spike via m3fx`，文档提交 `da4b94bb4 docs: v3.16 M3 Expressive phase 0 spike`（分支 `feature/24-m3`）。
 
 修复（2026-10-22，m3spike2）：
@@ -1515,6 +1515,14 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 - 验证：`:HMCL:compileJava` 通过；community **153/0**；全量 **263/0/2 skipped**；`:HMCL:checkTranslations` 通过。
 - 新产物：jar **11,788,701 B** SHA-256 `6b1ffcee0c1098dd011cdd95141b7b3b33e114f95056bf4e9f51c55e190465ac`；exe **12,989,853 B** SHA-256 `dafe151cd8ebfcb0874b2260418ba754fcad8bad9970ea45a7e57205f678ebae`；stub 1,201,152 B `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`、PK 偏移 1,201,152。
 - `m3spike4` zip **66,010,237 B** SHA-256 `c33b55b3cc1b0201b0d9e35a4cfe27c1bb29c289bd6b1563b1e28ff394a09711`；323 entries、`testzip=None`；代码提交 `539449b31 fix(24): continuous wavy indeterminate progress and 4px track`。`m3spike3` 包被取代。
+
+修复（2026-10-22，m3spike5）：
+
+- 现象：用户反馈 m3spike4 的不确定进度条“只有左右移动的感觉，没有上下波动”。检查 `ContinuousWavyBar.rebuild()`，`y = centerY + sin(2π * localX / WAVELENGTH) * AMPLITUDE` 只依赖段内 `localX`；每段波形形状固定，整段随 `offset` 平移，所以视觉上只有横向移动，没有波峰/波谷的上下运动。
+- 修复：新增 `WAVE_CYCLES = 2`，`wavePhase = offset * 2 * Math.PI * WAVE_CYCLES`，纵坐标改为 `centerY + sin(2π * localX / WAVELENGTH + wavePhase) * AMPLITUDE`。每 2.2 秒一个循环内波形自身走 2 个完整周期，同时整段仍平移一个轨道宽；终点 `wavePhase = 4π`，与起点相位相同，因此循环处不跳变。
+- 验证：`:HMCL:compileJava` / `:HMCL:checkTranslations` 通过；community **153/0**；全量 **263/0/2 skipped**。
+- 新产物：jar **11,788,756 B** SHA-256 `c740ba6d1019c4937a17a34f74aad6883fd297a16d3da1ff498f12f9bc0ced03`；exe **12,989,908 B** SHA-256 `7cec96b11c1d93cad8a926bf8f4e115823562ce65e88227a8370a77df0a954bb`；stub 1,201,152 B `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`。
+- `m3spike5` zip **66,010,554 B** SHA-256 `b4c19498666aa92ce0037b17b13f8c50a94d264e7a9b2bc56101b5ac95abc730`；323 entries、`testzip=None`；代码提交 `b456f2130 fix(24): animate wavy progress phase for vertical undulation`。`m3spike4` 包被取代。
 
 打开方式：
 
@@ -2206,7 +2214,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 
 D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保留 `visual.glass` 与按钮包装层的可替换结构，后续可切换 C/FAB。D8 未确认，暂按 8–11 周估算；D5 按 2.5 执行。
 
-**阶段 0 spike 状态（2026-10-22）**：代码已落盘，编译/community 测试/构建通过，JitPack 依赖可用；Windows 实机视觉/启动增量尚未验证，Go/No-Go 未正式通过。测试包命名 `m3spike4`（m3spike1 因 null font NPE 作废；m3spike2 被进度条/内置插件端点修订取代；m3spike3 被 4 px/连续波形修订取代）。
+**阶段 0 spike 状态（2026-10-22）**：代码已落盘，编译/community 测试/构建通过，JitPack 依赖可用；Windows 实机视觉/启动增量尚未验证，Go/No-Go 未正式通过。测试包命名 `m3spike5`（m3spike1 因 null font NPE 作废；m3spike2 被进度条/内置插件端点修订取代；m3spike3 被 4 px/连续波形修订取代；m3spike4 被上下起伏相位修订取代）。
 
 ---
 
@@ -2233,5 +2241,5 @@ D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保
 | 2026-10-22 | D2 毛玻璃 | 暂定选 A 壁纸快照磨砂；保留后续 C 实验位 |
 | 2026-10-22 | D7 启动按钮 | 暂定选形态 1 保留双段按钮只做 M3 视觉 |
 | 待定 | D8 排期 | 暂按 MVP 8–11 周估算，待实机后确认 |
-| 2026-10-22 | 阶段 0 spike | 代码/编译/构建完成；Windows 实机视觉验收待 `m3spike4` 测试包 |
+| 2026-10-22 | 阶段 0 spike | 代码/编译/构建完成；Windows 实机视觉验收待 `m3spike5` 测试包 |
 | 待定 | 本文整体 | 已批准范围/依赖/侧栏/进度侵入/玻璃/按钮；D8 待确认 |
