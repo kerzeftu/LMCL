@@ -548,7 +548,7 @@ v3.16.6 时两者均使用 `SVG.PERSON` 32px 图标与 `setLargeTitle(true)`；v
 `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/transfer/SettingsImportDialog.java` 的 `buildChangeRow`：
 
 - 行标题优先 `change.label()`，为空才用 `change.key()`；
-- `newValue` 含换行时，用 `VBox` 逐行 `Label`（`subtitle-label`、不换行、`OverrunStyle.ELLIPSIS`、`maxWidth 420`、Tooltip 显示全文），下载源因此一行一个 URL；
+- `newValue` 含换行时，用 `VBox` 逐行 `Label`（`subtitle-label`、不换行、`OverrunStyle.ELLIPSIS`、Tooltip 显示全文），下载源因此一行一个 URL；v3.16.12 已取消 `maxWidth 420` 与 `LinePane` 右贴边结构，改为自建行，见 §6B.11；
 - 单行值仍显示 `旧值/（未设置） → 新值`，空值走 `community.settings.transfer.value.absent`；
 - 分组仍由 §6B.8 的 `ComponentSublist` 负责，类目标题不变。
 
@@ -560,8 +560,43 @@ v3.16.6 时两者均使用 `SVG.PERSON` 32px 图标与 `setLargeTitle(true)`；v
 
 - `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过（仅 3 条既有 JavaFX `--add-exports` 警告）。
 - community **161 / 0 / 0 / 0**；全量 `:HMCL:test` **271 / 0 / 0 / 2 skipped**；新增 `HMCL/src/test/java/org/jackhuang/hmcl/community/config/section/SettingsPreviewTest.java` 6 个测试（默认隔离、下载新增/重命名/重排/无变化、`SettingsChange.label` 兼容）。
-- `:HMCL:makeExecutables`：jar **11,872,103 B** SHA-256 `76cb67e4…`；exe **13,073,255 B** SHA-256 `f3666c40…`；stub 1,201,152 B `ded29e28…`；测试包 `dist/LMCL-1.0.0-win-x64-m3spike12.zip` **74,634,197 B** SHA-256 `c72efc65…`。
+- `:HMCL:makeExecutables`：jar **11,872,103 B** SHA-256 `76cb67e4…`；exe **13,073,255 B** SHA-256 `f3666c40…`；stub 1,201,152 B `ded29e28…`；测试包 `dist/LMCL-1.0.0-win-x64-m3spike12.zip` **74,634,197 B** SHA-256 `c72efc65…`（已被 v3.16.12 的 m3spike13 取代，见 §6B.11）。
 - 偏差：下载源预览把整段变化合成一条多行记录，不支持逐源勾选应用；新增/移除只列 URL，重命名附带旧名 → 新名，不展示每个源的全部字段或排序的每个中间值；未知的 `widgetProps` 只显示字段数；未在 Windows 实机查看长 URL 换行、Tooltip 与 150% DPI 效果。
+
+## 6B.11 v3.16.12 导入预览行布局紧凑化（2026-10-23，m18043）
+
+User said (m18043)：“右边的字可以往左移一点，左边占少量空间，先说你的理解，我说没问题再开工”；随后 User said (m18055)：“对的，开工”。本节只调整“其他 → 设置导入/导出 → 导入设置”的变更预览行，不改导入应用逻辑、类目分组或 i18n。
+
+### 6B.11.1 根因
+
+`SettingsImportDialog.buildChangeRow` 原先返回 `LinePane`，右侧值放在 `LineComponent` 的 trailing 节点。上游 `LineComponent` 把 `titleContainer` 设为 `HBox.setHgrow(ALWAYS)`，并把标题标签最小宽度锁到 `USE_PREF_SIZE`；`ComponentList` 外层还有 `options-list-item` 的 10/16 padding。结果标题容器占满整行，右侧值被推到最右，标题较短时中间留下大片空白，变化内容不便阅读。
+
+### 6B.11.2 实现
+
+只改 `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/transfer/SettingsImportDialog.java`：
+
+- 删除 `LinePane` import，新增 `Pos`、`OverrunStyle`、`Tooltip`、`HBox`、`Priority`、`StackPane`；
+- `buildChangeRow` 返回 `StackPane`（`line-pane`/`line-component`，`minHeight = 48`），内部放 `HBox`（`line-component-container`，spacing 12，`Pos.CENTER_LEFT`）；
+- 标题 `Label`：`title-label`、`minWidth = 0`、`maxWidth = 140`、`OverrunStyle.ELLIPSIS`、Tooltip 显示全文；标题优先 `change.label()`，为空回退 `change.key()`；
+- 右侧 `VBox`：spacing 2、`Pos.CENTER_LEFT`、`minWidth = 0`、`maxWidth = MAX_VALUE`、`HBox.setHgrow(ALWAYS)`，因此占满剩余宽度并从标题右侧开始左对齐；
+- `newValue` 含换行时逐行 `Label`；单行仍显示 `旧值/（未设置） → 新值`，空值走 `community.settings.transfer.value.absent`；
+- `createValueLabel(String)`：`subtitle-label`、不换行、`OverrunStyle.ELLIPSIS`、`minWidth = 0`、`maxWidth = MAX_VALUE`、Tooltip 全文；
+- 类目分组仍由 §6B.8 的 `ComponentSublist` 负责；[应用]/[取消] 行为和导入数据不变；无新增 i18n key。
+
+### 6B.11.3 验证
+
+- `:HMCL:compileJava` BUILD SUCCESSFUL（仅 3 条既有 JavaFX `--add-exports` 警告）。
+- `:HMCL:checkTranslations` 通过；community **161 / 0 / 0 / 0**；全量 `:HMCL:test` **271 / 0 / 0 / 2 skipped**。
+- `:HMCL:makeExecutables` 成功：jar **11,872,564 B** SHA-256 `4d5c9b98c0b2134cd26f777a22275ae38568aa55515fb4551516637aa4c4e242`；exe **13,073,716 B** SHA-256 `0b1d31dbe4dc693157b432f07a9d9ae52958cc6ae6bed0df5f09e0b26550d2f8`；stub **1,201,152 B** `ded29e28…`；`exe[:stub] == stub`、`exe[stub:] == jar`，jar 内 `Main-Class` 仍为 `CommunityBootstrap`。
+- 测试包 `dist/LMCL-1.0.0-win-x64-m3spike13.zip` **74,902,494 B** SHA-256 `5c8af43f2ee9e868041f1c498c7713be00eaaa5e2683c95ebc2d6b5fb73fdf15`；327 entries、`testzip=None`；包内 326 个文件 `SHA256SUMS` 全部通过；旧 `m3spike12` 已删除。
+
+### 6B.11.4 偏差与未验证
+
+1. WSL2 无 Windows GUI：未实机查看标题列宽度、长 URL 省略、Tooltip、150% DPI 与窄窗口下的实际排版。
+2. 标题列固定最大 140 px；超长类目名会省略，完整文字只在 Tooltip 中可见。若未来需要自适应宽度，应改为按内容测量而不是继续加固定值。
+3. 多行值不换行，超出宽度用省略号 + Tooltip；没有横向滚动条，极长 URL 需悬停查看全文。
+4. 行仍复用 `line-component-container` 的 10/16 padding，外层的 `options-list-item` 背景也保留；`minHeight 48` 只保证紧凑行不因两行值被压扁。
+5. 预览仍按类目整体应用，不支持逐项勾选。
 
 ## 6. 实现偏差与已知问题
 
