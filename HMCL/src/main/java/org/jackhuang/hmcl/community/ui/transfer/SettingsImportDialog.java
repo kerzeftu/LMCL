@@ -121,13 +121,32 @@ public final class SettingsImportDialog extends DialogPane {
 
     private static @NotNull LinePane buildChangeRow(@NotNull SettingsChange change) {
         LinePane row = new LinePane();
-        row.setTitle(change.key());
-        String oldValue = change.oldValue() == null ? i18n("community.settings.transfer.value.absent") : change.oldValue();
-        String newValue = change.newValue() == null ? i18n("community.settings.transfer.value.absent") : change.newValue();
-        Label value = new Label(oldValue + "  →  " + newValue);
-        value.getStyleClass().add("subtitle-label");
-        value.setWrapText(false);
-        row.setRight(value);
+        row.setTitle(change.label() != null ? change.label() : change.key());
+        String newValue = change.newValue() == null
+                ? i18n("community.settings.transfer.value.absent")
+                : change.newValue();
+        if (newValue.indexOf('\n') >= 0) {
+            // 已格式化过的变化摘要（如下载源、主页布局）：逐行展示，不再拼 JSON 原文。
+            VBox lines = new VBox(2);
+            for (String line : newValue.split("\\n", -1)) {
+                Label detail = new Label(line);
+                detail.getStyleClass().add("subtitle-label");
+                detail.setWrapText(false);
+                detail.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
+                detail.setMaxWidth(420);
+                detail.setTooltip(new javafx.scene.control.Tooltip(line));
+                lines.getChildren().add(detail);
+            }
+            row.setRight(lines);
+        } else {
+            String oldValue = change.oldValue() == null
+                    ? i18n("community.settings.transfer.value.absent")
+                    : change.oldValue();
+            Label value = new Label(oldValue + "  →  " + newValue);
+            value.getStyleClass().add("subtitle-label");
+            value.setWrapText(false);
+            row.setRight(value);
+        }
         return row;
     }
 

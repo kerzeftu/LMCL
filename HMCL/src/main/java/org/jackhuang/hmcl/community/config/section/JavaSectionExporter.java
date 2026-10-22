@@ -17,14 +17,25 @@
  */
 package org.jackhuang.hmcl.community.config.section;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.jackhuang.hmcl.community.config.SettingsChange;
+import org.jackhuang.hmcl.community.config.SettingsPreviewValues;
 import org.jackhuang.hmcl.community.config.SettingsSectionExporter;
 import org.jackhuang.hmcl.community.env.CommunitySettings;
+import org.jackhuang.hmcl.community.java.JavaChoice;
 import org.jackhuang.hmcl.community.java.JavaPreference;
 import org.jackhuang.hmcl.download.java.disco.DiscoJavaDistribution;
 import org.jackhuang.hmcl.util.gson.JsonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
 /// “Java”设置段：偏好发行版与镜像展示开关。
 @NotNullByDefault
@@ -50,6 +61,43 @@ public final class JavaSectionExporter implements SettingsSectionExporter {
         object.addProperty(JavaPreference.KEY_DISTRIBUTION, preference.storageValue());
         object.addProperty(JavaPreference.KEY_MIRROR_ENABLED, preference.mirrorEnabled());
         return object;
+    }
+
+    @Override
+    public @NotNull @Unmodifiable List<SettingsChange> preview(@NotNull JsonObject incoming) {
+        JsonObject current = exportNow();
+        List<SettingsChange> changes = new ArrayList<>();
+        for (String key : current.keySet()) {
+            JsonElement incomingValue = incoming.get(key);
+            if (incomingValue == null) {
+                continue;
+            }
+            if (!SettingsPreviewValues.same(current.get(key), incomingValue)) {
+                changes.add(new SettingsChange(
+                        id(), key,
+                        displayValue(key, current.get(key)),
+                        displayValue(key, incomingValue),
+                        i18n("community.settings.transfer.preview.java." + (
+                                JavaPreference.KEY_DISTRIBUTION.equals(key) ? "distribution" : "mirror"))));
+            }
+        }
+        return List.copyOf(changes);
+    }
+
+    @Nullable
+    private static String displayValue(@NotNull String key, @Nullable JsonElement element) {
+        if (element == null || element.isJsonNull()) {
+            return null;
+        }
+        if (JavaPreference.KEY_DISTRIBUTION.equals(key)) {
+            String value = SettingsPreviewValues.string(element);
+            DiscoJavaDistribution distribution =
+                    value == null || value.isBlank() || JavaPreference.VALUE_ANY.equalsIgnoreCase(value)
+                            ? null : DiscoJavaDistribution.of(value);
+            return i18n(JavaChoice.of(distribution).i18nKey());
+        }
+        Boolean value = SettingsPreviewValues.bool(element);
+        return value == null ? null : SettingsPreviewValues.onOff(value);
     }
 
     @Override

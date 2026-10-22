@@ -19,12 +19,21 @@ package org.jackhuang.hmcl.community.config.section;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.jackhuang.hmcl.community.config.SettingsChange;
+import org.jackhuang.hmcl.community.config.SettingsPreviewValues;
 import org.jackhuang.hmcl.community.config.SettingsSectionExporter;
 import org.jackhuang.hmcl.community.memory.MemoryBaseSettings;
 import org.jackhuang.hmcl.setting.SettingsManager;
 import org.jackhuang.hmcl.util.gson.JsonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
 /// “内存”设置段：自动回收参数 + 启动前优化的全局默认值。
 ///
@@ -59,6 +68,54 @@ public final class MemorySectionExporter implements SettingsSectionExporter {
         object.addProperty(KEY_LAUNCH_OPTIMIZATION,
                 SettingsManager.getDefaultGameSettingsPresetOrCreate().memoryOptimizationOnLaunchProperty().getValue());
         return object;
+    }
+
+    @Override
+    public @NotNull @Unmodifiable List<SettingsChange> preview(@NotNull JsonObject incoming) {
+        JsonObject current = exportNow();
+        List<SettingsChange> changes = new ArrayList<>();
+        for (String key : current.keySet()) {
+            JsonElement incomingValue = incoming.get(key);
+            if (incomingValue == null) {
+                continue;
+            }
+            if (!SettingsPreviewValues.same(current.get(key), incomingValue)) {
+                changes.add(new SettingsChange(
+                        id(), key,
+                        displayValue(key, current.get(key)),
+                        displayValue(key, incomingValue),
+                        i18n(labelKey(key))));
+            }
+        }
+        return List.copyOf(changes);
+    }
+
+    @NotNull
+    private static String labelKey(@NotNull String key) {
+        return "community.settings.transfer.preview.memory." + switch (key) {
+            case "enabled" -> "enabled";
+            case "intervalMinutes" -> "interval";
+            case "minReclaimMiB" -> "min_reclaim";
+            case KEY_LAUNCH_OPTIMIZATION -> "launch";
+            default -> key;
+        };
+    }
+
+    @Nullable
+    private static String displayValue(@NotNull String key, @Nullable JsonElement element) {
+        if (element == null || element.isJsonNull()) {
+            return null;
+        }
+        if ("intervalMinutes".equals(key)) {
+            Double value = SettingsPreviewValues.number(element);
+            return value == null ? null : i18n("community.settings.transfer.preview.memory.minutes", value.intValue());
+        }
+        if ("minReclaimMiB".equals(key)) {
+            Double value = SettingsPreviewValues.number(element);
+            return value == null ? null : i18n("community.settings.transfer.preview.memory.mib", value.intValue());
+        }
+        Boolean value = SettingsPreviewValues.bool(element);
+        return value == null ? null : SettingsPreviewValues.onOff(value);
     }
 
     @Override

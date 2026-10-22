@@ -27,13 +27,26 @@ import org.jetbrains.annotations.Nullable;
 /// @param section 设置段 id（见 [SettingsSectionExporter#id()]）
 /// @param key 段内字段名
 /// @param oldValue 当前值的简短字符串形式
-/// @param newValue 导入值的简短字符串形式
+/// @param newValue 导入值的简短字符串形式；可包含换行，用于逐行展示变更说明
+/// @param label 面向用户的标题；`null` 时回退到 [key]
 @NotNullByDefault
 public record SettingsChange(
         @NotNull String section,
         @NotNull String key,
         @Nullable String oldValue,
-        @Nullable String newValue) {
+        @Nullable String newValue,
+        @Nullable String label) {
+
+    /// 兼容只提供字段名与值的旧构造方式。
+    ///
+    /// @param section 设置段 id
+    /// @param key 段内字段名
+    /// @param oldValue 当前值
+    /// @param newValue 导入值
+    public SettingsChange(@NotNull String section, @NotNull String key,
+                          @Nullable String oldValue, @Nullable String newValue) {
+        this(section, key, oldValue, newValue, null);
+    }
 
     /// 把 JSON 值压缩成适合在对话框中展示的单行文本。
     ///

@@ -537,7 +537,7 @@ public final class HMCLGameRepository extends DefaultGameRepository {
     /// Returns whether a new instance should use an isolated running directory under the default isolation settings.
     public boolean shouldIsolateNewInstance(boolean modded) {
         GameSettings.Preset preset = getParentGameSettings(null);
-        DefaultIsolationType type = Lang.requireNonNullElse(preset.defaultIsolationTypeProperty().getValue(), DefaultIsolationType.MODDED);
+        DefaultIsolationType type = Lang.requireNonNullElse(preset.defaultIsolationTypeProperty().getValue(), DefaultIsolationType.ALWAYS);
         return switch (type) {
             case NEVER -> false;
             case ALWAYS -> true;

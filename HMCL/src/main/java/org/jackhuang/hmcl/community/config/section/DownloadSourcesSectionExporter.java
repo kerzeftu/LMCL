@@ -18,13 +18,23 @@
 package org.jackhuang.hmcl.community.config.section;
 
 import com.google.gson.JsonObject;
+import org.jackhuang.hmcl.community.config.SettingsChange;
 import org.jackhuang.hmcl.community.config.SettingsSectionExporter;
 import org.jackhuang.hmcl.community.download.CommunityDownloadInstaller;
 import org.jackhuang.hmcl.community.download.CommunityDownloadRanker;
+import org.jackhuang.hmcl.community.download.CommunityDownloadSource;
 import org.jackhuang.hmcl.community.download.CommunityDownloadSources;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Unmodifiable;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 /// “下载源”设置段：与 `community-settings.json` 的 `downloadSources` 同构。
@@ -47,6 +57,81 @@ public final class DownloadSourcesSectionExporter implements SettingsSectionExpo
     @Override
     public @NotNull JsonObject exportNow() {
         return CommunityDownloadSources.load().toJson();
+    }
+
+    @Override
+    public @NotNull @Unmodifiable List<SettingsChange> preview(@NotNull JsonObject incoming) {
+        return describeChanges(CommunityDownloadSources.load(), CommunityDownloadSources.parse(incoming));
+    }
+
+    /// 把下载源差异转成可读的变更列表。
+    ///
+    /// 每行一个地址；只描述新增/移除/重命名/顺序调整，绝不输出段 JSON 原文。
+    ///
+    /// @param current 当前下载源
+    /// @param incoming 导入的下载源
+    /// @return 变更列表；无变化时为空
+    @NotNull
+    @Unmodifiable
+    static List<SettingsChange> describeChanges(@NotNull CommunityDownloadSources current,
+                                                @NotNull CommunityDownloadSources incoming) {
+        Map<String, String> currentByUrl = byUrl(current.sources());
+        Map<String, String> incomingByUrl = byUrl(incoming.sources());
+
+        List<CommunityDownloadSource> added = new ArrayList<>();
+        List<CommunityDownloadSource> removed = new ArrayList<>();
+        List<CommunityDownloadSource> renamed = new ArrayList<>();
+        for (CommunityDownloadSource source : incoming.sources()) {
+            if (!currentByUrl.containsKey(source.url())) {
+                added.add(source);
+            } else if (!Objects.equals(currentByUrl.get(source.url()), source.name())) {
+                renamed.add(source);
+            }
+        }
+        for (CommunityDownloadSource source : current.sources()) {
+            if (!incomingByUrl.containsKey(source.url())) {
+                removed.add(source);
+            }
+        }
+
+        boolean sameOrder = current.sources().stream().map(CommunityDownloadSource::url).toList()
+                .equals(incoming.sources().stream().map(CommunityDownloadSource::url).toList());
+
+        List<String> lines = new ArrayList<>();
+        if (!added.isEmpty()) {
+            lines.add(i18n("community.settings.transfer.preview.download.added", added.size()));
+            added.forEach(source -> lines.add(source.url()));
+        }
+        if (!removed.isEmpty()) {
+            lines.add(i18n("community.settings.transfer.preview.download.removed", removed.size()));
+            removed.forEach(source -> lines.add(source.url()));
+        }
+        if (!renamed.isEmpty()) {
+            lines.add(i18n("community.settings.transfer.preview.download.renamed", renamed.size()));
+            renamed.forEach(source -> lines.add(i18n(
+                    "community.settings.transfer.preview.download.rename_line",
+                    source.url(), currentByUrl.get(source.url()), source.name())));
+        }
+        if (lines.isEmpty() && !sameOrder) {
+            lines.add(i18n("community.settings.transfer.preview.download.reordered"));
+            int index = 1;
+            for (CommunityDownloadSource source : incoming.sources()) {
+                lines.add(index++ + ". " + source.url());
+            }
+        }
+        if (lines.isEmpty()) {
+            return List.of();
+        }
+        return List.of(new SettingsChange(ID, "sources", null, String.join("\n", lines),
+                i18n("community.settings.transfer.section.download")));
+    }
+
+    private static @NotNull Map<String, String> byUrl(@NotNull List<CommunityDownloadSource> sources) {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (CommunityDownloadSource source : sources) {
+            result.putIfAbsent(source.url(), source.name());
+        }
+        return result;
     }
 
     @Override

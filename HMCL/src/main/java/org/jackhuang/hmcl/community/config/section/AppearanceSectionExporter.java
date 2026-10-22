@@ -23,6 +23,8 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import javafx.beans.property.Property;
 import org.glavo.monetfx.ColorStyle;
+import org.jackhuang.hmcl.community.config.SettingsChange;
+import org.jackhuang.hmcl.community.config.SettingsPreviewValues;
 import org.jackhuang.hmcl.community.config.SettingsSectionExporter;
 import org.jackhuang.hmcl.setting.BackgroundType;
 import org.jackhuang.hmcl.setting.LauncherSettings;
@@ -37,9 +39,14 @@ import org.jackhuang.hmcl.util.i18n.SupportedLocale;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
+
+import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
 /// “外观”设置段：只导出可跨设备复用的 UI 偏好。
 ///
@@ -128,6 +135,77 @@ public final class AppearanceSectionExporter implements SettingsSectionExporter 
             }));
         }
         return object;
+    }
+
+    @Override
+    public @NotNull @Unmodifiable List<SettingsChange> preview(@NotNull JsonObject incoming) {
+        JsonObject current = exportNow();
+        List<SettingsChange> changes = new ArrayList<>();
+        for (String key : current.keySet()) {
+            JsonElement incomingValue = incoming.get(key);
+            if (incomingValue == null) {
+                // apply() 对缺失字段保持现状，预览也不应展示成“移除”。
+                continue;
+            }
+            if (!SettingsPreviewValues.same(current.get(key), incomingValue)) {
+                changes.add(new SettingsChange(
+                        id(), key,
+                        displayValue(key, current.get(key)),
+                        displayValue(key, incomingValue),
+                        i18n(labelKey(key))));
+            }
+        }
+        return List.copyOf(changes);
+    }
+
+    /// 返回外观字段的人类可读标题 key。
+    ///
+    /// @param key 字段名
+    /// @return i18n key
+    @NotNull
+    private static String labelKey(@NotNull String key) {
+        return "community.settings.transfer.preview.appearance." + key;
+    }
+
+    /// 把外观字段值转成人类可读文本。
+    ///
+    /// 复杂对象不会原样输出 JSON：主题引用、自定义颜色和覆盖集合都有专门摘要。
+    ///
+    /// @param key 字段名
+    /// @param element JSON 值
+    /// @return 可读文本，缺失时为 `null`
+    @Nullable
+    private static String displayValue(@NotNull String key, @Nullable JsonElement element) {
+        if (element == null || element.isJsonNull()) {
+            return switch (key) {
+                case "selectedTheme" -> i18n("community.settings.transfer.preview.appearance.selectedTheme.default");
+                case "customThemeColor" -> i18n("community.settings.transfer.preview.appearance.customThemeColor.default");
+                default -> null;
+            };
+        }
+        if ("selectedTheme".equals(key) && element instanceof JsonObject object) {
+            String packId = JsonUtils.getString(object, "packId");
+            String themeId = JsonUtils.getString(object, "themeId");
+            if (packId == null) {
+                return i18n("community.settings.transfer.preview.appearance.selectedTheme.unknown");
+            }
+            return themeId == null ? packId : packId + " / " + themeId;
+        }
+        if ("customThemeColor".equals(key) && element instanceof JsonObject object) {
+            String name = JsonUtils.getString(object, "name");
+            return name != null ? name : i18n("community.settings.transfer.preview.appearance.customThemeColor.updated");
+        }
+        if ("themeAppearanceOverrides".equals(key) && element instanceof JsonArray array) {
+            return i18n("community.settings.transfer.value.items", array.size());
+        }
+        if ("language".equals(key)) {
+            String name = SettingsPreviewValues.string(element);
+            if (name != null) {
+                return SupportedLocale.getLocaleByName(name)
+                        .getDisplayName(SupportedLocale.DEFAULT);
+            }
+        }
+        return SettingsPreviewValues.describe(element);
     }
 
     @Override
