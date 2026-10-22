@@ -128,7 +128,7 @@ public static Parent createInlineView(@Nullable String sectionId)
 内容顺序固定：
 
 1. 产品信息：图标 `/assets/img/icon.png`、`CommunityMetadata.fullName()`、`version_line`（版本 + 上游基线）；官网链接可用时使用 `LineButton.createExternalLinkButton`；
-2. 开发人员：`指尖的宇宙 kerze`，副标题“开发与维护”；
+2. 开发人员：`指尖的宇宙 kerze`（副标题“开发与维护”）与`木子呆、法棍与仰望星空派`（副标题“图标设计与绘制”）；
 3. 上游致谢：`AboutData.load()` 读取 `thanks.json`，**全部条目**按原顺序展示；头像支持字符串与 `{light,dark}` 两种格式；有 `externalLink` 的条目点击 `FXUtils.openLink`；
 4. 捐赠者：读取 `lmcl-donors.json`；空数组显示 `community.about.donors.empty`；**没有捐赠按钮/入口**；
 5. 更新检查：`CommunityUpdateNotifier.isConfigured()` 为 false 时按钮禁用并显示 `community.update.not_configured`；否则 `checkAsync()`，有新版本弹 `CommunityUpdateDialog`，无新版本 `Controllers.dialog(community.update.latest)`；不下载、不替换文件；
@@ -381,10 +381,10 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 
 ### 6B.4 UI
 
-- `ui/transfer/SettingsTransferPane`（`extends VBox`）：标题、说明、5 个 `CheckBox`（默认勾选下载源/外观/主页，其余不勾）、[全选]/[全不选]、[导入…]/[导出…]、状态 label；
+- `ui/transfer/SettingsTransferPane`（`extends VBox`）：标题、说明、5 个 `CheckBox`（默认勾选下载源/外观/主页，其余不勾；右侧只放勾选框，不再重复选项文字，勾选框右对齐）、[全选]/[全不选]、[导入…]/[导出…]、状态 label；
 - 导出：`FileChooser`（`*.lmcl.json`）→ `Schedulers.io()` 写盘 → 回 FX 显示“已导出 N 类设置”；
 - 导入：`FileChooser` → `Schedulers.io()` 读文件 + `SettingsImportService.preview` → 回 FX `SettingsImportDialog`；
-- `SettingsImportDialog extends DialogPane`（宽 680）：段数、变更摘要（最多 50 条）、警告、预览错误；`[导入]` 调 `apply`，失败列出 `sectionId: message`；`[取消]` 不写任何设置；
+- `SettingsImportDialog extends DialogPane`（宽 680）：段数、变更摘要（v3.16.6 起按设置类目分组的可展开 `ComponentSublist`，显示全部变更，不再截断 50 条）、警告、预览错误；`[导入]` 调 `apply`，失败列出 `sectionId: message`；`[取消]` 不写任何设置；
 - v3.14 起，导入成功且应用了 `downloadSources` 段时，`SettingsImportDialog` 调 `CommunityDownloadSettingsPane.refreshVisible()`；设置页是长生命周期对象，靠 `CommunityDownloadSources.revision()` 判断是否需要重读，避免已打开页面仍显示旧列表；先导入后进入设置页时，由 `DownloadSettingsPage implements PageAware` 的 `onPageShown()` 调 `reloadIfChanged()` 兜底；
 - 拖入：任意页面把 `.lmcl.json` 拖到窗口 → 同一个 `SettingsImportDialog`；非该后缀不接收，不干扰 authlib 拖入；
 - i18n：`community.settings.transfer.*` 共 23 个 key（标题/说明/5 类/按钮/状态/预览/错误），三份语言文件一致。
@@ -432,8 +432,56 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 - `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **146/0/0/0**，全量 `:HMCL:test` **256/0/0/2 skipped**（v3.15 后为 147/257，见[步骤 07 §10](07-下载源配置.md)）；
 - `settings4` 包内附 `LMCL-download-source-sample.lmcl.json`（schema 2，BMCLAPI / openbmclapi / bmclapi 备用共 3 个源），手工验收步骤见[步骤 07 §5.2](07-下载源配置.md) 与 §10.6；
 - 未做：GUI 实机（WSL2 无 DISPLAY）、跨机器导入、导出后重新导入的完整回环、`CommunityConfigDnD` 单测；
-- 偏差：`SettingsImportDialog` 最多显示 50 条变更，不显示逐段勾选；导入按文件中的段全量应用，不支持只导入某一段（导出支持选择）；
+- 偏差：v3.16.6 已移除 50 条截断；导入按文件中的段全量应用，不支持只导入某一段（导出支持选择）；
 - 注意：`CommunitySettings` 是独立文件，不是上游 `LauncherSettings`，导入不会触碰账号/上游设置。
+
+## 6B.8 v3.16.6 开发人员、导出勾选与导入预览分组（2026-10-22，m16092）
+
+用户要求：开发人员增加“木子呆、法棍与仰望星空派”，小字“图标设计与绘制”；设置导入/导出左侧已有选项，右侧不再写小字，所有勾选框右对齐；导入 JSON 时每一项写类目，并做成可展开内容。
+
+### 6B.8.1 关于 LMCL 开发人员
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/about/AboutLMCLPage.java` 的 `buildDevelopers()` 返回两个 `LineButton`：
+
+| 条目 | 标题 | 副标题 |
+|---|---|---|
+| 1 | `指尖的宇宙 kerze` | `community.about.developer.role`（开发与维护） |
+| 2 | `木子呆、法棍与仰望星空派` | `community.about.developer.icon`（图标设计与绘制 / Icon design and illustration） |
+
+两者均使用 `SVG.PERSON` 32px 图标与 `setLargeTitle(true)`；新增 key 只加 `community.about.developer.icon`，三份 `I18N*.properties` 同步。
+
+### 6B.8.2 设置导出勾选
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/transfer/SettingsTransferPane.java`：
+
+- `CheckBox check = new CheckBox();` 不再用 `i18n(exporter.titleKey())` 作 label，避免左侧标题与右侧文字重复；
+- `check.setAccessibleText(i18n(exporter.titleKey()))` 保留无障碍文本；
+- `LinePane` 的 `setRight(check)` 位于 `IDX_TRAILING`，勾选框统一贴右；左侧标题由 `i18n(exporter.titleKey())` 显示，选项行结构不变。
+
+### 6B.8.3 导入预览分组
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/transfer/SettingsImportDialog.java`：
+
+- 用 `LinkedHashMap<String, List<SettingsChange>>` 按 `SettingsChange.section()` 分组，类目顺序沿用预览顺序；
+- 每个类目建一个 `ComponentSublist`，标题为 `sectionTitle(sectionId) + " (" + count + ")"`，内容为 `buildChangeRow(change)`；
+- `sectionTitle()` 通过 `SettingsExportService.find(section).titleKey()` 取本地化类目名，找不到时回退 sectionId；
+- 行只显示设置项 key 与“旧值 → 新值”，不再带 `sectionId ·` 前缀（类目已由分组标题表达）；
+- 删除原 50 条截断与“还有 N 条”提示，全部变更都在分组内；
+- `ComponentSublist` 默认折叠，点击标题展开；`ComponentList` 负责外框与分组间距。
+
+### 6B.8.4 验证
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过（仅 3 条既有 JavaFX `--add-exports` 警告）。
+- community **155 / 0 / 0 / 0**（28 个 XML）；全量 **265 / 0 / 0 / 2 skipped**。
+- `:HMCL:makeExecutables`：jar **11,793,778 B** SHA-256 `14d2e80eb2ac0fce0afeb883df1147f88f6dd297406d4003bc815719060c6468`；exe **12,994,930 B** SHA-256 `8dbd2ee12231b8305ee75561db03bb1ee0bbb5093dba7033dfab6eb8b87b7083`；stub 1,201,152 B `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`。
+- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike7.zip` **66,039,211 B** SHA-256 `5f10a29c48cd9d7c7a389145e3b3677c1680ebc022a7acb18f418cbc2d81662b`；323 entries、`testzip=None`；旧 m3spike6 已删除。
+
+### 6B.8.5 偏差与未验证
+
+- 本包未在 Windows 实机运行；勾选框在 1280×720/150% DPI 下的贴右效果、分组展开动画与长类目滚动未点验。
+- 开发人员为静态文案，无头像、无外链；用户后续提供头像/链接时再扩展。
+- 导入预览仍是“文件整体应用”，不能逐类目/逐项勾选应用；分组只改善查看。
+- `community.settings.transfer.import.more` 已无 UI 引用，保留为兼容 key，不在本轮清理。
 
 ## 6. 实现偏差与已知问题
 
