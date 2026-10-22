@@ -48,7 +48,7 @@ public final class NetworkWidget extends DashboardWidget {
     /// 镜像行。
     private final Label mirrorLabel = BuiltinWidgets.caption("");
 
-    /// 官方兜底行。
+    /// 零内置说明行（不表示官方兜底）。
     private final Label fallbackLabel = BuiltinWidgets.caption(i18n("community.network.fallback"));
 
     /// 配置按钮。
