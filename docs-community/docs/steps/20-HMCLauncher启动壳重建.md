@@ -358,3 +358,20 @@ i686-w64-mingw32-g++-posix -std=c++20 -Os -s -municode -mwindows   -ffunction-se
 - **MinGW CRT 差异**：本 stub 用 MinGW 静态 CRT，体积 1.2 MB（官方约 454 KB），依赖面已压到 Win7 系统 DLL；MSVC 正式构建仍应作为发布基线。
 - 图标/Java 下载页仍是上游占位，发布前必须处理。
 - fork 仓库尚无远端；公开源码义务在发布二进制前必须补远端地址与 Release 源码包。
+
+---
+
+## 8. 随包 JavaFX 依赖（v3.16.10，2026-10-23）
+
+上游 `EntryPoint.checkJavaFX()` 在 fat jar 未包含 JavaFX 时调用 `SelfDependencyPatcher.patch()`，首次启动会弹窗下载 `javafx-base/graphics/controls`。m3spike10 及更早测试包只带 stub、jar、JRE，未带依赖缓存，因此全新机器每次首启都会遇到。
+
+v3.16.10 的处理：
+
+- 测试包根目录新增 `dependencies/windows-x86_64/openjfx/`，随包携带 JavaFX 21.0.8 的 `classic` 三份 jar（与 `assets/openjfx-dependencies.json` 的 Windows x64 清单一致），并附 `LICENSE-OpenJFX.txt`；
+- `CommunityBootstrap.applyBundledDependencies()` 在 `Metadata` / `SelfDependencyPatcher` 初始化前，把 `hmcl.dependencies.dir` 指向启动器目录下的 `dependencies/`；
+- 显式 `-Dhmcl.dependencies.dir` / `HMCL_DEPENDENCIES_DIR` 优先；包内目录缺失时仍保留上游下载兜底；
+- 未改 `SelfDependencyPatcher`/`EntryPoint`，不新增上游侵入点。
+
+发行包必须整体解压并保留 `dependencies/`；只复制 `LMCL.exe`/`LMCL-1.0.0-any.jar` 会回到首启下载。只带 Windows x64 + JDK 17 的 `classic` 依赖；JDK 23+ 的 `modern`（JavaFX 25）未随包。
+
+实现细节、验证数字与手工验收见[步骤 21 §19](21-主页重构与侧边栏移除.md)。Windows 实机“断网 + 全新用户数据”首启仍未验证。
