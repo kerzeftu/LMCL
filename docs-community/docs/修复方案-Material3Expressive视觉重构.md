@@ -1499,7 +1499,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 - 根因：`FontManager.getFont()` 并非保证非 null；当用户没有自定义字体且默认字体探测失败时返回 null，旧代码无条件 `font.family()`。
 - 修复：抽出 `CommunityM3.fontStyle(@Nullable FontReference)`；null 时返回 null，`install` 不写 inline font 样式，继续继承组件字体；有字体时才设置并转义引号/反斜杠；`CommunityM3` 还给子树加 `community-m3-host` 类。
 - 回归：新增 `CommunityM3Test` 2 个测试（null 字体、字体名转义）；community **149/0**、全量 **259/0/2 skipped**。
-- 新产物：jar **11,783,754 B**（`39f25911…`）、exe **12,984,906 B**（`b2dece72…`）、`m3spike2` zip **66,266,200 B**（`dbd7d1b5…`）；代码提交 `f8cd1b9ec fix(24): avoid null FontManager font in M3 spike`。
+- 新产物：jar **11,783,754 B**（`39f25911…`）、exe **12,984,906 B**（`b2dece72…`）、`m3spike2` zip **66,266,200 B**（`dbd7d1b5…`）；代码提交 `f8cd1b9ec fix(24): avoid null FontManager font in M3 spike`；文档提交 `17f5fa6ff docs: v3.16.1 m3spike2 null-font fix`。
 
 打开方式：
 
