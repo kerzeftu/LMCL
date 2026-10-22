@@ -44,6 +44,7 @@ import javafx.stage.FileChooser;
 import org.glavo.monetfx.Brightness;
 import org.glavo.monetfx.ColorStyle;
 import org.glavo.uuid.UUIDs;
+import org.jackhuang.hmcl.community.dashboard.builtin.HomeCustomizationPane;
 import org.jackhuang.hmcl.setting.BackgroundType;
 import org.jackhuang.hmcl.setting.FontManager;
 import org.jackhuang.hmcl.setting.LauncherSettings;
@@ -109,6 +110,15 @@ public class PersonalizationPage extends StackPane {
     /// Time format used by default exported theme names.
     private static final DateTimeFormatter EXPORTED_THEME_NAME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+
+    /// 页面滚动容器。
+    private final ScrollPane scrollPane;
+
+    /// 页面内容容器。
+    private final VBox content;
+
+    /// 主页组件自定义区。
+    private final HomeCustomizationPane homeCustomizationPane;
 
     /// Snaps a percent value to the nearest 5% opacity tick.
     private static double snapOpacity(double val) {
@@ -414,13 +424,14 @@ public class PersonalizationPage extends StackPane {
 
     /// Creates the launcher appearance settings page.
     public PersonalizationPage() {
-        VBox content = new VBox(10);
+        content = new VBox(10);
         content.setPadding(new Insets(10));
         content.setFillWidth(true);
-        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane = new ScrollPane(content);
         FXUtils.smoothScrolling(scrollPane);
         scrollPane.setFitToWidth(true);
         getChildren().setAll(scrollPane);
+        homeCustomizationPane = new HomeCustomizationPane();
 
         ComponentList themeList = new ComponentList();
         {
@@ -1306,6 +1317,25 @@ public class PersonalizationPage extends StackPane {
 
             content.getChildren().addAll(ComponentList.createComponentListTitle(i18n("settings.launcher.fonts")), fontPane);
         }
+
+        content.getChildren().addAll(
+                ComponentList.createComponentListTitle(i18n("community.home.widgets.title")),
+                homeCustomizationPane);
+    }
+
+    /// 滚动到“主页组件”自定义区；由主页“自定义”按钮调用。
+    public void scrollToHomeCustomization() {
+        homeCustomizationPane.requestLayout();
+        Platform.runLater(() -> {
+            double contentHeight = content.getHeight();
+            double viewportHeight = scrollPane.getViewportBounds().getHeight();
+            if (contentHeight <= viewportHeight) {
+                scrollPane.setVvalue(1);
+                return;
+            }
+            double offset = homeCustomizationPane.getBoundsInParent().getMinY();
+            scrollPane.setVvalue(Math.min(1, Math.max(0, offset / (contentHeight - viewportHeight))));
+        });
     }
 
     /// Choice with a right-side paint picker.

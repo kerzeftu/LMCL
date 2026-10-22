@@ -38,7 +38,6 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
     private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(State.fromTitle(i18n("settings")));
     private final TabHeader tab;
     private final TabHeader.Tab<GameSettingsPage<GameSettings.Preset>> gameTab = new TabHeader.Tab<>("versionSettingsPage");
-    private final TabControl.Tab<JavaManagementPage> javaManagementTab = new TabControl.Tab<>("javaManagementPage");
     private final TabHeader.Tab<SettingsPage> settingsTab = new TabHeader.Tab<>("settingsPage");
     private final TabHeader.Tab<PersonalizationPage> personalizationTab = new TabHeader.Tab<>("personalizationPage");
     private final TabHeader.Tab<DownloadSettingsPage> downloadTab = new TabHeader.Tab<>("downloadSettingsPage");
@@ -46,18 +45,16 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
 
     public LauncherSettingsPage() {
         gameTab.setNodeSupplier(() -> new GameSettingsPage<>(GameSettings.Preset.class));
-        javaManagementTab.setNodeSupplier(JavaManagementPage::new);
         settingsTab.setNodeSupplier(SettingsPage::new);
         personalizationTab.setNodeSupplier(PersonalizationPage::new);
         downloadTab.setNodeSupplier(DownloadSettingsPage::new);
-        tab = new TabHeader(transitionPane, gameTab, javaManagementTab, settingsTab, personalizationTab, downloadTab);
+        tab = new TabHeader(transitionPane, gameTab, settingsTab, personalizationTab, downloadTab);
 
         tab.select(gameTab);
         addEventHandler(Navigator.NavigationEvent.NAVIGATED, event -> gameTab.getNode().loadInstance(GameDirectoryManager.getSelectedRepository(), null));
 
         AdvancedListBox sideBar = new AdvancedListBox()
                 .addNavigationDrawerTab(tab, gameTab, i18n("settings.type.global.manage"), SVG.STADIA_CONTROLLER, SVG.STADIA_CONTROLLER_FILL)
-                .addNavigationDrawerTab(tab, javaManagementTab, i18n("java.management"), SVG.LOCAL_CAFE, SVG.LOCAL_CAFE_FILL)
                 .startCategory(i18n("launcher").toUpperCase(Locale.ROOT))
                 .addNavigationDrawerTab(tab, settingsTab, i18n("settings.launcher.general"), SVG.TUNE)
                 .addNavigationDrawerTab(tab, personalizationTab, i18n("settings.launcher.appearance"), SVG.STYLE, SVG.STYLE_FILL)
@@ -86,6 +83,12 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
     /// 选中“下载”设置 tab；主页网络卡使用。
     public void showDownloadSettings() {
         tab.select(downloadTab, false);
+    }
+
+    /// 选中“外观”设置 tab 并滚动到主页组件自定义区；主页自定义键使用。
+    public void showHomeCustomization() {
+        tab.select(personalizationTab, false);
+        personalizationTab.getNode().scrollToHomeCustomization();
     }
 
     @Override

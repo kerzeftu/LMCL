@@ -26,9 +26,11 @@ import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.animation.TransitionPane;
 import org.jackhuang.hmcl.ui.construct.AdvancedListBox;
 import org.jackhuang.hmcl.ui.construct.PageAware;
+import org.jackhuang.hmcl.ui.construct.TabControl;
 import org.jackhuang.hmcl.ui.construct.TabHeader;
 import org.jackhuang.hmcl.ui.decorator.DecoratorAnimatedPage;
 import org.jackhuang.hmcl.ui.decorator.DecoratorPage;
+import org.jackhuang.hmcl.ui.main.JavaManagementPage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
@@ -37,10 +39,11 @@ import java.util.Locale;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
-/// “管理”页：侧栏“管理”入口，左侧为账户/实例二级菜单。
+/// “管理”页：侧栏“管理”入口，左侧为账户/实例/Java 二级菜单。
 ///
 /// 账户与实例复用 [AccountsPane]、[InstancesPane]，不复制上游页面逻辑；
-/// 上游页面自带的 200 px 导航在 [AccountsPane]/[InstancesPane] 内隐藏。
+/// 上游页面自带的 200 px 导航在 [AccountsPane]/[InstancesPane] 内隐藏；
+/// Java 管理直接复用上游 [JavaManagementPage]（该页无左侧栏）。
 ///
 /// 线程：单例构造与页面切换均在 FX 线程。
 @NotNullByDefault
@@ -54,13 +57,15 @@ public final class ManagementPage extends DecoratorAnimatedPage implements Decor
     private final TransitionPane transitionPane = new TransitionPane();
     private final TabHeader.Tab<AccountsPane> accountsTab = new TabHeader.Tab<>("managementAccountsPage");
     private final TabHeader.Tab<InstancesPane> instancesTab = new TabHeader.Tab<>("managementInstancesPage");
+    private final TabControl.Tab<JavaManagementPage> javaTab = new TabControl.Tab<>("managementJavaPage");
     private final TabHeader tab;
 
     private ManagementPage() {
         accountsTab.setNodeSupplier(AccountsPane::new);
         instancesTab.setNodeSupplier(InstancesPane::new);
+        javaTab.setNodeSupplier(JavaManagementPage::new);
 
-        tab = new TabHeader(transitionPane, accountsTab, instancesTab);
+        tab = new TabHeader(transitionPane, accountsTab, instancesTab, javaTab);
         tab.select(accountsTab);
 
         AdvancedListBox sideBar = new AdvancedListBox()
@@ -68,7 +73,9 @@ public final class ManagementPage extends DecoratorAnimatedPage implements Decor
                 .addNavigationDrawerTab(tab, accountsTab, i18n("community.management.tab.accounts"),
                         SVG.PERSON, SVG.PERSON)
                 .addNavigationDrawerTab(tab, instancesTab, i18n("community.management.tab.instances"),
-                        SVG.GAMEPAD, SVG.GAMEPAD);
+                        SVG.GAMEPAD, SVG.GAMEPAD)
+                .addNavigationDrawerTab(tab, javaTab, i18n("java.management"),
+                        SVG.LOCAL_CAFE, SVG.LOCAL_CAFE);
 
         FXUtils.setLimitWidth(sideBar, 200);
         setLeft(sideBar);
@@ -95,6 +102,11 @@ public final class ManagementPage extends DecoratorAnimatedPage implements Decor
     /// 选中实例 tab。
     public void showInstances() {
         tab.select(instancesTab, false);
+    }
+
+    /// 选中 Java 管理 tab。
+    public void showJava() {
+        tab.select(javaTab, false);
     }
 
     @Override

@@ -27,7 +27,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
@@ -55,8 +54,8 @@ import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.ui.account.AccountAdvancedListItem;
-import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
+import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import org.jackhuang.hmcl.ui.main.MainPage;
 import org.jackhuang.hmcl.util.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -64,6 +63,7 @@ import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -83,7 +83,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 /// - 不再使用可拖拽的 12 行网格，而是固定的“主列 + 右栏”分栏；
 /// - 上游 200px 文本侧栏已移除；实例/下载/设置入口在全局 64px 侧栏，账户与实例管理入口在左栏账户卡（打开“管理”页）；
 /// - 组件仍由 [WidgetRegistry] 与 [DashboardWidget] 提供，显隐/重置写入
-///   `dashboard.json`，保留用户已有的 `pinnedInstanceIds` 与 `widgetProps`。
+///   `dashboard.json`，保留用户已有的 `pinnedInstanceIds` 与 `widgetProps`；
+/// - 自定义入口跳转“设置 > 外观”，编辑区内嵌在 `PersonalizationPage`。
 ///
 /// 线程：构造与所有 UI 操作只在 FX 线程；`dashboard.json` 读盘在构造时同步完成
 /// （小文件，与上游 `DashboardPane` 一致），组件的磁盘读取仍走 `DashboardWidget#loadAsync`。
@@ -167,6 +168,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 正在运行的实例。
     private final Set<String> running = new LinkedHashSet<>();
 
+    /// 当前挂载的主页；设置页保存后用它即时刷新。
+    private static @Nullable WeakReference<HomePane> active;
+
     /// 是否有未落盘的变更。
     private boolean dirty;
 
@@ -179,6 +183,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// @param configPath `dashboard.json` 路径
     public HomePane(@NotNull MainPage mainPage, @NotNull Path configPath) {
         this.mainPage = mainPage;
+        active = new WeakReference<>(this);
         this.config = DashboardConfig.load(configPath);
         this.registry = WidgetRegistry.load();
         this.context = new DashboardContext(
@@ -244,6 +249,10 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         }
         widgets.clear();
         CommunitySettingsPanel.setDashboardActions(null);
+        WeakReference<HomePane> ref = active;
+        if (ref != null && ref.get() == this) {
+            active = null;
+        }
     }
 
     /// 刷新全部组件（从设置页返回时使用）。
@@ -264,56 +273,34 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         rebuildBody();
     }
 
-    /// 打开组件显隐对话框。
+    /// 打开设置 > 外观中的主页组件自定义区。
     @Override
     public void startEditing() {
         if (config.readOnly()) {
             Controllers.dialog(i18n("community.home.readonly"), null, MessageDialogPane.MessageType.WARNING);
             return;
         }
+        LauncherSettingsPage page = Controllers.getSettingsPage();
+        page.showHomeCustomization();
+        Controllers.navigate(page);
+    }
 
-        VBox list = new VBox(6);
-        Map<String, CheckBox> boxes = new LinkedHashMap<>();
-        for (DashboardWidgetDescriptor descriptor : registry.all()) {
-            if (!descriptor.isValid()) {
-                continue;
-            }
-            CheckBox box = new CheckBox(i18n(descriptor.nameKey()));
-            box.setSelected(isEnabled(descriptor.id()));
-            boxes.put(descriptor.id(), box);
-            list.getChildren().add(box);
+    /// 设置页保存主页配置后，从磁盘重载并重建左右栏。
+    public void reloadFromDisk() {
+        if (disposed) {
+            return;
         }
+        config.reload();
+        rebuildBody();
+    }
 
-        ScrollPane listScroll = new ScrollPane(list);
-        listScroll.setFitToWidth(true);
-        listScroll.setPrefHeight(360);
-
-        VBox content = new VBox(8, BuiltinWidgets.caption(i18n("community.home.widgets.hint")), listScroll);
-        org.jackhuang.hmcl.ui.construct.DialogPane root = BuiltinWidgets.dialogRoot(i18n("community.home.widgets.title"), content, 520);
-
-        JFXButton cancel = BuiltinWidgets.borderButton(i18n("community.dashboard.cancel"),
-                () -> root.fireEvent(new DialogCloseEvent()));
-        JFXButton save = BuiltinWidgets.raisedButton(i18n("community.dashboard.done"), () -> {
-            List<DashboardItem> items = new ArrayList<>();
-            for (DashboardWidgetDescriptor descriptor : registry.all()) {
-                CheckBox box = boxes.get(descriptor.id());
-                if (box == null) {
-                    continue;
-                }
-                items.add(new DashboardItem(
-                        descriptor.id(),
-                        box.isSelected(),
-                        descriptor.order(),
-                        descriptor.defaultColumns(),
-                        descriptor.defaultRows()));
-            }
-            config.setItems(items);
-            persist();
-            rebuildBody();
-            root.fireEvent(new DialogCloseEvent());
-        });
-        content.getChildren().add(BuiltinWidgets.dialogActions(cancel, save));
-        Controllers.dialog(root);
+    /// 通知当前挂载的主页配置已变化；没有挂载时什么都不做。
+    public static void notifyConfigurationChanged() {
+        WeakReference<HomePane> ref = active;
+        HomePane pane = ref != null ? ref.get() : null;
+        if (pane != null && !pane.disposed) {
+            pane.reloadFromDisk();
+        }
     }
 
     /// 构建顶部：问候与运行状态。

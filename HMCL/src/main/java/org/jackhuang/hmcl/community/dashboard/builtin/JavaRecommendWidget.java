@@ -35,7 +35,7 @@ import org.jackhuang.hmcl.community.jvm.JvmPresetWizard;
 import org.jackhuang.hmcl.download.java.disco.DiscoJavaDistribution;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
-import org.jackhuang.hmcl.ui.main.JavaManagementPage;
+import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.util.platform.Platform;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
@@ -64,9 +64,13 @@ public final class JavaRecommendWidget extends DashboardWidget {
     private final JFXButton recommendButton = BuiltinWidgets.borderButton(
             i18n("community.java.card.recommend"), this::openRecommendDialog);
 
-    /// 管理 Java 按钮。
+    /// 管理 Java 按钮；统一跳到“管理”页的 Java tab。
     private final JFXButton manageButton = BuiltinWidgets.borderButton(
-            i18n("community.java.card.manage"), () -> navigate(new JavaManagementPage()));
+            i18n("community.java.card.manage"), () -> {
+                ManagementPage page = ManagementPage.getInstance();
+                page.showJava();
+                navigate(page);
+            });
 
     /// 构造 Java 卡。
     ///
