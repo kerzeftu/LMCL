@@ -522,6 +522,47 @@ v3.16.6 时两者均使用 `SVG.PERSON` 32px 图标与 `setLargeTitle(true)`；v
 3. 未给头像增加外链或个人主页；未来如需链接，应把整行 `LineButton` 的点击行为与头像解耦。
 4. 如果未来把 `loadImage` 改成远程加载，必须移到 `loadAsync`/IO 线程，避免 FX 线程阻塞。
 
+## 6B.10 v3.16.11 导入预览人类可读变化摘要（2026-10-23，m17461）
+
+用户要求：导入 JSON 时展开的每一项写“变化”而不是配置原文，例如导入下载源写新增几个下载源，换行后每行一个网址。本节只记录导入预览；默认隔离策略见[步骤 23 §11](23-管理页与启动内存优化.md)。
+
+### 6B.10.1 数据模型
+
+| 文件 | 改动 |
+|---|---|
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/config/SettingsChange.java` | record 扩为 `(String section, String key, @Nullable String oldValue, @Nullable String newValue, @Nullable String label)`；保留 4 参兼容构造（`label = null`）；`display(JsonElement)` 仍是 120 字符 JSON 截断，仅作为无法摘要时的兜底 |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/config/SettingsPreviewValues.java` | 新增：`onOff(boolean)`、`describe(JsonElement)`（布尔 → 开/关，字符串原值，空串 → 空值，数组 → 条目数，对象 → 字段数）、`same(a,b)` 结构化比较、`string/bool/number` 取值 |
+
+`SettingsSectionExporter.preview(JsonObject)` 的默认实现仍逐字段生成 `SettingsChange`；5 个导出器都覆写了 `preview`，因此常规导入不再出现 JSON 原文。`label` 为空时 UI 回退到 `key`。
+
+### 6B.10.2 各类目摘要
+
+- **下载源**（`DownloadSourcesSectionExporter`）：`describeChanges(CommunityDownloadSources.load(), CommunityDownloadSources.parse(incoming))` 按 URL 比较，输出 `preview.download.added` / `removed` / `renamed` / `reordered`；每行再列出 URL，重命名行为 `preview.download.rename_line`（URL、旧名 → 新名）；仅顺序变化时列出 `1. URL` 编号。一个类目只生成一条多行 `SettingsChange`。没有变化时返回空列表。
+- **外观**（`AppearanceSectionExporter`）：遍历 19 个白名单键；导入 JSON 缺失的键跳过（`apply` 对缺失字段保留现状）。`selectedTheme` 显示 `packId/themeId`，`customThemeColor` 显示颜色名，`themeAppearanceOverrides` 显示条目数，`language` 用 `SupportedLocale` 的显示名，其余用 `SettingsPreviewValues.describe`；每项 label 为 `community.settings.transfer.preview.appearance.<key>`。
+- **主页**（`HomeSectionExporter`）：把 `items` 解析为 `(id, enabled, order, colSpan, rowSpan, column)` 后比较新增/移除/启停/移动/改尺寸/改顺序；组件名由 `WidgetRegistry.load().byId(id).nameKey()` 得到，未知 id 回退 id；输出多行 `community.settings.transfer.preview.home.layout`，另加固定实例数、`widgetProps` 字段数两条独立变化。列标签复用 `community.home.customize.section.left/right` 与 `...home.column.default`。
+- **内存**（`MemorySectionExporter`）：逐项 `enabled`、`intervalMinutes`、`minReclaimMiB`、`memoryOptimizationOnLaunch`；分钟/MiB 用带单位的本地化模板，布尔用开/关。
+- **Java**（`JavaSectionExporter`）：`preferredDistribution` 用 `JavaChoice.of(DiscoJavaDistribution.of(value)).i18nKey()` 本地化，`mirrorEnabled` 用开/关。
+
+### 6B.10.3 预览 UI
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/transfer/SettingsImportDialog.java` 的 `buildChangeRow`：
+
+- 行标题优先 `change.label()`，为空才用 `change.key()`；
+- `newValue` 含换行时，用 `VBox` 逐行 `Label`（`subtitle-label`、不换行、`OverrunStyle.ELLIPSIS`、`maxWidth 420`、Tooltip 显示全文），下载源因此一行一个 URL；
+- 单行值仍显示 `旧值/（未设置） → 新值`，空值走 `community.settings.transfer.value.absent`；
+- 分组仍由 §6B.8 的 `ComponentSublist` 负责，类目标题不变。
+
+### 6B.10.4 i18n
+
+三份 `HMCL/src/main/resources/assets/lang/I18N.properties`、`I18N_zh.properties`、`I18N_zh_CN.properties` 各新增 56 个 key，前缀为 `community.settings.transfer.value.*`、`community.settings.transfer.preview.download.*`、`...preview.appearance.*`、`...preview.home.*`、`...preview.memory.*`、`...preview.java.*`。`checkTranslations` 通过。
+
+### 6B.10.5 验证与偏差
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过（仅 3 条既有 JavaFX `--add-exports` 警告）。
+- community **161 / 0 / 0 / 0**；全量 `:HMCL:test` **271 / 0 / 0 / 2 skipped**；新增 `HMCL/src/test/java/org/jackhuang/hmcl/community/config/section/SettingsPreviewTest.java` 6 个测试（默认隔离、下载新增/重命名/重排/无变化、`SettingsChange.label` 兼容）。
+- `:HMCL:makeExecutables`：jar **11,872,103 B** SHA-256 `76cb67e4…`；exe **13,073,255 B** SHA-256 `f3666c40…`；stub 1,201,152 B `ded29e28…`；测试包 `dist/LMCL-1.0.0-win-x64-m3spike12.zip` **74,634,197 B** SHA-256 `c72efc65…`。
+- 偏差：下载源预览把整段变化合成一条多行记录，不支持逐源勾选应用；新增/移除只列 URL，重命名附带旧名 → 新名，不展示每个源的全部字段或排序的每个中间值；未知的 `widgetProps` 只显示字段数；未在 Windows 实机查看长 URL 换行、Tooltip 与 150% DPI 效果。
+
 ## 6. 实现偏差与已知问题
 
 1. 关于页致谢标题实际为“HMCL 贡献者致谢”，未使用方案里的“HMCL 项目与贡献者”；含义相近，但把社区伙伴也归入“贡献者”。
