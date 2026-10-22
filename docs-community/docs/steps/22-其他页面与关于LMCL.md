@@ -448,7 +448,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 | 1 | `指尖的宇宙 kerze` | `community.about.developer.role`（开发与维护） |
 | 2 | `木子呆、法棍与仰望星空派` | `community.about.developer.icon`（图标设计与绘制 / Icon design and illustration） |
 
-两者均使用 `SVG.PERSON` 32px 图标与 `setLargeTitle(true)`；新增 key 只加 `community.about.developer.icon`，三份 `I18N*.properties` 同步。
+v3.16.6 时两者均使用 `SVG.PERSON` 32px 图标与 `setLargeTitle(true)`；v3.16.7 已改为本地头像，见 §6B.9。新增 key 只加 `community.about.developer.icon`，三份 `I18N*.properties` 同步。
 
 ### 6B.8.2 设置导出勾选
 
@@ -479,9 +479,48 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 ### 6B.8.5 偏差与未验证
 
 - 本包未在 Windows 实机运行；勾选框在 1280×720/150% DPI 下的贴右效果、分组展开动画与长类目滚动未点验。
-- 开发人员为静态文案，无头像、无外链；用户后续提供头像/链接时再扩展。
+- v3.16.6 时开发人员为静态文案、无头像；v3.16.7 已补本地头像，仍无外链，见 §6B.9。
 - 导入预览仍是“文件整体应用”，不能逐类目/逐项勾选应用；分组只改善查看。
 - `community.settings.transfer.import.more` 已无 UI 引用，保留为兼容 key，不在本轮清理。
+
+## 6B.9 v3.16.7 开发人员本地头像（2026-10-22，m16336）
+
+用户提供两张开发人员头像，要求放入“关于 LMCL”的开发人员条目；同时提出回到主页时左上角 HOME 按钮的问题，后者见[步骤 21 §16](21-主页重构与侧边栏移除.md)。
+
+### 6B.9.1 资源
+
+| 开发人员 | 资源 | 尺寸 | 大小 |
+|---|---|---|---|
+| 指尖的宇宙 kerze | `HMCL/src/main/resources/assets/about/avatars/kerze.jpg` | 300×300 | 4,968 B |
+| 木子呆、法棍与仰望星空派 | `HMCL/src/main/resources/assets/about/avatars/muzidai.jpg` | 640×640 | 49,592 B |
+
+两张图均来自用户附件，转存为 JPEG 内置资源；jar 内路径与源码常量一致，运行时不依赖网络。
+
+### 6B.9.2 实现
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/about/AboutLMCLPage.java`：
+
+- 新增常量 `KERZE_AVATAR`、`ICON_DESIGNER_AVATAR`；
+- `buildDevelopers()` 的两个 `LineButton` 分别调用 `setAvatar(developer, KERZE_AVATAR)` 与 `setAvatar(iconDesigner, ICON_DESIGNER_AVATAR)`；
+- 新增 `setAvatar(LineButton, String resource)`：复用同文件 `loadImage(...)`（内置路径走 `FXUtils.newBuiltinImage`），用 `ImageContainer(32, 32)` + `setImage` + `setMouseTransparent(true)` 作为 leading；资源缺失或解码失败时回退 `SVG.PERSON.createIcon(32)`；
+- 标题、副标题、`setLargeTitle(true)` 与 i18n key 不变；致谢列表的头像逻辑不受影响。
+
+头像在页面构造/数据加载后的 FX 线程同步读取内置资源；文件只有几 KB，加载成本可接受，也没有远程请求。
+
+### 6B.9.3 验证
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过（仅 3 条既有 JavaFX `--add-exports` 警告）。
+- community **155 / 0 / 0 / 0**；全量 `:HMCL:test` **265 / 0 / 0 / 2 skipped**。
+- `:HMCL:makeExecutables`：jar **11,848,943 B** SHA-256 `4f30111044b50ee8bda2727f995dd98bc0178a63d717b47b96d738654fe2d022`；exe **13,050,095 B** SHA-256 `5243673b443e4e4633a7914a75e2ecf630a9b19f7ebb73b2f903ce445566f832`；stub 1,201,152 B `89b58fa0…`；
+- jar 内已包含 `assets/about/avatars/kerze.jpg`、`assets/about/avatars/muzidai.jpg` 与更新后的 `AboutLMCLPage.class`；
+- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike8.zip` **66,148,447 B** SHA-256 `edfdba1d566338d60060ef0e57c3d04ccfa9b558d52398f82605c7ecdf31da82`；323 entries、`testzip=None`。
+
+### 6B.9.4 偏差与未验证
+
+1. 未在 Windows 实机查看 32px 圆角/裁切效果、150% DPI 与中英文排版；WSL2 无 X11。
+2. 头像只在构建时读取；用户更换头像需要重新构建，运行时不提供“上传头像”。
+3. 未给头像增加外链或个人主页；未来如需链接，应把整行 `LineButton` 的点击行为与头像解耦。
+4. 如果未来把 `loadImage` 改成远程加载，必须移到 `loadAsync`/IO 线程，避免 FX 线程阻塞。
 
 ## 6. 实现偏差与已知问题
 
