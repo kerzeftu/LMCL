@@ -129,8 +129,14 @@ public final class AboutLMCLPage extends SpinnerPane {
         developer.setTitle("指尖的宇宙 kerze");
         developer.setSubtitle(i18n("community.about.developer.role"));
 
+        LineButton iconDesigner = new LineButton();
+        iconDesigner.setLargeTitle(true);
+        iconDesigner.setLeading(SVG.PERSON.createIcon(32));
+        iconDesigner.setTitle("木子呆、法棍与仰望星空派");
+        iconDesigner.setSubtitle(i18n("community.about.developer.icon"));
+
         ComponentList list = new ComponentList();
-        list.getContent().setAll(developer);
+        list.getContent().setAll(developer, iconDesigner);
         return list;
     }
 

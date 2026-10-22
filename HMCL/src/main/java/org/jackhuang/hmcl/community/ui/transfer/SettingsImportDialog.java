@@ -18,10 +18,8 @@
 package org.jackhuang.hmcl.community.ui.transfer;
 
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.config.CommunitySettingsBundle;
 import org.jackhuang.hmcl.community.config.SettingsChange;
@@ -32,6 +30,7 @@ import org.jackhuang.hmcl.community.download.CommunityDownloadSettingsPane;
 import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.construct.ComponentList;
+import org.jackhuang.hmcl.ui.construct.ComponentSublist;
 import org.jackhuang.hmcl.ui.construct.DialogPane;
 import org.jackhuang.hmcl.ui.construct.LinePane;
 import org.jackhuang.hmcl.task.Schedulers;
@@ -39,7 +38,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
@@ -87,23 +89,21 @@ public final class SettingsImportDialog extends DialogPane {
             empty.getStyleClass().add("subtitle-label");
             content.getChildren().add(empty);
         } else {
-            ComponentList list = new ComponentList();
-            int shown = 0;
+            Map<String, List<SettingsChange>> grouped = new LinkedHashMap<>();
             for (SettingsChange change : preview.changes()) {
-                if (shown >= 50) {
-                    break;
+                grouped.computeIfAbsent(change.section(), key -> new ArrayList<>()).add(change);
+            }
+
+            ComponentList list = new ComponentList();
+            for (Map.Entry<String, List<SettingsChange>> entry : grouped.entrySet()) {
+                ComponentSublist group = new ComponentSublist();
+                group.setTitle(sectionTitle(entry.getKey()) + " (" + entry.getValue().size() + ")");
+                for (SettingsChange change : entry.getValue()) {
+                    group.getContent().add(buildChangeRow(change));
                 }
-                list.getContent().add(buildChangeRow(change));
-                shown++;
+                list.getContent().add(group);
             }
-            if (preview.changes().size() > shown) {
-                Label more = new Label(i18n("community.settings.transfer.import.more",
-                        preview.changes().size() - shown));
-                more.getStyleClass().add("subtitle-label");
-                content.getChildren().addAll(list, more);
-            } else {
-                content.getChildren().add(list);
-            }
+            content.getChildren().add(list);
         }
 
         ScrollPane scroll = new ScrollPane(content);
@@ -114,22 +114,21 @@ public final class SettingsImportDialog extends DialogPane {
         setValid(preview.errors().isEmpty());
     }
 
-    private static @NotNull HBox buildChangeRow(@NotNull SettingsChange change) {
+    private static @NotNull String sectionTitle(@NotNull String section) {
+        var exporter = SettingsExportService.find(section);
+        return exporter == null ? section : i18n(exporter.titleKey());
+    }
+
+    private static @NotNull LinePane buildChangeRow(@NotNull SettingsChange change) {
         LinePane row = new LinePane();
-        SettingsExportService.find(change.section());
-        String sectionName = SettingsExportService.find(change.section()) == null
-                ? change.section()
-                : i18n(SettingsExportService.find(change.section()).titleKey());
-        row.setTitle(sectionName + " · " + change.key());
+        row.setTitle(change.key());
         String oldValue = change.oldValue() == null ? i18n("community.settings.transfer.value.absent") : change.oldValue();
         String newValue = change.newValue() == null ? i18n("community.settings.transfer.value.absent") : change.newValue();
         Label value = new Label(oldValue + "  →  " + newValue);
         value.getStyleClass().add("subtitle-label");
         value.setWrapText(false);
         row.setRight(value);
-        HBox wrapper = new HBox(row);
-        wrapper.setAlignment(Pos.CENTER_LEFT);
-        return wrapper;
+        return row;
     }
 
     @Override

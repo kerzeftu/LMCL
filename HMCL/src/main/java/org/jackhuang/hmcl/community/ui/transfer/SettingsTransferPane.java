@@ -76,7 +76,8 @@ public final class SettingsTransferPane extends VBox {
 
         ComponentList list = new ComponentList();
         for (SettingsSectionExporter exporter : SettingsExportService.exporters()) {
-            CheckBox check = new CheckBox(i18n(exporter.titleKey()));
+            CheckBox check = new CheckBox();
+            check.setAccessibleText(i18n(exporter.titleKey()));
             check.setSelected(exporter.id().equals("downloadSources")
                     || exporter.id().equals("appearance")
                     || exporter.id().equals("home"));
