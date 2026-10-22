@@ -46,6 +46,7 @@ import org.jackhuang.hmcl.community.launch.LaunchEvent;
 import org.jackhuang.hmcl.community.launch.LaunchEventListener;
 import org.jackhuang.hmcl.community.launch.LaunchEventKind;
 import org.jackhuang.hmcl.community.ui.CommunitySettingsPanel;
+import org.jackhuang.hmcl.community.ui.m3.M3SpikePane;
 import org.jackhuang.hmcl.community.update.CommunityUpdateDialog;
 import org.jackhuang.hmcl.community.update.CommunityUpdateNotifier;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
@@ -320,6 +321,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         JFXButton customizeButton = BuiltinWidgets.borderButton(
                 i18n("community.home.customize"), this::startEditing);
         HBox header = new HBox(10, titles, BuiltinWidgets.spacer(), customizeButton);
+        if (Boolean.getBoolean("lmcl.m3.spike")) {
+            header.getChildren().add(2, BuiltinWidgets.borderButton("M3 Spike", M3SpikePane::open));
+        }
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(0, 0, 2, 0));
         return header;
