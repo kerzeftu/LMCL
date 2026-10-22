@@ -337,14 +337,21 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
   "version": 1,
   "product": "LMCL",
   "productVersion": "3.16.1000",
-  "createdAt": "2026-10-22T05:00:00Z",
+  "exportedAt": "2026-10-22T05:00:00Z",
   "sections": {
-    "downloadSources": { "schema": 1, "primary": { "name": "BMCLAPI", "url": "https://bmclapi2.bangbang93.com" }, "mirrors": [] }
+    "downloadSources": {
+      "schema": 2,
+      "sources": [
+        { "name": "BMCLAPI", "url": "https://bmclapi2.bangbang93.com" },
+        { "name": "BMCLAPI 主控", "url": "https://openbmclapi.bangbang93.com" },
+        { "name": "BMCLAPI 备用", "url": "https://bmclapi.bangbang93.com" }
+      ]
+    }
   }
 }
 ```
 
-- `CommunitySettingsBundle.FORMAT = "lmcl.settings"`、`VERSION = 1`、`FILE_SUFFIX = ".lmcl.json"`、`MAX_BYTES = 2 MiB`；
+- `CommunitySettingsBundle.FORMAT = "lmcl.settings"`、`VERSION = 1`、`FILE_SUFFIX = ".lmcl.json"`、`MAX_BYTES = 2 MiB`、时间字段 `exportedAt`（ISO-8601）；
 - `sections` 只允许已注册的 5 个 id；未知段保留在内存中但只记 `warnings`，不参与导入；
 - 没有任何受支持段时抛 `JsonParseException`；`format` 不匹配或 `version > 1` 同样拒绝；
 - 写文件使用 UTF-8、原子写；导出文件名 `LMCL-settings-<yyyyMMdd-HHmmss>.lmcl.json`（`SettingsExportService.suggestedFileName()`）。
@@ -366,7 +373,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 
 导出器实现位于 `config/section/`：
 
-- `DownloadSourcesSectionExporter`：解析 → `save()` → `CommunityDownloadInstaller.apply()`；导入后立即生效，无需重启；段非法时整体拒绝，保留旧配置；
+- `DownloadSourcesSectionExporter`：解析 → `save()` → `CommunityDownloadInstaller.apply()`（触发一次测速，完成后按延迟重排候选）；导入后立即生效，无需重启；段非法时整体拒绝，保留旧配置；v3.13 起 schema 2 `sources[]`，v1 `primary`+`mirrors` 仍可导入并迁移；
 - `AppearanceSectionExporter`：19 个白名单键（`language`、`selectedTheme`、`themeAppearanceOverrides`、`customThemeColor`、`themeBrightnessMode`、`builtinBackgroundId`、`logFontFamily`、`launcherFontFamily`、`titleBarTransparent`、`windowTransparent`、`animationDisabled`、`backgroundOpacity`、`logFontSize`、`themeColorType`、`themeColorStyle`、`backgroundType`、`networkBackgroundImageCachePolicy`、`backgroundFallbackType`、`backgroundLoadPolicy`）；先完整解析，任一键非法则不写入（全有或全无）；
 - `HomeSectionExporter`：`DashboardConfig.load(Metadata.HMCL_LOCAL_HOME/config/dashboard.json)` → 只读则拒绝 → `replaceFromJson` → `save()` → `HomePane.notifyConfigurationChanged()`；
 - `MemorySectionExporter`：`MemoryBaseSettings` + 默认 `GameSettings.Preset` 的 `memoryOptimizationOnLaunchProperty()`；
@@ -422,7 +429,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 ### 6B.7 验证与偏差
 
 - `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **143/0/0/0**，全量 `:HMCL:test` **253/0/0/2 skipped**；
-- `settings1` 包内附 `LMCL-download-source-sample.lmcl.json`，手工验收步骤见[步骤 07 §5.2](07-下载源配置.md)；
+- `settings2` 包内附 `LMCL-download-source-sample.lmcl.json`（schema 2，BMCLAPI / openbmclapi / bmclapi 备用共 3 个源），手工验收步骤见[步骤 07 §5.2](07-下载源配置.md)；
 - 未做：GUI 实机（WSL2 无 DISPLAY）、跨机器导入、导出后重新导入的完整回环、`CommunityConfigDnD` 单测；
 - 偏差：`SettingsImportDialog` 最多显示 50 条变更，不显示逐段勾选；导入按文件中的段全量应用，不支持只导入某一段（导出支持选择）；
 - 注意：`CommunitySettings` 是独立文件，不是上游 `LauncherSettings`，导入不会触碰账号/上游设置。
