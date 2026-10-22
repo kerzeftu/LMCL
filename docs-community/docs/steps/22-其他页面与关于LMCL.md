@@ -316,7 +316,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 1. `AccountListPage`/`GameListPage` 未改源码，只隐藏其 `left`；依赖上游 private skin 与固定 center 结构，上游升级需重新验证。
 2. 实例页目录菜单在 `selectedRepositoryProperty` 变化时重建；新建目录后需重新打开菜单刷新。
 3. 账户页认证服务器菜单每次 `setOnShowing` 重建，未做搜索/分组。
-4. 独立设置对话框 `CommunitySettingsPanel.open(...)` 仍保留，供侧栏齿轮/下载源按钮使用；内嵌视图与其共享 `buildBody`。
+4. 独立设置对话框 `CommunitySettingsPanel.open(...)` 仍由旧 `DashboardPane` 使用；主页已由 `HomePane` 接管，下载源守卫和主页网络卡均改为跳转 设置 → 下载（v3.14）。
 5. GUI 未在 Windows 实机验证。
 
 ## 6B. v3.12 设置导入 / 导出（第五 tab）
@@ -373,7 +373,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 
 导出器实现位于 `config/section/`：
 
-- `DownloadSourcesSectionExporter`：解析 → `save()` → `CommunityDownloadInstaller.apply()`（触发一次测速，完成后按延迟重排候选）；导入后立即生效，无需重启；段非法时整体拒绝，保留旧配置；v3.13 起 schema 2 `sources[]`，v1 `primary`+`mirrors` 仍可导入并迁移；
+- `DownloadSourcesSectionExporter`：解析 → `save()` → `CommunityDownloadInstaller.apply()` → `CommunityDownloadRanker.refreshAsync(true)`（强制重新测速，完成后按延迟重排候选），并记录 `Imported N community download source(s)`；导入后立即生效，无需重启；段非法时整体拒绝，保留旧配置；v3.13 起 schema 2 `sources[]`，v1 `primary`+`mirrors` 仍可导入并迁移；
 - `AppearanceSectionExporter`：19 个白名单键（`language`、`selectedTheme`、`themeAppearanceOverrides`、`customThemeColor`、`themeBrightnessMode`、`builtinBackgroundId`、`logFontFamily`、`launcherFontFamily`、`titleBarTransparent`、`windowTransparent`、`animationDisabled`、`backgroundOpacity`、`logFontSize`、`themeColorType`、`themeColorStyle`、`backgroundType`、`networkBackgroundImageCachePolicy`、`backgroundFallbackType`、`backgroundLoadPolicy`）；先完整解析，任一键非法则不写入（全有或全无）；
 - `HomeSectionExporter`：`DashboardConfig.load(Metadata.HMCL_LOCAL_HOME/config/dashboard.json)` → 只读则拒绝 → `replaceFromJson` → `save()` → `HomePane.notifyConfigurationChanged()`；
 - `MemorySectionExporter`：`MemoryBaseSettings` + 默认 `GameSettings.Preset` 的 `memoryOptimizationOnLaunchProperty()`；
@@ -385,6 +385,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 - 导出：`FileChooser`（`*.lmcl.json`）→ `Schedulers.io()` 写盘 → 回 FX 显示“已导出 N 类设置”；
 - 导入：`FileChooser` → `Schedulers.io()` 读文件 + `SettingsImportService.preview` → 回 FX `SettingsImportDialog`；
 - `SettingsImportDialog extends DialogPane`（宽 680）：段数、变更摘要（最多 50 条）、警告、预览错误；`[导入]` 调 `apply`，失败列出 `sectionId: message`；`[取消]` 不写任何设置；
+- v3.14 起，导入成功且应用了 `downloadSources` 段时，`SettingsImportDialog` 调 `CommunityDownloadSettingsPane.refreshVisible()`；设置页是长生命周期对象，靠 `CommunityDownloadSources.revision()` 判断是否需要重读，避免已打开页面仍显示旧列表；先导入后进入设置页时，由 `DownloadSettingsPage implements PageAware` 的 `onPageShown()` 调 `reloadIfChanged()` 兜底；
 - 拖入：任意页面把 `.lmcl.json` 拖到窗口 → 同一个 `SettingsImportDialog`；非该后缀不接收，不干扰 authlib 拖入；
 - i18n：`community.settings.transfer.*` 共 23 个 key（标题/说明/5 类/按钮/状态/预览/错误），三份语言文件一致。
 
@@ -428,8 +429,8 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 
 ### 6B.7 验证与偏差
 
-- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **143/0/0/0**，全量 `:HMCL:test` **253/0/0/2 skipped**；
-- `settings2` 包内附 `LMCL-download-source-sample.lmcl.json`（schema 2，BMCLAPI / openbmclapi / bmclapi 备用共 3 个源），手工验收步骤见[步骤 07 §5.2](07-下载源配置.md)；
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **146/0/0/0**，全量 `:HMCL:test` **256/0/0/2 skipped**；
+- `settings3` 包内附 `LMCL-download-source-sample.lmcl.json`（schema 2，BMCLAPI / openbmclapi / bmclapi 备用共 3 个源），手工验收步骤见[步骤 07 §5.2](07-下载源配置.md) 与 §9.4；
 - 未做：GUI 实机（WSL2 无 DISPLAY）、跨机器导入、导出后重新导入的完整回环、`CommunityConfigDnD` 单测；
 - 偏差：`SettingsImportDialog` 最多显示 50 条变更，不显示逐段勾选；导入按文件中的段全量应用，不支持只导入某一段（导出支持选择）；
 - 注意：`CommunitySettings` 是独立文件，不是上游 `LauncherSettings`，导入不会触碰账号/上游设置。
