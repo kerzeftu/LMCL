@@ -28,25 +28,25 @@ import java.util.List;
 
 /// 根据用户配置构建下载候选链。
 ///
-/// 候选顺序严格等于用户配置：主源 → 镜像 1..5；**不追加任何官方/内置源**。
-/// 空配置返回 [MissingDownloadProvider]，所有网络操作都会明确失败。
+/// 候选顺序等于传入顺序（通常已由 [CommunityDownloadRanker] 按测速结果排序）；
+/// **不追加任何官方/内置源**。空配置返回 [MissingDownloadProvider]，所有网络操作都会明确失败。
 @NotNullByDefault
 public final class CommunityDownloadProvider {
 
     private CommunityDownloadProvider() {
     }
 
-    /// 构建 provider。
+    /// 按给定顺序构建 provider。
     ///
-    /// @param sources 用户下载源
-    /// @return 自动候选 provider；空配置时为 [MissingDownloadProvider]
+    /// @param sources 已排序的下载源
+    /// @return 自动候选 provider；空列表时为 [MissingDownloadProvider]
     @NotNull
-    public static DownloadProvider of(@NotNull CommunityDownloadSources sources) {
+    public static DownloadProvider of(@NotNull List<CommunityDownloadSource> sources) {
         if (sources.isEmpty()) {
             return new MissingDownloadProvider();
         }
-        List<DownloadProvider> providers = new ArrayList<>(sources.orderedSources().size());
-        for (CommunityDownloadSource source : sources.orderedSources()) {
+        List<DownloadProvider> providers = new ArrayList<>(sources.size());
+        for (CommunityDownloadSource source : sources) {
             providers.add(new BMCLAPIDownloadProvider(source.url()));
         }
         return new AutoDownloadProvider(providers, List.copyOf(providers));

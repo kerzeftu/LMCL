@@ -42,11 +42,11 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 @NotNullByDefault
 public final class NetworkWidget extends DashboardWidget {
 
-    /// 主源行。
-    private final Label primaryLabel = BuiltinWidgets.caption("");
+    /// 源行。
+    private final Label sourceLabel = BuiltinWidgets.caption("");
 
-    /// 镜像行。
-    private final Label mirrorLabel = BuiltinWidgets.caption("");
+    /// 源数量行。
+    private final Label countLabel = BuiltinWidgets.caption("");
 
     /// 零内置说明行（不表示官方兜底）。
     private final Label fallbackLabel = BuiltinWidgets.caption(i18n("community.network.fallback"));
@@ -77,7 +77,7 @@ public final class NetworkWidget extends DashboardWidget {
         errorLabel.setManaged(false);
 
         HBox footer = new HBox(8, fallbackLabel, BuiltinWidgets.spacer(), configureButton);
-        VBox box = new VBox(3, primaryLabel, mirrorLabel, errorLabel, footer);
+        VBox box = new VBox(3, sourceLabel, countLabel, errorLabel, footer);
         box.setFillWidth(true);
         return box;
     }
@@ -95,14 +95,16 @@ public final class NetworkWidget extends DashboardWidget {
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);
 
-        CommunityDownloadSource primary = sources.primary();
-        primaryLabel.setText(primary == null
-                ? i18n("community.network.primary.none")
-                : i18n("community.network.primary",
-                BuiltinWidgets.shorten(primary.name(), 16),
-                CommunityDownloadSource.defaultName(primary.url())));
-        mirrorLabel.setText(i18n("community.network.mirrors",
-                sources.mirrors().size(), CommunityDownloadSources.MAX_MIRRORS));
+        if (sources.isEmpty()) {
+            sourceLabel.setText(i18n("community.network.source.none"));
+        } else {
+            CommunityDownloadSource first = sources.sources().get(0);
+            sourceLabel.setText(i18n("community.network.source",
+                    BuiltinWidgets.shorten(first.name(), 16),
+                    CommunityDownloadSource.defaultName(first.url())));
+        }
+        countLabel.setText(i18n("community.network.sources",
+                sources.size(), CommunityDownloadSources.MAX_SOURCES));
     }
 
     /// 打开设置页的“下载”tab。

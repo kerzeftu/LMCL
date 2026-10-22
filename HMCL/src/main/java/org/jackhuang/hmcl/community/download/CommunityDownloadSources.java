@@ -32,18 +32,22 @@ import java.util.Set;
 
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 用户自定义下载源集合：1 个可选的主源 + 最多 5 个镜像源。
+/// 用户自定义的下载源集合：最多 5 个平级源，没有主源/镜像之分。
 ///
 /// 默认（空集合）不内置任何下载源，包括 Mojang 官方源；未配置时下载入口
-/// 会明确提示先配置。配置后候选顺序为 主源 → 镜像源（按配置顺序）。
+/// 会明确提示先配置。下载时由 [CommunityDownloadRanker] 对全部源测速，
+/// 按延迟从低到高排序后再交给 [org.jackhuang.hmcl.download.AutoDownloadProvider]
+/// 作为候选顺序；配置里的顺序只作为测速失败时的兜底顺序。
 ///
 /// 数据存放在 `<本地根>/config/community-settings.json` 的 `downloadSources` 段：
 /// ```json
 /// {
 ///   "downloadSources": {
-///     "schema": 1,
-///     "primary": { "name": "示例", "url": "https://example.com" },
-///     "mirrors": [ { "name": "镜像 1", "url": "https://mirror.example.com" } ]
+///     "schema": 2,
+///     "sources": [
+///       { "name": "BMCLAPI", "url": "https://bmclapi2.bangbang93.com" },
+///       { "name": "示例镜像", "url": "https://mirror.example.com" }
+///     ]
 ///   }
 /// }
 /// ```
@@ -53,29 +57,20 @@ public final class CommunityDownloadSources {
     /// 配置段名。
     public static final String SECTION = "downloadSources";
 
-    /// 镜像源数量上限。
-    public static final int MAX_MIRRORS = 5;
+    /// 下载源数量上限。
+    public static final int MAX_SOURCES = 5;
 
     /// 当前 schema 版本。
-    public static final int SCHEMA = 1;
+    public static final int SCHEMA = 2;
 
-    /// 未配置主源。
-    private static final @Nullable CommunityDownloadSource NO_PRIMARY = null;
-
-    /// 主源（可为 `null`）。
-    private final @Nullable CommunityDownloadSource primary;
-
-    /// 镜像源（不可变，按用户顺序）。
-    private final @NotNull List<CommunityDownloadSource> mirrors;
+    /// 下载源（不可变，按用户配置顺序）。
+    private final @NotNull List<CommunityDownloadSource> sources;
 
     /// 构造下载源集合。
     ///
-    /// @param primary 主源或 `null`
-    /// @param mirrors 镜像源，超过 [CommunityDownloadSources#MAX_MIRRORS] 时截断
-    public CommunityDownloadSources(@Nullable CommunityDownloadSource primary,
-                                    @NotNull List<CommunityDownloadSource> mirrors) {
-        this.primary = primary;
-        this.mirrors = List.copyOf(mirrors.size() > MAX_MIRRORS ? mirrors.subList(0, MAX_MIRRORS) : mirrors);
+    /// @param sources 下载源，超过 [CommunityDownloadSources#MAX_SOURCES] 时截断
+    public CommunityDownloadSources(@NotNull List<CommunityDownloadSource> sources) {
+        this.sources = List.copyOf(sources.size() > MAX_SOURCES ? sources.subList(0, MAX_SOURCES) : sources);
     }
 
     /// 返回空集合（未配置任何下载源）。
@@ -83,7 +78,7 @@ public final class CommunityDownloadSources {
     /// @return 空集合
     @NotNull
     public static CommunityDownloadSources empty() {
-        return new CommunityDownloadSources(NO_PRIMARY, List.of());
+        return new CommunityDownloadSources(List.of());
     }
 
     /// 从社区共享设置读取。
@@ -101,71 +96,97 @@ public final class CommunityDownloadSources {
 
     /// 解析 JSON 段落；非法条目被丢弃，重复地址只保留第一次出现。
     ///
+    /// 兼容 v1 的 `primary` + `mirrors` 结构：按“主源、镜像 1..n”顺序合并为
+    /// 平级源，超过 5 个时截断。写出时统一使用 v2 的 `sources` 数组。
+    ///
     /// @param section JSON 段落
     /// @return 下载源集合
     @NotNull
     public static CommunityDownloadSources parse(@NotNull JsonObject section) {
+        List<CommunityDownloadSource> parsed = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
-        CommunityDownloadSource parsedPrimary = null;
+
+        if (section.get("sources") instanceof JsonArray array) {
+            parseArray(array, parsed, seen);
+        } else {
+            parseLegacy(section, parsed, seen);
+        }
+
+        return new CommunityDownloadSources(parsed);
+    }
+
+    /// 解析 v2 的 `sources` 数组。
+    private static void parseArray(@NotNull JsonArray array,
+                                   @NotNull List<CommunityDownloadSource> parsed,
+                                   @NotNull Set<String> seen) {
+        for (JsonElement element : array) {
+            if (parsed.size() >= MAX_SOURCES) {
+                LOG.warning("Too many community download sources, extra entries ignored");
+                break;
+            }
+            if (element instanceof JsonObject object) {
+                CommunityDownloadSource source = CommunityDownloadSource.fromJson(object);
+                if (source != null && seen.add(source.url())) {
+                    parsed.add(source);
+                }
+            }
+        }
+    }
+
+    /// 解析 v1 的 `primary` + `mirrors` 结构。
+    private static void parseLegacy(@NotNull JsonObject section,
+                                    @NotNull List<CommunityDownloadSource> parsed,
+                                    @NotNull Set<String> seen) {
         if (section.get("primary") instanceof JsonObject object) {
             CommunityDownloadSource source = CommunityDownloadSource.fromJson(object);
             if (source != null && seen.add(source.url())) {
-                parsedPrimary = source;
+                parsed.add(source);
             }
         }
-
-        List<CommunityDownloadSource> parsedMirrors = new ArrayList<>();
         if (section.get("mirrors") instanceof JsonArray array) {
             for (JsonElement element : array) {
-                if (parsedMirrors.size() >= MAX_MIRRORS) {
-                    LOG.warning("Too many community download mirrors, extra entries ignored");
+                if (parsed.size() >= MAX_SOURCES) {
+                    LOG.warning("Too many community download sources, extra entries ignored");
                     break;
                 }
                 if (element instanceof JsonObject object) {
                     CommunityDownloadSource source = CommunityDownloadSource.fromJson(object);
                     if (source != null && seen.add(source.url())) {
-                        parsedMirrors.add(source);
+                        parsed.add(source);
                     }
                 }
             }
         }
-        return new CommunityDownloadSources(parsedPrimary, parsedMirrors);
     }
 
-    /// 返回主源或 `null`。
+    /// 返回全部下载源（不可变，按配置顺序）。
     ///
-    /// @return 主源
-    @Nullable
-    public CommunityDownloadSource primary() {
-        return primary;
-    }
-
-    /// 返回镜像源（不可变）。
-    ///
-    /// @return 镜像源列表
+    /// @return 下载源列表
     @NotNull
-    public List<CommunityDownloadSource> mirrors() {
-        return mirrors;
+    public List<CommunityDownloadSource> sources() {
+        return sources;
+    }
+
+    /// 返回下载源数量。
+    ///
+    /// @return 数量
+    public int size() {
+        return sources.size();
     }
 
     /// 返回是否未配置任何自定义源。
     ///
     /// @return 是否为空
     public boolean isEmpty() {
-        return primary == null && mirrors.isEmpty();
+        return sources.isEmpty();
     }
 
-    /// 返回候选顺序：主源 → 镜像源（全部为 BMCLAPI 兼容源）。
+    /// 返回全部下载源；保留该名称以兼容既有调用方，语义等同于 [CommunityDownloadSources#sources()]。
     ///
-    /// @return 自定义源列表
+    /// @return 下载源列表
     @NotNull
     public List<CommunityDownloadSource> orderedSources() {
-        List<CommunityDownloadSource> result = new ArrayList<>(1 + mirrors.size());
-        if (primary != null) {
-            result.add(primary);
-        }
-        result.addAll(mirrors);
-        return List.copyOf(result);
+        return sources;
     }
 
     /// 将本集合写入社区共享设置（立即落盘）。
@@ -173,21 +194,18 @@ public final class CommunityDownloadSources {
         CommunitySettings.get().putSection(SECTION, toJson());
     }
 
-    /// 序列化为 JSON。
+    /// 序列化为 JSON（schema 2）。
     ///
     /// @return JSON 对象
     @NotNull
     public JsonObject toJson() {
         JsonObject object = new JsonObject();
         object.addProperty("schema", SCHEMA);
-        if (primary != null) {
-            object.add("primary", primary.toJson());
-        }
         JsonArray array = new JsonArray();
-        for (CommunityDownloadSource mirror : mirrors) {
-            array.add(mirror.toJson());
+        for (CommunityDownloadSource source : sources) {
+            array.add(source.toJson());
         }
-        object.add("mirrors", array);
+        object.add("sources", array);
         return object;
     }
 

@@ -53,6 +53,8 @@ public final class CommunityDownloadGuard {
     /// 必须在 JavaFX 线程调用。
     public static boolean requireConfigured(@Nullable Window owner) {
         if (configured) {
+            // 进入下载入口时刷新测速（受 5 分钟 TTL 限制），让候选顺序自动跟随当前网络。
+            CommunityDownloadRanker.refreshAsync(false);
             return true;
         }
         // 安装器可能在设置初始化完成前失败，或启动路径未经过侧栏；这里做一次兜底，

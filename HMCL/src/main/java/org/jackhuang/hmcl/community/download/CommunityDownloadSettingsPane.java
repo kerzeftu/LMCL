@@ -29,11 +29,11 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.task.Schedulers;
+import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.construct.ComponentList;
 import org.jackhuang.hmcl.ui.construct.LinePane;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
-import org.jackhuang.hmcl.ui.Controllers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
@@ -42,40 +42,40 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 下载源设置页：主源 1 个 + 镜像源最多 5 个。
+/// 下载源设置页：最多 5 个平级源，下载时自动测速排序。
 ///
 /// 交互约定：
-/// - 地址留空表示“不配置”；全部留空时下载入口会提示先配置下载源；
-/// - 每行可单独测试连通性（请求 `/mc/game/version_manifest.json`）；
-/// - 保存后立即写 `community-settings.json` 并重建下载候选链，无需重启。
+/// - 地址留空表示该槽位不配置；全部留空时下载入口会提示先配置下载源；
+/// - 每个源可以单独测试连通性并显示延迟；
+/// - [测速排序] 立即测试全部源，并按延迟从低到高重排列表（只改界面，保存后才落盘）；
+/// - 保存后立即写 `community-settings.json` 并重建下载候选链，无需重启；
+/// - 每次进入下载入口或保存后都会自动重新测速（5 分钟 TTL）。
 @NotNullByDefault
 public final class CommunityDownloadSettingsPane extends VBox {
 
     /// 地址输入框宽度。
     private static final double FIELD_WIDTH = 240;
 
-    /// 主源行。
-    private final LinePane primaryRow = new LinePane();
+    /// 下载源卡片。
+    private final ComponentList sourcesCard = new ComponentList();
 
-    /// 主源地址输入框。
-    private final JFXTextField primaryField = new JFXTextField();
+    /// 已添加的源行。
+    private final List<SourceRow> sources = new ArrayList<>();
 
-    /// 镜像源卡片。
-    private final ComponentList mirrorsCard = new ComponentList();
+    /// 源计数标签。
+    private final Label sourceCount = new Label();
 
-    /// 已添加的镜像行。
-    private final List<MirrorRow> mirrors = new ArrayList<>();
+    /// 添加源按钮。
+    private final JFXButton addSourceButton = FXUtils.newBorderButton(i18n("community.settings.download.add"));
 
-    /// 镜像计数标签。
-    private final Label mirrorCount = new Label();
-
-    /// 添加镜像按钮。
-    private final JFXButton addMirrorButton = FXUtils.newBorderButton(i18n("community.settings.download.add"));
+    /// 测速排序按钮。
+    private final JFXButton sortButton = FXUtils.newBorderButton(i18n("community.settings.download.sort"));
 
     /// 保存按钮。
     private final JFXButton saveButton = FXUtils.newBorderButton(i18n("community.settings.download.save"));
@@ -100,42 +100,27 @@ public final class CommunityDownloadSettingsPane extends VBox {
         hint.setWrapText(true);
         hint.getStyleClass().addAll("hint", "info");
 
-        primaryField.setPromptText(i18n("community.settings.download.url.prompt"));
-        FXUtils.setLimitWidth(primaryField, FIELD_WIDTH);
-        HBox primaryRight = new HBox(8, primaryField,
-                createTestButton(() -> CommunityDownloadSource.normalizeUrl(primaryField.getText()),
-                        primaryRow));
-        primaryRight.setAlignment(Pos.CENTER_RIGHT);
+        Label title = new Label(i18n("community.settings.download.sources"));
+        title.getStyleClass().add("title-label");
 
-        primaryRow.setTitle(i18n("community.settings.download.primary"));
-        primaryRow.setSubtitle(i18n("community.settings.download.primary.hint"));
-        primaryRow.setRight(primaryRight);
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+        HBox header = new HBox(8, title, headerSpacer, sourceCount);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(4, 0, 0, 10));
 
-        ComponentList primaryCard = new ComponentList();
-        primaryCard.getStyleClass().add("card-non-transparent");
-        primaryCard.getContent().setAll(primaryRow);
+        sourcesCard.getStyleClass().add("card-non-transparent");
 
-        Label mirrorsTitle = new Label(i18n("community.settings.download.mirror"));
-        mirrorsTitle.getStyleClass().add("title-label");
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox mirrorsHeader = new HBox(8, mirrorsTitle, spacer, mirrorCount);
-        mirrorsHeader.setAlignment(Pos.CENTER_LEFT);
-        mirrorsHeader.setPadding(new Insets(4, 0, 0, 10));
-
-        mirrorsCard.getStyleClass().add("card-non-transparent");
-
-        addMirrorButton.setOnAction(e -> {
-            addMirrorRow(null);
-            refreshMirrorRows();
+        addSourceButton.setOnAction(e -> {
+            addSourceRow(null);
+            refreshSourceRows();
         });
-
-        HBox mirrorActions = new HBox(8, addMirrorButton);
-        mirrorActions.setPadding(new Insets(0, 0, 0, 10));
-
+        sortButton.setOnAction(e -> speedTestAndSort());
         saveButton.setOnAction(e -> save());
         resetButton.setOnAction(e -> confirmReset());
+
+        HBox sourceActions = new HBox(8, addSourceButton, sortButton);
+        sourceActions.setPadding(new Insets(0, 0, 0, 10));
 
         Region actionsSpacer = new Region();
         HBox.setHgrow(actionsSpacer, Priority.ALWAYS);
@@ -146,56 +131,51 @@ public final class CommunityDownloadSettingsPane extends VBox {
         message.setManaged(false);
         message.setVisible(false);
 
-        getChildren().setAll(hint, primaryCard, mirrorsHeader, mirrorsCard, mirrorActions, actions, message);
+        getChildren().setAll(hint, header, sourcesCard, sourceActions, actions, message);
 
         loadFromDisk();
     }
 
     /// 从磁盘读取配置并填充 UI。
     private void loadFromDisk() {
-        CommunityDownloadSources sources = CommunityDownloadSources.load();
-        for (CommunityDownloadSource source : sources.orderedSources()) {
+        CommunityDownloadSources loaded = CommunityDownloadSources.load();
+        for (CommunityDownloadSource source : loaded.sources()) {
             knownNames.put(source.url(), source.name());
+            addSourceRow(source.url());
         }
-        if (sources.primary() != null) {
-            primaryField.setText(sources.primary().url());
-        }
-        for (CommunityDownloadSource mirror : sources.mirrors()) {
-            addMirrorRow(mirror.url());
-        }
-        refreshMirrorRows();
+        refreshSourceRows();
     }
 
-    /// 新增一个镜像行。
+    /// 新增一个源行。
     ///
     /// @param url 初始地址，或 `null` 表示空行
-    private void addMirrorRow(@Nullable String url) {
-        MirrorRow row = new MirrorRow();
+    private void addSourceRow(@Nullable String url) {
+        SourceRow row = new SourceRow();
         if (url != null) {
             row.urlField.setText(url);
         }
-        mirrors.add(row);
+        sources.add(row);
     }
 
-    /// 重建镜像卡片内容与计数。
-    private void refreshMirrorRows() {
+    /// 重建源卡片内容、序号与计数。
+    private void refreshSourceRows() {
         List<Node> nodes = new ArrayList<>();
-        if (mirrors.isEmpty()) {
+        if (sources.isEmpty()) {
             LinePane empty = new LinePane();
-            empty.setTitle(i18n("community.settings.download.mirror.empty"));
-            empty.setSubtitle(i18n("community.settings.download.mirror.empty.hint"));
+            empty.setTitle(i18n("community.settings.download.empty"));
+            empty.setSubtitle(i18n("community.settings.download.empty.hint"));
             nodes.add(empty);
         } else {
-            for (int i = 0; i < mirrors.size(); i++) {
-                MirrorRow row = mirrors.get(i);
-                row.pane.setTitle(i18n("community.settings.download.mirror") + " " + (i + 1));
+            for (int i = 0; i < sources.size(); i++) {
+                SourceRow row = sources.get(i);
+                row.pane.setTitle(i18n("community.settings.download.source", i + 1));
                 nodes.add(row.pane);
             }
         }
-        mirrorsCard.getContent().setAll(nodes);
-        mirrorCount.setText(i18n("community.settings.download.count", mirrors.size(),
-                CommunityDownloadSources.MAX_MIRRORS));
-        addMirrorButton.setDisable(mirrors.size() >= CommunityDownloadSources.MAX_MIRRORS);
+        sourcesCard.getContent().setAll(nodes);
+        sourceCount.setText(i18n("community.settings.download.count", sources.size(),
+                CommunityDownloadSources.MAX_SOURCES));
+        addSourceButton.setDisable(sources.size() >= CommunityDownloadSources.MAX_SOURCES);
     }
 
     /// 创建“测试”按钮。
@@ -215,13 +195,15 @@ public final class CommunityDownloadSettingsPane extends VBox {
             }
             button.setDisable(true);
             row.setSubtitle(i18n("community.settings.download.testing"));
-            DownloadSourceTester.test(url).whenComplete((ok, error) ->
+            DownloadSourceTester.probe(url).whenComplete((result, error) ->
                     Schedulers.javafx().execute(() -> {
                         button.setDisable(false);
-                        boolean success = error == null && Boolean.TRUE.equals(ok);
-                        row.setSubtitle(i18n(success
-                                ? "community.settings.download.test.ok"
-                                : "community.settings.download.test.fail"));
+                        if (error == null && result != null && result.available()) {
+                            row.setSubtitle(i18n("community.settings.download.test.ok.ms",
+                                    result.latencyMillis()));
+                        } else {
+                            row.setSubtitle(i18n("community.settings.download.test.fail"));
+                        }
                     }));
         });
         return button;
@@ -229,56 +211,29 @@ public final class CommunityDownloadSettingsPane extends VBox {
 
     /// 校验并保存当前配置。
     private void save() {
-        String primaryUrl = CommunityDownloadSource.normalizeUrl(primaryField.getText());
-        if (!primaryUrl.isEmpty() && !CommunityDownloadSource.isValidUrl(primaryUrl)) {
-            showMessage(i18n("community.settings.download.error.invalid", primaryUrl), true);
-            return;
-        }
-
+        List<SourceRow> nonEmpty = new ArrayList<>();
         List<String> urls = new ArrayList<>();
-        if (!primaryUrl.isEmpty()) {
-            urls.add(primaryUrl);
-        }
-        List<MirrorRow> nonEmptyMirrors = new ArrayList<>();
-        for (MirrorRow row : mirrors) {
-            String url = CommunityDownloadSource.normalizeUrl(row.urlField.getText());
-            if (url.isEmpty()) {
-                continue;
-            }
-            if (!CommunityDownloadSource.isValidUrl(url)) {
-                showMessage(i18n("community.settings.download.error.invalid", url), true);
-                return;
-            }
-            urls.add(url);
-            nonEmptyMirrors.add(row);
-        }
-        if (nonEmptyMirrors.size() > CommunityDownloadSources.MAX_MIRRORS) {
-            showMessage(i18n("community.settings.download.error.too_many",
-                    CommunityDownloadSources.MAX_MIRRORS), true);
-            return;
-        }
-        String duplicate = CommunityDownloadSources.findDuplicate(urls);
-        if (duplicate != null) {
-            showMessage(i18n("community.settings.download.error.duplicate", duplicate), true);
+        String error = collectValidSources(nonEmpty, urls);
+        if (error != null) {
+            showMessage(error, true);
             return;
         }
 
-        CommunityDownloadSource primary = primaryUrl.isEmpty() ? null : toSource(primaryUrl);
-        List<CommunityDownloadSource> mirrorSources = new ArrayList<>();
-        for (MirrorRow row : nonEmptyMirrors) {
-            mirrorSources.add(toSource(CommunityDownloadSource.normalizeUrl(row.urlField.getText())));
+        List<CommunityDownloadSource> configured = new ArrayList<>(nonEmpty.size());
+        for (SourceRow row : nonEmpty) {
+            configured.add(toSource(CommunityDownloadSource.normalizeUrl(row.urlField.getText())));
         }
-        CommunityDownloadSources sources = new CommunityDownloadSources(primary, mirrorSources);
+        CommunityDownloadSources sourcesToSave = new CommunityDownloadSources(configured);
 
         setBusy(true);
         Schedulers.io().execute(() -> {
             try {
-                sources.save();
+                sourcesToSave.save();
                 CommunityDownloadInstaller.apply();
-                if (CommunityDownloadGuard.isConfigured() != !sources.isEmpty()) {
+                if (CommunityDownloadGuard.isConfigured() != !sourcesToSave.isEmpty()) {
                     throw new IllegalStateException("Configured download sources were not applied");
                 }
-                int count = sources.orderedSources().size();
+                int count = sourcesToSave.size();
                 Schedulers.javafx().execute(() -> {
                     setBusy(false);
                     showMessage(i18n("community.settings.download.applied", count), false);
@@ -291,6 +246,99 @@ public final class CommunityDownloadSettingsPane extends VBox {
                 });
             }
         });
+    }
+
+    /// 立即测速全部源，按延迟升序重排界面行；结果需保存后才落盘。
+    private void speedTestAndSort() {
+        List<SourceRow> rows = new ArrayList<>();
+        List<String> urls = new ArrayList<>();
+        String error = collectValidSources(rows, urls);
+        if (error != null) {
+            showMessage(error, true);
+            return;
+        }
+        if (rows.isEmpty()) {
+            showMessage(i18n("community.settings.download.sort.empty"), true);
+            return;
+        }
+
+        setBusy(true);
+        showMessage(i18n("community.settings.download.sort.running"), false);
+
+        List<CompletableFuture<DownloadSourceTester.Result>> futures = new ArrayList<>(urls.size());
+        for (String url : urls) {
+            futures.add(DownloadSourceTester.probe(url));
+        }
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
+                .whenComplete((ignored, failure) -> Schedulers.javafx().execute(() -> {
+                    List<RowResult> results = new ArrayList<>(rows.size());
+                    for (int i = 0; i < rows.size(); i++) {
+                        DownloadSourceTester.Result result;
+                        try {
+                            result = futures.get(i).join();
+                        } catch (Throwable e) {
+                            result = DownloadSourceTester.Result.failure();
+                        }
+                        results.add(new RowResult(rows.get(i), result));
+                    }
+                    results.sort((a, b) -> {
+                        if (a.result().available() != b.result().available()) {
+                            return a.result().available() ? -1 : 1;
+                        }
+                        if (!a.result().available()) {
+                            return 0;
+                        }
+                        return Long.compare(a.result().latencyMillis(), b.result().latencyMillis());
+                    });
+
+                    sources.clear();
+                    for (RowResult result : results) {
+                        sources.add(result.row());
+                        if (result.result().available()) {
+                            result.row().pane.setSubtitle(i18n("community.settings.download.test.ok.ms",
+                                    result.result().latencyMillis()));
+                        } else {
+                            result.row().pane.setSubtitle(i18n("community.settings.download.test.fail"));
+                        }
+                    }
+                    refreshSourceRows();
+                    setBusy(false);
+                    if (failure != null) {
+                        showMessage(i18n("community.settings.download.sort.failed"), true);
+                    } else {
+                        showMessage(i18n("community.settings.download.sort.done"), false);
+                    }
+                }));
+    }
+
+    /// 收集非空源行并校验；返回错误文案或 `null`。
+    ///
+    /// @param nonEmpty 输出参数：非空行
+    /// @param urls 输出参数：规范化地址
+    /// @return 错误文案或 `null`
+    @Nullable
+    private String collectValidSources(@NotNull List<SourceRow> nonEmpty,
+                                       @NotNull List<String> urls) {
+        for (SourceRow row : sources) {
+            String url = CommunityDownloadSource.normalizeUrl(row.urlField.getText());
+            if (url.isEmpty()) {
+                continue;
+            }
+            if (!CommunityDownloadSource.isValidUrl(url)) {
+                return i18n("community.settings.download.error.invalid", url);
+            }
+            urls.add(url);
+            nonEmpty.add(row);
+        }
+        if (nonEmpty.size() > CommunityDownloadSources.MAX_SOURCES) {
+            return i18n("community.settings.download.error.too_many",
+                    CommunityDownloadSources.MAX_SOURCES);
+        }
+        String duplicate = CommunityDownloadSources.findDuplicate(urls);
+        if (duplicate != null) {
+            return i18n("community.settings.download.error.duplicate", duplicate);
+        }
+        return null;
     }
 
     /// 按地址构造下载源，尽量复用已有显示名。
@@ -309,10 +357,9 @@ public final class CommunityDownloadSettingsPane extends VBox {
                 i18n("community.settings.download.reset"),
                 MessageDialogPane.MessageType.QUESTION)
                 .yesOrNo(() -> {
-                    primaryField.setText("");
-                    mirrors.clear();
+                    sources.clear();
                     knownNames.clear();
-                    refreshMirrorRows();
+                    refreshSourceRows();
 
                     setBusy(true);
                     Schedulers.io().execute(() -> {
@@ -336,16 +383,17 @@ public final class CommunityDownloadSettingsPane extends VBox {
         Controllers.dialog(pane);
     }
 
-    /// 保存/重置期间禁用操作。
+    /// 保存/测速/重置期间禁用操作。
     ///
     /// @param busy 是否忙碌
     private void setBusy(boolean busy) {
         saveButton.setDisable(busy);
         resetButton.setDisable(busy);
-        addMirrorButton.setDisable(busy || mirrors.size() >= CommunityDownloadSources.MAX_MIRRORS);
-        primaryField.setDisable(busy);
-        for (MirrorRow row : mirrors) {
+        sortButton.setDisable(busy);
+        addSourceButton.setDisable(busy || sources.size() >= CommunityDownloadSources.MAX_SOURCES);
+        for (SourceRow row : sources) {
             row.urlField.setDisable(busy);
+            row.testButton.setDisable(busy);
             row.removeButton.setDisable(busy);
         }
     }
@@ -361,8 +409,15 @@ public final class CommunityDownloadSettingsPane extends VBox {
         message.setVisible(true);
     }
 
-    /// 镜像源一行。
-    private final class MirrorRow {
+    /// 一次测速结果与对应行。
+    ///
+    /// @param row 行
+    /// @param result 探测结果
+    private record RowResult(@NotNull SourceRow row, @NotNull DownloadSourceTester.Result result) {
+    }
+
+    /// 下载源一行。
+    private final class SourceRow {
 
         /// 行容器。
         private final LinePane pane = new LinePane();
@@ -370,24 +425,26 @@ public final class CommunityDownloadSettingsPane extends VBox {
         /// 地址输入框。
         private final JFXTextField urlField = new JFXTextField();
 
+        /// 测试按钮。
+        private final JFXButton testButton = createTestButton(
+                () -> CommunityDownloadSource.normalizeUrl(urlField.getText()), pane);
+
         /// 删除按钮。
         private final JFXButton removeButton = FXUtils.newBorderButton(
                 i18n("community.settings.download.remove"));
 
         /// 构造一行。
-        private MirrorRow() {
+        private SourceRow() {
             urlField.setPromptText(i18n("community.settings.download.url.prompt"));
             FXUtils.setLimitWidth(urlField, FIELD_WIDTH);
 
-            HBox right = new HBox(8, urlField,
-                    createTestButton(() -> CommunityDownloadSource.normalizeUrl(urlField.getText()), pane),
-                    removeButton);
+            HBox right = new HBox(8, urlField, testButton, removeButton);
             right.setAlignment(Pos.CENTER_RIGHT);
             pane.setRight(right);
 
             removeButton.setOnAction(e -> {
-                mirrors.remove(this);
-                refreshMirrorRows();
+                sources.remove(this);
+                refreshSourceRows();
             });
         }
     }

@@ -30,8 +30,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 /// 把用户配置的下载源接入上游下载链路。
 ///
 /// 做法是**替换** `DownloadProviders` 内部 `DownloadProviderWrapper` 的实现：
-/// 候选顺序 = 主源 → 镜像；**不追加任何官方/内置源**；未配置时使用
-/// [MissingDownloadProvider]，所有网络操作明确失败。
+/// 候选顺序 = [CommunityDownloadRanker] 按最近测速结果排好的顺序；**不追加任何
+/// 官方/内置源**；未配置时使用 [MissingDownloadProvider]，所有网络操作明确失败。
 /// 上游的“下载源”设置仍然存在，但每次变更都会被本类重新覆盖为社区配置，
 /// 从而保证“默认不内置下载源、以设置里的自定义源为准”。
 ///
@@ -67,8 +67,20 @@ public final class CommunityDownloadInstaller {
         apply();
     }
 
-    /// 按当前设置重建并应用 provider。
+    /// 按当前设置重建并应用 provider，并触发一次（受 TTL 限制的）自动测速。
     public static void apply() {
+        applyInternal(true);
+    }
+
+    /// 测速完成后用新顺序重建 provider；不再触发测速，避免循环。
+    static void applyRanked() {
+        applyInternal(false);
+    }
+
+    /// 重建并应用 provider。
+    ///
+    /// @param scheduleRanking 是否顺带触发自动测速
+    private static void applyInternal(boolean scheduleRanking) {
         try {
             DownloadProvider current = DownloadProviders.getDownloadProvider();
             if (!(current instanceof DownloadProviderWrapper wrapper)) {
@@ -77,17 +89,20 @@ public final class CommunityDownloadInstaller {
             CommunityDownloadSources sources = CommunityDownloadSources.load();
             wrapper.setProvider(build(sources));
             CommunityDownloadGuard.refresh(!sources.isEmpty());
+            if (scheduleRanking && !sources.isEmpty()) {
+                CommunityDownloadRanker.refreshAsync(false);
+            }
         } catch (Throwable e) {
             LOG.warning("Failed to apply community download sources", e);
         }
     }
 
-    /// 构建候选链：只用用户配置的源（主源 → 镜像）；空配置返回 [MissingDownloadProvider]。
+    /// 构建候选链：按最近测速结果排序，只用用户配置的源；空配置返回 [MissingDownloadProvider]。
     ///
     /// @param sources 自定义下载源
     /// @return 自动候选 provider 或未配置 provider
     @NotNull
     static DownloadProvider build(@NotNull CommunityDownloadSources sources) {
-        return CommunityDownloadProvider.of(sources);
+        return CommunityDownloadProvider.of(CommunityDownloadRanker.order(sources.sources()));
     }
 }

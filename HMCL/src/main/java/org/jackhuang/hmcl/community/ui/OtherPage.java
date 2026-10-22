@@ -56,8 +56,9 @@ public final class OtherPage extends DecoratorAnimatedPage implements DecoratorP
 
     private static @Nullable OtherPage instance;
 
+    // 顶层页面由左侧图标栏导航，不再显示标题栏左上角的“返回主界面”按钮。
     private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(
-            State.fromTitle(i18n("community.other.title")));
+            new State(i18n("community.other.title"), null, false, false, true));
 
     private final TransitionPane transitionPane = new TransitionPane();
     private final TabHeader.Tab<MemoryOptimizationView> memoryTab = new TabHeader.Tab<>("communityMemoryOptimizationPage");

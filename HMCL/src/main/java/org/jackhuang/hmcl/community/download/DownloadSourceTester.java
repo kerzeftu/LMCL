@@ -28,14 +28,15 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-/// 下载源连通性测试：请求 `<url>/mc/game/version_manifest.json`，2xx 视为可用。
+/// 下载源探测：请求 `<url>/mc/game/version_manifest.json`。
 ///
-/// 只做只读探测，不下载任何文件、不写盘；超时 8 秒。
+/// 只做只读探测，不下载任何文件、不写盘；连接/请求超时 5 秒。
+/// 成功时记录从发起请求到收到响应头的毫秒数，供 [CommunityDownloadRanker] 排序。
 @NotNullByDefault
 final class DownloadSourceTester {
 
     /// 连接/读取超时。
-    private static final Duration TIMEOUT = Duration.ofSeconds(8);
+    private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     /// 版本清单路径（BMCLAPI 兼容源均提供）。
     private static final String VERSION_LIST_PATH = "/mc/game/version_manifest.json";
@@ -44,12 +45,24 @@ final class DownloadSourceTester {
     private DownloadSourceTester() {
     }
 
-    /// 异步测试一个源。
+    /// 一次探测结果。
+    ///
+    /// @param available 是否返回 2xx
+    /// @param latencyMillis 请求耗时（毫秒）；失败时为 `-1`
+    record Result(boolean available, long latencyMillis) {
+
+        /// 创建“不可用”结果。
+        static Result failure() {
+            return new Result(false, -1);
+        }
+    }
+
+    /// 异步探测一个源。
     ///
     /// @param url 规范化后的 API 根
-    /// @return 是否可用；失败/超时返回 `false`
+    /// @return 探测结果；失败/超时返回不可用
     @NotNull
-    static CompletableFuture<Boolean> test(@NotNull String url) {
+    static CompletableFuture<Result> probe(@NotNull String url) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 HttpClient client = HttpClient.newBuilder()
@@ -61,10 +74,13 @@ final class DownloadSourceTester {
                         .header("User-Agent", "LMCL-DownloadSourceTester")
                         .GET()
                         .build();
+                long startedAt = System.nanoTime();
                 HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-                return response.statusCode() >= 200 && response.statusCode() < 300;
+                long elapsedMillis = Math.max(0L, (System.nanoTime() - startedAt) / 1_000_000L);
+                boolean available = response.statusCode() >= 200 && response.statusCode() < 300;
+                return available ? new Result(true, elapsedMillis) : Result.failure();
             } catch (Throwable e) {
-                return false;
+                return Result.failure();
             }
         }, Schedulers.io());
     }
