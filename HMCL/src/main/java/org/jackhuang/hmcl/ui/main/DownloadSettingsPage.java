@@ -34,6 +34,7 @@ import org.jackhuang.hmcl.task.FetchTask;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.WeakListenerHolder;
 import org.jackhuang.hmcl.ui.construct.*;
+import org.jackhuang.hmcl.ui.construct.PageAware;
 import org.jackhuang.hmcl.util.Holder;
 import org.jackhuang.hmcl.util.i18n.I18n;
 import org.jackhuang.hmcl.util.io.FileUtils;
@@ -47,9 +48,12 @@ import java.util.Optional;
 import static org.jackhuang.hmcl.setting.SettingsManager.settings;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
-public class DownloadSettingsPage extends StackPane {
+public class DownloadSettingsPage extends StackPane implements PageAware {
 
     private final WeakListenerHolder holder = new WeakListenerHolder();
+
+    /// 社区下载源编辑器；页面被重新选中时从磁盘刷新，避免导入后仍显示旧列表。
+    private final CommunityDownloadSettingsPane communitySources;
 
     public DownloadSettingsPage() {
         VBox content = new VBox(10);
@@ -61,11 +65,11 @@ public class DownloadSettingsPage extends StackPane {
         getChildren().setAll(scrollPane);
 
         // LMCL: replace the upstream three-way source selector with the community
-        // primary + mirrors editor. The upstream settings are still read by
-        // DownloadProviders, but CommunityDownloadInstaller overrides the actual
-        // provider chain, so exposing them would only be confusing.
+        // flat source editor (max 5, automatic speed ranking). The upstream settings
+        // are still read by DownloadProviders, but CommunityDownloadInstaller
+        // overrides the actual provider chain, so exposing them would be confusing.
         {
-            CommunityDownloadSettingsPane communitySources = new CommunityDownloadSettingsPane();
+            communitySources = new CommunityDownloadSettingsPane();
             communitySources.setPadding(Insets.EMPTY);
             content.getChildren().addAll(
                     ComponentList.createComponentListTitle(i18n("community.settings.tab.download")),
@@ -331,6 +335,11 @@ public class DownloadSettingsPage extends StackPane {
             content.getChildren().addAll(ComponentList.createComponentListTitle(i18n("settings.launcher.proxy")), proxyList);
         }
 
+    }
+
+    @Override
+    public void onPageShown() {
+        communitySources.reloadIfChanged();
     }
 
     private void clearCacheDirectory() {

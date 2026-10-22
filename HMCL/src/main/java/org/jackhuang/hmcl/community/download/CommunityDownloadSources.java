@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
@@ -63,6 +64,9 @@ public final class CommunityDownloadSources {
     /// 当前 schema 版本。
     public static final int SCHEMA = 2;
 
+    /// 保存代数；每次 [CommunityDownloadSources#save()] 自增，供设置页判断是否需要刷新。
+    private static final AtomicLong REVISION = new AtomicLong();
+
     /// 下载源（不可变，按用户配置顺序）。
     private final @NotNull List<CommunityDownloadSource> sources;
 
@@ -71,6 +75,13 @@ public final class CommunityDownloadSources {
     /// @param sources 下载源，超过 [CommunityDownloadSources#MAX_SOURCES] 时截断
     public CommunityDownloadSources(@NotNull List<CommunityDownloadSource> sources) {
         this.sources = List.copyOf(sources.size() > MAX_SOURCES ? sources.subList(0, MAX_SOURCES) : sources);
+    }
+
+    /// 当前保存代数；导入或保存后变化，设置页据此刷新列表而不覆盖未保存的编辑。
+    ///
+    /// @return 代数
+    public static long revision() {
+        return REVISION.get();
     }
 
     /// 返回空集合（未配置任何下载源）。
@@ -192,6 +203,7 @@ public final class CommunityDownloadSources {
     /// 将本集合写入社区共享设置（立即落盘）。
     public void save() {
         CommunitySettings.get().putSection(SECTION, toJson());
+        REVISION.incrementAndGet();
     }
 
     /// 序列化为 JSON（schema 2）。

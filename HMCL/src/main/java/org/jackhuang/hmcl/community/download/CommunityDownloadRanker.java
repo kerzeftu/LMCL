@@ -57,6 +57,9 @@ public final class CommunityDownloadRanker {
     /// 是否有测速任务正在运行。
     private static volatile boolean running;
 
+    /// 运行期间收到强制刷新时，完成后是否再跑一轮。
+    private static volatile boolean pendingRefresh;
+
     /// 本类只提供静态方法。
     private CommunityDownloadRanker() {
     }
@@ -100,6 +103,9 @@ public final class CommunityDownloadRanker {
         long now = System.currentTimeMillis();
         synchronized (LOCK) {
             if (running) {
+                if (force) {
+                    pendingRefresh = true;
+                }
                 return;
             }
             if (!force && testedAt > 0 && now - testedAt < TTL_MILLIS) {
@@ -141,17 +147,23 @@ public final class CommunityDownloadRanker {
                         ranking = List.of();
                     }
 
+                    boolean rerun;
                     synchronized (LOCK) {
                         if (!ranking.isEmpty()) {
                             rankedUrls = List.copyOf(ranking);
                         }
                         testedAt = System.currentTimeMillis();
                         running = false;
+                        rerun = pendingRefresh;
+                        pendingRefresh = false;
                     }
                     if (error != null) {
                         LOG.warning("Community download source speed test failed", error);
                     }
                     CommunityDownloadInstaller.applyRanked();
+                    if (rerun) {
+                        refreshAsync(true);
+                    }
                 });
     }
 
@@ -175,6 +187,7 @@ public final class CommunityDownloadRanker {
             rankedUrls = List.of();
             testedAt = 0L;
             running = false;
+            pendingRefresh = false;
         }
     }
 

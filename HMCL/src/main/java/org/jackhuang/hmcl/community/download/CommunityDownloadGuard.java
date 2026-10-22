@@ -18,8 +18,8 @@
 package org.jackhuang.hmcl.community.download;
 
 import javafx.stage.Window;
-import org.jackhuang.hmcl.community.ui.CommunitySettingsPanel;
 import org.jackhuang.hmcl.ui.Controllers;
+import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.NotNullByDefault;
@@ -66,6 +66,7 @@ public final class CommunityDownloadGuard {
                     "Failed to initialize community download sources", e);
         }
         if (configured) {
+            CommunityDownloadRanker.refreshAsync(false);
             return true;
         }
 
@@ -74,7 +75,11 @@ public final class CommunityDownloadGuard {
                 i18n("community.download.not_configured.title"),
                 MessageDialogPane.MessageType.WARNING)
                 .addAction(i18n("community.download.not_configured.go_settings"),
-                        () -> CommunitySettingsPanel.open(owner, "download"))
+                        () -> {
+                            LauncherSettingsPage page = Controllers.getSettingsPage();
+                            page.showDownloadSettings();
+                            Controllers.navigate(page);
+                        })
                 .addCancel(i18n("button.cancel"), null)
                 .build();
         Controllers.dialog(dialog);

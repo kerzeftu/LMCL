@@ -27,6 +27,8 @@ import org.jackhuang.hmcl.community.config.CommunitySettingsBundle;
 import org.jackhuang.hmcl.community.config.SettingsChange;
 import org.jackhuang.hmcl.community.config.SettingsExportService;
 import org.jackhuang.hmcl.community.config.SettingsImportService;
+import org.jackhuang.hmcl.community.config.section.DownloadSourcesSectionExporter;
+import org.jackhuang.hmcl.community.download.CommunityDownloadSettingsPane;
 import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.construct.ComponentList;
@@ -137,6 +139,9 @@ public final class SettingsImportDialog extends DialogPane {
         if (!result.success()) {
             onFailure(i18n("community.settings.transfer.import.failed", result.failures().size()));
             return;
+        }
+        if (result.applied().contains(DownloadSourcesSectionExporter.ID)) {
+            CommunityDownloadSettingsPane.refreshVisible();
         }
         Controllers.showToast(i18n("community.settings.transfer.import.done", result.applied().size()));
         onSuccess();

@@ -38,6 +38,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -89,8 +90,15 @@ public final class CommunityDownloadSettingsPane extends VBox {
     /// 已知地址 → 显示名，用于保存时保留用户已有名称。
     private final Map<String, String> knownNames = new HashMap<>();
 
+    /// 上次从磁盘加载时的 [CommunityDownloadSources#revision()]。
+    private long loadedRevision = -1L;
+
+    /// 最近创建的设置页；导入完成后用于刷新仍可见的列表。
+    private static volatile @Nullable WeakReference<CommunityDownloadSettingsPane> lastInstance;
+
     /// 构造设置页并从磁盘加载当前配置。
     public CommunityDownloadSettingsPane() {
+        lastInstance = new WeakReference<>(this);
         CommunityStyles.apply(this);
         setSpacing(10);
         setPadding(new Insets(10));
@@ -136,14 +144,50 @@ public final class CommunityDownloadSettingsPane extends VBox {
         loadFromDisk();
     }
 
+    /// 重新从磁盘读取配置并刷新列表。
+    ///
+    /// 导入 `.lmcl.json` 或从其他页面回到“设置 → 下载”时调用，避免长生命周期
+    /// 的设置页显示导入前的旧列表。
+    public void reload() {
+        FXUtils.checkFxUserThread();
+        loadFromDisk();
+    }
+
+    /// 刷新当前仍可见的设置页；由导入完成后调用。
+    ///
+    /// 未显示时不做事，页面下次显示会走 [CommunityDownloadSettingsPane#reloadIfChanged()]。
+    public static void refreshVisible() {
+        FXUtils.checkFxUserThread();
+        WeakReference<CommunityDownloadSettingsPane> reference = lastInstance;
+        CommunityDownloadSettingsPane pane = reference == null ? null : reference.get();
+        if (pane != null && pane.getScene() != null) {
+            pane.reloadIfChanged();
+        }
+    }
+
+    /// 仅当磁盘配置被其他入口（如导入）保存过时刷新；不会覆盖尚未保存的编辑。
+    public void reloadIfChanged() {
+        FXUtils.checkFxUserThread();
+        if (loadedRevision != CommunityDownloadSources.revision()) {
+            loadFromDisk();
+        }
+    }
+
     /// 从磁盘读取配置并填充 UI。
     private void loadFromDisk() {
+        long revision = CommunityDownloadSources.revision();
+        sources.clear();
+        knownNames.clear();
         CommunityDownloadSources loaded = CommunityDownloadSources.load();
         for (CommunityDownloadSource source : loaded.sources()) {
             knownNames.put(source.url(), source.name());
             addSourceRow(source.url());
         }
         refreshSourceRows();
+        message.setText("");
+        message.setManaged(false);
+        message.setVisible(false);
+        loadedRevision = revision;
     }
 
     /// 新增一个源行。
@@ -230,6 +274,8 @@ public final class CommunityDownloadSettingsPane extends VBox {
             try {
                 sourcesToSave.save();
                 CommunityDownloadInstaller.apply();
+                // 保存后立即按新配置测速，避免沿用旧源的 5 分钟缓存。
+                CommunityDownloadRanker.refreshAsync(true);
                 if (CommunityDownloadGuard.isConfigured() != !sourcesToSave.isEmpty()) {
                     throw new IllegalStateException("Configured download sources were not applied");
                 }

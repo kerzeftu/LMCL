@@ -20,9 +20,12 @@ package org.jackhuang.hmcl.community.config.section;
 import com.google.gson.JsonObject;
 import org.jackhuang.hmcl.community.config.SettingsSectionExporter;
 import org.jackhuang.hmcl.community.download.CommunityDownloadInstaller;
+import org.jackhuang.hmcl.community.download.CommunityDownloadRanker;
 import org.jackhuang.hmcl.community.download.CommunityDownloadSources;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
+
+import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 /// “下载源”设置段：与 `community-settings.json` 的 `downloadSources` 同构。
 @NotNullByDefault
@@ -51,5 +54,8 @@ public final class DownloadSourcesSectionExporter implements SettingsSectionExpo
         CommunityDownloadSources sources = CommunityDownloadSources.parse(incoming);
         sources.save();
         CommunityDownloadInstaller.apply();
+        // 导入后立即重新测速，确保新源不会沿用旧缓存顺序。
+        CommunityDownloadRanker.refreshAsync(true);
+        LOG.info("Imported " + sources.size() + " community download source(s)");
     }
 }
