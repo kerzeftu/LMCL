@@ -34,6 +34,12 @@ public final class DashboardItem {
     /// 组件 id 的合法形式（小写 kebab-case，不含 `'.'`）。
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9-]+");
 
+    /// 主页左栏。
+    public static final String COLUMN_LEFT = "left";
+
+    /// 主页右栏。
+    public static final String COLUMN_RIGHT = "right";
+
     /// 组件 id，见 [WidgetProvider] 的登记约定。
     private final String id;
 
@@ -49,7 +55,10 @@ public final class DashboardItem {
     /// 行跨度，取值 `1` 或 `2`。
     private int rowSpan;
 
-    /// 创建一个布局项。
+    /// 主页栏位；`null` 表示使用组件默认栏位（仅主页使用）。
+    private final @Nullable String column;
+
+    /// 创建一个布局项（未指定主页栏位）。
     ///
     /// @param id 组件 id（必须匹配 {@code [a-z0-9-]+}）
     /// @param enabled 是否渲染
@@ -57,11 +66,36 @@ public final class DashboardItem {
     /// @param colSpan 列跨度，会被收敛到 `[1, 2]`
     /// @param rowSpan 行跨度，会被收敛到 `[1, 2]`
     public DashboardItem(@NotNull String id, boolean enabled, int order, int colSpan, int rowSpan) {
+        this(id, enabled, order, colSpan, rowSpan, null);
+    }
+
+    /// 创建一个布局项。
+    ///
+    /// @param id 组件 id（必须匹配 {@code [a-z0-9-]+}）
+    /// @param enabled 是否渲染
+    /// @param order 排序权重（越小越靠前）
+    /// @param colSpan 列跨度，会被收敛到 `[1, 2]`
+    /// @param rowSpan 行跨度，会被收敛到 `[1, 2]`
+    /// @param column 主页栏位，仅接受 `left`/`right`；`null` 或未知值表示使用默认栏位
+    public DashboardItem(@NotNull String id, boolean enabled, int order, int colSpan, int rowSpan,
+                         @Nullable String column) {
         this.id = id;
         this.enabled = enabled;
         this.order = order;
         this.colSpan = clampSpan(colSpan);
         this.rowSpan = clampSpan(rowSpan);
+        this.column = normalizeColumn(column);
+    }
+
+    /// 把主页栏位规范化为 `left`/`right`；未知值返回 `null`。
+    ///
+    /// @param column 原始栏位
+    /// @return `left`、`right` 或 `null`
+    public static @Nullable String normalizeColumn(@Nullable String column) {
+        if (COLUMN_LEFT.equals(column) || COLUMN_RIGHT.equals(column)) {
+            return column;
+        }
+        return null;
     }
 
     /// 判断 id 是否为合法的组件 id（`[a-z0-9-]+`）。
@@ -85,7 +119,7 @@ public final class DashboardItem {
     /// @return 内容相同的新实例
     @NotNull
     public DashboardItem copy() {
-        return new DashboardItem(id, enabled, order, colSpan, rowSpan);
+        return new DashboardItem(id, enabled, order, colSpan, rowSpan, column);
     }
 
     /// 返回组件 id。
@@ -150,5 +184,12 @@ public final class DashboardItem {
     /// @param rowSpan 行跨度
     public void setRowSpan(int rowSpan) {
         this.rowSpan = clampSpan(rowSpan);
+    }
+
+    /// 返回主页栏位；`null` 表示使用组件默认栏位。
+    ///
+    /// @return `left`、`right` 或 `null`
+    public @Nullable String column() {
+        return column;
     }
 }

@@ -183,7 +183,8 @@ public final class DashboardConfig {
                 int order = JsonUtils.getInt(itemObject, "order", index * 10);
                 int colSpan = JsonUtils.getInt(itemObject, "colSpan", 1);
                 int rowSpan = JsonUtils.getInt(itemObject, "rowSpan", 1);
-                items.add(new DashboardItem(id, enabled, order, colSpan, rowSpan));
+                String column = JsonUtils.getString(itemObject, "column");
+                items.add(new DashboardItem(id, enabled, order, colSpan, rowSpan, column));
                 index++;
             }
         }
@@ -258,6 +259,9 @@ public final class DashboardConfig {
             itemObject.addProperty("order", item.order());
             itemObject.addProperty("colSpan", item.colSpan());
             itemObject.addProperty("rowSpan", item.rowSpan());
+            if (item.column() != null) {
+                itemObject.addProperty("column", item.column());
+            }
             itemsArray.add(itemObject);
         }
         root.add("items", itemsArray);
@@ -305,6 +309,9 @@ public final class DashboardConfig {
             itemObject.addProperty("order", item.order());
             itemObject.addProperty("colSpan", item.colSpan());
             itemObject.addProperty("rowSpan", item.rowSpan());
+            if (item.column() != null) {
+                itemObject.addProperty("column", item.column());
+            }
             itemsArray.add(itemObject);
         }
         root.add("items", itemsArray);
@@ -349,7 +356,8 @@ public final class DashboardConfig {
                         JsonUtils.getBoolean(itemObject, "enabled", true),
                         JsonUtils.getInt(itemObject, "order", index * 10),
                         JsonUtils.getInt(itemObject, "colSpan", 1),
-                        JsonUtils.getInt(itemObject, "rowSpan", 1)));
+                        JsonUtils.getInt(itemObject, "rowSpan", 1),
+                        JsonUtils.getString(itemObject, "column")));
                 index++;
             }
         }

@@ -96,6 +96,40 @@ public final class DashboardConfigTest {
     }
 
     @Test
+    public void columnRoundTrip() throws Exception {
+        Path path = directory.resolve("dashboard.json");
+        Files.writeString(path, "{\"schema\":1,\"items\":[{\"id\":\"launch\",\"enabled\":true,"
+                        + "\"order\":10,\"colSpan\":2,\"rowSpan\":1,\"column\":\"left\"},"
+                        + "{\"id\":\"activity-calendar\",\"enabled\":true,"
+                        + "\"order\":20,\"colSpan\":2,\"rowSpan\":1,\"column\":\"right\"}],"
+                        + "\"pinnedInstanceIds\":[],\"widgetProps\":{}}",
+                StandardCharsets.UTF_8);
+
+        DashboardConfig config = DashboardConfig.load(path);
+        assertEquals(DashboardItem.COLUMN_LEFT, config.items().get(0).column());
+        assertEquals(DashboardItem.COLUMN_RIGHT, config.items().get(1).column());
+        assertEquals("left", config.toExportJson().getAsJsonArray("items")
+                .get(0).getAsJsonObject().get("column").getAsString());
+
+        config.save();
+        DashboardConfig reloaded = DashboardConfig.load(path);
+        assertEquals(DashboardItem.COLUMN_LEFT, reloaded.items().get(0).column());
+        assertEquals(DashboardItem.COLUMN_RIGHT, reloaded.items().get(1).column());
+    }
+
+    @Test
+    public void unknownColumnFallsBackToDefault() throws Exception {
+        Path path = directory.resolve("dashboard.json");
+        Files.writeString(path, "{\"schema\":1,\"items\":[{\"id\":\"launch\",\"enabled\":true,"
+                        + "\"order\":10,\"colSpan\":2,\"rowSpan\":1,\"column\":\"middle\"}],"
+                        + "\"pinnedInstanceIds\":[],\"widgetProps\":{}}",
+                StandardCharsets.UTF_8);
+
+        DashboardConfig config = DashboardConfig.load(path);
+        assertEquals(null, config.items().get(0).column());
+    }
+
+    @Test
     public void rejectsNewerSchemaOnImport() {
         DashboardConfig config = DashboardConfig.load(directory.resolve("dashboard.json"));
         JsonObject object = new JsonObject();

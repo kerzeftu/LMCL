@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -134,11 +135,14 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 当前已创建的组件。
     private final Map<String, DashboardWidget> widgets = new LinkedHashMap<>();
 
-    /// 左信息栏（账号、游玩记录）。
+    /// 左栏（固定账号卡 + 用户放到左栏的组件）。
     private final VBox infoColumn = new VBox(12);
 
-    /// 右实例栏（启动、置顶实例、Java、快照、崩溃、体检、网络）。
+    /// 右栏（用户放到右栏的组件）。
     private final VBox instanceColumn = new VBox(12);
+
+    /// 固定账号卡；重建左右栏时复用，避免重复绑定全局账号属性。
+    private @Nullable VBox accountCard;
 
     /// 运行状态文案。
     private final Label runStatus = new Label();
@@ -366,7 +370,11 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         pane.getStyleClass().add("edge-to-edge");
     }
 
-    /// 重建左信息栏与右实例栏。
+    /// 重建左栏与右栏。
+    ///
+    /// 栏位与顺序来自 `dashboard.json` 的 `column`/`order`；配置中缺失的组件
+    /// 按注册表默认值补齐，保证升级后新增组件仍能显示。账号卡固定在左栏顶部，
+    /// 不参与组件排序。
     private void rebuildBody() {
         for (DashboardWidget widget : widgets.values()) {
             try {
@@ -379,12 +387,17 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         infoColumn.getChildren().clear();
         instanceColumn.getChildren().clear();
 
-        infoColumn.getChildren().add(buildAccountCard());
-        for (Slot slot : INFO_SLOTS) {
-            addWidget(infoColumn, slot.id(), slot.height());
+        if (accountCard == null) {
+            accountCard = buildAccountCard();
         }
-        for (Slot slot : INSTANCE_SLOTS) {
-            addWidget(instanceColumn, slot.id(), slot.height());
+        infoColumn.getChildren().add(accountCard);
+        for (DashboardItem item : itemsForHome()) {
+            if (!item.enabled()) {
+                continue;
+            }
+            String column = item.column() != null ? item.column() : defaultColumn(item.id());
+            VBox target = DashboardItem.COLUMN_LEFT.equals(column) ? infoColumn : instanceColumn;
+            addWidget(target, item.id(), slotHeight(item.id()));
         }
 
         if (instanceColumn.getChildren().isEmpty()) {
@@ -396,14 +409,62 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         // 左右列分别作为两个 ScrollPane 的内容，互不影响滚动位置。
     }
 
-    /// 添加一个组件；未启用/未登记时跳过。
+    /// 返回主页要渲染的完整组件列表（含配置中缺失的默认组件），按 `order` 稳定排序。
+    private List<DashboardItem> itemsForHome() {
+        Map<String, DashboardItem> configured = new LinkedHashMap<>();
+        for (DashboardItem item : config.items()) {
+            if (registry.byId(item.id()) != null && !configured.containsKey(item.id())) {
+                configured.put(item.id(), item);
+            }
+        }
+
+        List<DashboardItem> result = new ArrayList<>(configured.values());
+        for (DashboardWidgetDescriptor descriptor : registry.all()) {
+            if (!descriptor.isValid() || configured.containsKey(descriptor.id())) {
+                continue;
+            }
+            result.add(new DashboardItem(
+                    descriptor.id(),
+                    true,
+                    descriptor.order(),
+                    descriptor.defaultColumns(),
+                    descriptor.defaultRows(),
+                    defaultColumn(descriptor.id())));
+        }
+        result.sort(Comparator.comparingInt(DashboardItem::order));
+        return result;
+    }
+
+    /// 组件默认栏位：游玩记录/日历在左，其余在右。
+    static String defaultColumn(@NotNull String id) {
+        for (Slot slot : INFO_SLOTS) {
+            if (slot.id().equals(id)) {
+                return DashboardItem.COLUMN_LEFT;
+            }
+        }
+        return DashboardItem.COLUMN_RIGHT;
+    }
+
+    /// 组件默认最小高度。
+    private static double slotHeight(@NotNull String id) {
+        for (Slot slot : INFO_SLOTS) {
+            if (slot.id().equals(id)) {
+                return slot.height();
+            }
+        }
+        for (Slot slot : INSTANCE_SLOTS) {
+            if (slot.id().equals(id)) {
+                return slot.height();
+            }
+        }
+        return 150;
+    }
+
+    /// 添加一个组件；未登记时跳过。
     ///
     /// 槽位高度只是最小高度：内容更长时组件按自身 `prefHeight` 增高，
     /// 避免固定高度裁掉按钮/文字；各列滚动由所属 `ScrollPane` 负责。
     private void addWidget(@NotNull VBox column, @NotNull String id, double minHeight) {
-        if (!isEnabled(id)) {
-            return;
-        }
         DashboardWidget widget = registry.create(id, context);
         if (widget == null) {
             return;
@@ -450,16 +511,6 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         }
     }
 
-    /// 组件是否启用；配置中缺失的组件默认启用（兼容旧版 10/11 卡布局）。
-    private boolean isEnabled(@NotNull String id) {
-        for (DashboardItem item : config.items()) {
-            if (item.id().equals(id)) {
-                return item.enabled();
-            }
-        }
-        return true;
-    }
-
     /// 生成全部组件启用的默认布局。
     @NotNull
     private List<DashboardItem> defaultItems() {
@@ -473,7 +524,8 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
                     true,
                     descriptor.order(),
                     descriptor.defaultColumns(),
-                    descriptor.defaultRows()));
+                    descriptor.defaultRows(),
+                    defaultColumn(descriptor.id())));
         }
         return items;
     }
@@ -487,7 +539,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         boolean found = false;
         for (DashboardItem item : config.items()) {
             if (item.id().equals(descriptor.id())) {
-                items.add(new DashboardItem(item.id(), false, item.order(), item.colSpan(), item.rowSpan()));
+                items.add(new DashboardItem(item.id(), false, item.order(), item.colSpan(), item.rowSpan(), item.column()));
                 found = true;
             } else {
                 items.add(item.copy());
@@ -499,7 +551,8 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
                     false,
                     descriptor.order(),
                     descriptor.defaultColumns(),
-                    descriptor.defaultRows()));
+                    descriptor.defaultRows(),
+                    defaultColumn(descriptor.id())));
         }
         config.setItems(items);
         persist();
