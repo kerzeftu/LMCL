@@ -51,9 +51,9 @@ public final class ManagementPage extends DecoratorAnimatedPage implements Decor
 
     private static @Nullable ManagementPage instance;
 
-    // 顶层页面由左侧图标栏导航，不再显示标题栏左上角的“返回主界面”按钮。
+    // 顶层页面由左侧图标栏导航；标题栏只保留返回按钮，不显示主页/关闭按钮。
     private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(
-            new State(i18n("community.management.title"), null, false, false, true));
+            new State(i18n("community.management.title"), null, true, false, true));
 
     private final TransitionPane transitionPane = new TransitionPane();
     private final TabHeader.Tab<AccountsPane> accountsTab = new TabHeader.Tab<>("managementAccountsPage");

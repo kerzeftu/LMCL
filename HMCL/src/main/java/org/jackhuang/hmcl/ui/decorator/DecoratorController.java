@@ -29,6 +29,8 @@ import javafx.util.Duration;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorDnD;
 import org.jackhuang.hmcl.community.config.CommunityConfigDnD;
 import org.jackhuang.hmcl.community.ui.CommunitySideBar;
+import org.jackhuang.hmcl.community.ui.ManagementPage;
+import org.jackhuang.hmcl.community.ui.OtherPage;
 import org.jackhuang.hmcl.community.ui.transfer.SettingsImportDialog;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jackhuang.hmcl.ui.Controllers;
@@ -40,6 +42,8 @@ import org.jackhuang.hmcl.ui.animation.Motion;
 import org.jackhuang.hmcl.ui.animation.TransitionPane.AnimationProducer;
 import org.jackhuang.hmcl.ui.construct.JFXDialogPane;
 import org.jackhuang.hmcl.ui.construct.Navigator;
+import org.jackhuang.hmcl.ui.download.DownloadPage;
+import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import org.jackhuang.hmcl.ui.main.RootPage;
 import org.jackhuang.hmcl.ui.wizard.Refreshable;
 import org.jackhuang.hmcl.ui.wizard.WizardProvider;
@@ -197,15 +201,21 @@ public class DecoratorController {
             decorator.canRefreshProperty().set(false);
         }
 
-        // LMCL: the home page itself must not show the top-left home shortcut.
-        // Back buttons on other pages are unaffected.
+        // LMCL: the home page and the four top-level sections (management, settings,
+        // other, download) must not show the top-left home/close shortcut. The back
+        // arrow remains available on those sections; other pages are unaffected.
         boolean home = to instanceof RootPage;
-        decorator.canCloseProperty().set(!home && navigator.size() > 2);
+        boolean topLevelSection = to instanceof ManagementPage
+                || to instanceof LauncherSettingsPage
+                || to instanceof OtherPage
+                || to instanceof DownloadPage;
+        boolean noCloseNav = home || topLevelSection;
+        decorator.canCloseProperty().set(!noCloseNav && navigator.size() > 2);
 
         if (to instanceof DecoratorPage) {
-            decorator.showCloseAsHomeProperty().set(!home && !((DecoratorPage) to).isPageCloseable());
+            decorator.showCloseAsHomeProperty().set(!noCloseNav && !((DecoratorPage) to).isPageCloseable());
         } else {
-            decorator.showCloseAsHomeProperty().set(!home);
+            decorator.showCloseAsHomeProperty().set(!noCloseNav);
         }
 
         decorator.setNavigationDirection(event.getDirection());
