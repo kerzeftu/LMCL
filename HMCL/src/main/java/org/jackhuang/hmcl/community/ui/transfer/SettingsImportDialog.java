@@ -18,8 +18,14 @@
 package org.jackhuang.hmcl.community.ui.transfer;
 
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.config.CommunitySettingsBundle;
 import org.jackhuang.hmcl.community.config.SettingsChange;
@@ -32,7 +38,6 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.construct.ComponentList;
 import org.jackhuang.hmcl.ui.construct.ComponentSublist;
 import org.jackhuang.hmcl.ui.construct.DialogPane;
-import org.jackhuang.hmcl.ui.construct.LinePane;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
@@ -119,35 +124,54 @@ public final class SettingsImportDialog extends DialogPane {
         return exporter == null ? section : i18n(exporter.titleKey());
     }
 
-    private static @NotNull LinePane buildChangeRow(@NotNull SettingsChange change) {
-        LinePane row = new LinePane();
-        row.setTitle(change.label() != null ? change.label() : change.key());
+    private static @NotNull StackPane buildChangeRow(@NotNull SettingsChange change) {
+        String titleText = change.label() != null ? change.label() : change.key();
+        Label title = new Label(titleText);
+        title.getStyleClass().add("title-label");
+        title.setMinWidth(0);
+        title.setMaxWidth(140);
+        title.setTextOverrun(OverrunStyle.ELLIPSIS);
+        title.setTooltip(new Tooltip(titleText));
+
         String newValue = change.newValue() == null
                 ? i18n("community.settings.transfer.value.absent")
                 : change.newValue();
+        VBox valueBox = new VBox(2);
+        valueBox.setAlignment(Pos.CENTER_LEFT);
+        valueBox.setMinWidth(0);
+        valueBox.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(valueBox, Priority.ALWAYS);
         if (newValue.indexOf('\n') >= 0) {
             // 已格式化过的变化摘要（如下载源、主页布局）：逐行展示，不再拼 JSON 原文。
-            VBox lines = new VBox(2);
             for (String line : newValue.split("\\n", -1)) {
-                Label detail = new Label(line);
-                detail.getStyleClass().add("subtitle-label");
-                detail.setWrapText(false);
-                detail.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
-                detail.setMaxWidth(420);
-                detail.setTooltip(new javafx.scene.control.Tooltip(line));
-                lines.getChildren().add(detail);
+                valueBox.getChildren().add(createValueLabel(line));
             }
-            row.setRight(lines);
         } else {
             String oldValue = change.oldValue() == null
                     ? i18n("community.settings.transfer.value.absent")
                     : change.oldValue();
-            Label value = new Label(oldValue + "  →  " + newValue);
-            value.getStyleClass().add("subtitle-label");
-            value.setWrapText(false);
-            row.setRight(value);
+            valueBox.getChildren().add(createValueLabel(oldValue + "  →  " + newValue));
         }
+
+        HBox line = new HBox(12, title, valueBox);
+        line.getStyleClass().add("line-component-container");
+        line.setAlignment(Pos.CENTER_LEFT);
+
+        StackPane row = new StackPane(line);
+        row.getStyleClass().addAll("line-pane", "line-component");
+        row.setMinHeight(48);
         return row;
+    }
+
+    private static @NotNull Label createValueLabel(@NotNull String text) {
+        Label label = new Label(text);
+        label.getStyleClass().add("subtitle-label");
+        label.setWrapText(false);
+        label.setTextOverrun(OverrunStyle.ELLIPSIS);
+        label.setMinWidth(0);
+        label.setMaxWidth(Double.MAX_VALUE);
+        label.setTooltip(new Tooltip(text));
+        return label;
     }
 
     @Override
