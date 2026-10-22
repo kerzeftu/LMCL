@@ -155,6 +155,9 @@ public final class SettingsImportDialog extends DialogPane {
 
         HBox line = new HBox(12, title, valueBox);
         line.getStyleClass().add("line-component-container");
+        // 外层 ComponentList 的 options-list-item 已有 16px 左内边距；这里用 48px，
+        // 使可见左边距从 32px 增至 64px（原来的两倍）。
+        line.setPadding(new Insets(10, 16, 10, 48));
         line.setAlignment(Pos.CENTER_LEFT);
 
         StackPane row = new StackPane(line);
