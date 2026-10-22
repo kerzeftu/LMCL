@@ -3,7 +3,7 @@
 > **阶段**：阶段一 · 工程底座 ｜ **优先级**：P1 ｜ **工期**：2–5 天
 > **前置**：[步骤 01](01-仓库建立与上游同步机制.md)（镜像/同步方式已定）、[步骤 03](03-产品身份与合规改造.md)（产品名、图标、版本号已定） ｜ **后续**：[步骤 04](04-包名Relocate改造.md)（产物拼接验证）、[步骤 18](18-内存优化P2-发布准备.md)（发布签名）
 > **侵入点**：HMCL 仓库 **0 处**；新增独立 fork 仓库 `HMCLauncher`，通过 `HMCL_LAUNCHER_EXE` 替换构建期 stub
-> **实现状态（2026-10-22）**：源码 fork/品牌字段/数据目录/CI 与 **MinGW i686 交叉构建**已完成（本地 `hmclauncher` 仓库，`c580531`）；**Windows/MSVC 构建与 10 项行为验收待执行**；`home4-stub` 仅供测试，已验收的 home3 保留。见 §7。
+> **实现状态（2026-10-22）**：源码 fork/品牌字段/数据目录/CI 与 **MinGW i686 交叉构建**已完成（本地 `hmclauncher` 仓库，`c580531` + `802853c`）；**v3.16.8 起 stub 资源版本与启动器产品版本对齐为 `1.0.0.0`**；**Windows/MSVC 构建与 10 项行为验收待执行**；`home4-stub` 与 `m3spike8` 已删除，当前测试包为 `m3spike9`，已验收的 home3 保留。见 §7。
 
 ---
 
@@ -157,7 +157,7 @@ git grep -n "VERSIONINFO\|ProductName\|FileDescription\|LegalCopyright\|IDI_HMCL
 | `HMCL/HMCL.rc.in:50` | `ProductName` | `LMCL` |
 | `HMCL/HMCL.rc.in:48` | `LegalCopyright` | **保留** `Copyright (C) 2025 huangyuhui`，再追加一行 `Modifications Copyright (C) 2026 <组织名>` |
 | `HMCL/HMCL.rc.in:47/:49` | `InternalName` / `OriginalFilename` | 改为 `LMCL.exe`（与磁盘文件名无关；fork 模板同步改，保持资源表自洽） |
-| `HMCL/HMCL.rc.in:46/:51` | `FileVersion` / `ProductVersion` | 由 `project(... VERSION 3.16.1000.0)` 注入（**必须 4 段**：`FILEVERSION` 用 `PROJECT_VERSION_TWEAK` 拼第 4 段，写 3 段会生成 `3,16,1000,` 非法值）：显示为 `3.16.1000.0`，与 HMCL 版本链 `3.16.1000` 对齐（见步骤 03） |
+| `HMCL/HMCL.rc.in:46/:51` | `FileVersion` / `ProductVersion` | 由 `project(... VERSION 1.0.0.0)` 注入（**必须 4 段**：`FILEVERSION` 用 `PROJECT_VERSION_TWEAK` 拼第 4 段，写 3 段会生成 `1,0,0,` 非法值）：显示为 `1.0.0.0`，与 HMCL 产品版本 `1.0.0` 对齐（见步骤 03）；上游基线 `v3.16.4` 单独记录在 `hmcl.community.baseline` |
 | `HMCL/HMCL.rc.in:23` + 仓库根 `HMCL.ico` | 图标 | 社区版图标（含 16/32/48/256 多尺寸；CMake `configure_file` 自动复制） |
 | `HMCL/i18n.cpp:8-23` | 三条错误文案（取路径失败 / `LMCL_JAVA_HOME` 无效 / 找不到 Java） | 把 "HMCL" 换成产品名；保留 "Java 17+" 与操作指引；中文分支仅在 `GetUserDefaultUILanguage()==2052` 时生效；代码接受 `LMCL_JAVA_HOME`，兼容 `HMCL_JAVA_HOME` |
 | `HMCL/main.cpp:209-213` | Java 下载页链接 | 换成自有页面，或保留 HMCL 官方页（见[步骤 03](03-产品身份与合规改造.md) 决策） |
@@ -169,7 +169,7 @@ git grep -n "VERSIONINFO\|ProductName\|FileDescription\|LegalCopyright\|IDI_HMCL
 ### 3.4 版本资源、manifest 与兼容项
 
 - **manifest**：官方 exe 内嵌的是链接器默认最小 manifest，内容只有 `trustInfo/requestedPrivileges/requestedExecutionLevel level='asInvoker' uiAccess='false'`；**没有** `longPathAware`、`supportedOS`、DPI 声明。→ **不要新增/修改 manifest**（新增 `longPathAware` 属行为差异，须登记并补测；也不要用 `requireAdministrator`）。
-- **版本注入**：只改 `CMakeLists.txt` 的 `project(HMCLauncher LANGUAGES CXX VERSION 3.16.1000.0)` 一处（**必须 4 段**，否则 `@PROJECT_VERSION_TWEAK@` 为空、`FILEVERSION` 非法）——`HMCL.rc.in` 的 `FILEVERSION`/`PRODUCTVERSION` 与 `config.h` 的 `HMCL_LAUNCHER_VERSION` 都由它生成；不要手改构建产物，保持可复现。
+- **版本注入**：只改 `CMakeLists.txt` 的 `project(HMCLauncher LANGUAGES CXX VERSION 1.0.0.0)` 一处（**必须 4 段**，否则 `@PROJECT_VERSION_TWEAK@` 为空、`FILEVERSION` 非法）——`HMCL.rc.in` 的 `FILEVERSION`/`PRODUCTVERSION` 与 `config.h` 的 `HMCL_LAUNCHER_VERSION` 都由它生成；不要手改构建产物，保持可复现。
 - **最低 Java**：`set(HMCL_EXPECTED_JAVA_MAJOR_VERSION 17)` 决定"找不到 Java"的判定与提示文案；它应与 HMCL 的 Java 底线一起变化（不是本步能单独拍的产品决策）。
 - 不新增加壳/压缩（exe 需保持"可直接读尾部 jar"的结构——HMCL 拼接逻辑只依赖 stub 前缀，但 stub 自己要读自身尾部；加壳会破坏该读取）。
 - 若签名：**签 stub 还是签最终 exe** 由[步骤 18](18-内存优化P2-发布准备.md) 决定；本期先不签名，接受 SmartScreen 首次提示。
@@ -202,7 +202,7 @@ export HMCL_LAUNCHER_EXE=/abs/path/HMCLauncher.exe
 # 参考：官方 v3.16.4 实测 = stub 454,144 B + jar 10,453,287 B = exe 10,907,431 B
 python3 - <<'PY'
 stub = open('/abs/path/HMCLauncher.exe','rb').read()
-exe  = open('HMCL/build/libs/HMCL-3.16.1000.exe','rb').read()
+exe  = open('HMCL/build/libs/HMCL-1.0.0.exe','rb').read()
 assert exe[:len(stub)] == stub, 'prefix mismatch'
 assert stub.count(b'PK\x03\x04') == 0, 'stub unexpectedly contains zip entries'
 assert exe[len(stub):len(stub)+4] == b'PK\x03\x04', 'jar not at stub end'
@@ -219,7 +219,7 @@ PY
 - **A（推荐）只产 stub**：fork 仓库 `build.yml` 只做 `cmake -A Win32` → `sha256` → tag 时发布 `HMCLauncher.exe` + `.sha256`；完整 exe 由我们 HMCL 仓库的 CI 用 `lib/stub/HMCLauncher.exe` 拼（与 §3.6 一致）。
 - **B 保留上游"完整 exe"流水线**：可行，但必须把上游 build.yml 第 2 步的 `repository: HMCL-Dev/HMCL` / `ref: main` 换成 `<org>/HMCL` + 出包分支；否则会用**上游 main** 的 jar 出包（版本号、Bootstrap 属性全错，且构建成功不报错）。
 - 上游 build.yml 事实（可直接照抄结构）：`windows-2022`、`cmake -A Win32 -B build`、`Get-FileHash` 生成 `HMCLauncher.exe.sha256`、设 `HMCL_LAUNCHER_EXE` 后 `./gradlew makeExecutables --no-daemon`、artifacts 同时含完整 exe 与 stub；**tag 时 Release 只附 stub + sha256**。
-- 发布时：tag（如 `v3.16.1000-stub.1`）+ Release 附 exe、源码链接、上游基线 commit。
+- 发布时：tag（如 `v1.0.0-stub.1`）+ Release 附 exe、源码链接、上游基线 commit。
 - HMCL 仓库：把 stub 的 `sha256` 写进 step-20 的发布记录；`HMCL_LAUNCHER_EXE` 指向仓库内 `lib/stub/HMCLauncher.exe`（**优先固定路径，避免构建依赖网络**）。
 - 建议同时保留 `docs/附录/CI工作流/` 中的构建说明，便于审计"对应源码"。
 
@@ -276,7 +276,7 @@ PY
 |---|---|
 | 本地 fork 仓库 | ✅ `/home/kerze/hmclce/hmclauncher`（独立 git，`main`） |
 | 上游基线 | ✅ `da0e0c3b4f01fa0edbaf575d9631f093daf70cd1`（对应 Maven `3.7.0.1`），写入 `UPSTREAM_COMMIT` |
-| 版本注入 | ✅ `CMakeLists.txt` `VERSION 3.16.1000.0`（四段） |
+| 版本注入 | ✅ `CMakeLists.txt` `VERSION 1.0.0.0`（四段，v3.16.8 对齐产品版本） |
 | 资源品牌字段 | ✅ `HMCL/HMCL.rc.in` 六项 + 版权保留 |
 | 错误文案品牌 | ✅ `HMCL/i18n.cpp` 英文/中文产品名改 LMCL；`LMCL_JAVA_HOME` 优先，保留 `HMCL_JAVA_HOME` 兼容别名 |
 | 数据目录 | ✅ Java 搜索改 `.lmcl/java`、`%APPDATA%/LMCL/java`（上游 `.hmcl`） |
@@ -286,19 +286,20 @@ PY
 | Java 下载页 | ⏳ 待补；当前保留上游 `docs.hmcl.net` |
 | 启动逻辑 | ✅ 未改（Java 查找/参数/自读 jar 尾部） |
 | CI | ✅ 只产 stub，`windows-2022`、`-A Win32`、PE machine 断言、无 ZIP 头断言、tag Release |
-| MinGW 交叉构建 | ✅ PE32/i386/GUI，1,201,152 B，SHA-256 `89b58fa0…` |
+| MinGW 交叉构建 | ✅ PE32/i386/GUI，1,201,152 B，SHA-256 `ded29e28…`（v3.16.8 重建） |
 | Windows/MSVC + 10 项行为验收 | ⏳ 本机无法执行 |
 
 ### 7.2 文件与改动
 
 fork 仓库提交：
 
-- `8559bfb brand(LMCL): fork HMCLauncher stub, version 3.16.1000.0`
+- `8559bfb brand(LMCL): fork HMCLauncher stub, version 3.16.1000.0`（历史）
 - `c580531 brand(LMCL): use .lmcl/LMCL java dirs and LMCL env vars`
+- `802853c brand(LMCL): align stub version with 1.0.0.0`（v3.16.8）
 
 | 文件 | 改动 |
 |---|---|
-| `CMakeLists.txt` | `project(... VERSION 3.16.1000.0)` |
+| `CMakeLists.txt` | `project(... VERSION 1.0.0.0)`（v3.16.8；历史 `3.16.1000.0`） |
 | `HMCL/HMCL.rc.in` | `CompanyName=LMCL Team`；`FileDescription=Lumina Minecraft Launcher`；`InternalName`/`OriginalFilename=LMCL.exe`；`ProductName=LMCL`；`LegalCopyright` 保留上游并追加 `Modifications Copyright (C) 2026 LMCL Team`；`STRINGTABLE` 改 `LMCL` |
 | `HMCL/i18n.cpp` | 错误提示产品名改 LMCL；`LMCL_JAVA_HOME` |
 | `HMCL/main.cpp` | 兼容读取 `LMCL_*`/`HMCL_*` 环境变量；Java 搜索 `.lmcl/java`、`%APPDATA%/LMCL/java`；日志标题改 LMCL |
@@ -311,7 +312,7 @@ fork 仓库提交：
 
 - 新增 `lmcl/lib/stub/README.md`：fork 路径、`HMCL_LAUNCHER_EXE` 用法、basename 必须 `HMCLauncher.exe`、发布前验收。
 - **未提交二进制**：`lmcl/lib/stub/` 只有说明；`HMCL/build.gradle.kts` 的官方 stub 回落逻辑不变。
-- 采用新 stub 的测试包放在 `dist/LMCL-3.16.1000-win-x64-home4-stub.zip`，**仅供测试**；已验收的 home3（官方 stub）保留为回退。
+- 采用新 stub 的测试包放在 `dist/LMCL-3.16.1000-win-x64-home4-stub.zip`（历史，已删除）；当前测试包为 `dist/LMCL-1.0.0-win-x64-m3spike9.zip`，**仅供测试**；已验收的 home3（官方 stub）保留为回退。
 
 ### 7.4 MinGW 交叉构建（本机实测）
 
@@ -325,7 +326,7 @@ i686-w64-mingw32-g++-posix -std=c++20 -Os -s -municode -mwindows   -ffunction-se
 结果：
 
 - `HMCLauncher.exe` 1,201,152 B，PE32 GUI Intel i386，machine `0x14c`，stub 内 `PK\x03\x04` 计数 0。
-- SHA-256 `89b58fa02a12363051ec05ae344527b27734787582f2049c8d953482aa22b617`。
+- v3.16.8 重建（`1.0.0.0`）SHA-256 `ded29e28971755afc83041f91dec9fce7ff4f4a130c0bb07983b4a42f8f3370b`；历史 `3.16.1000.0` 版本为 `89b58fa0…`。
 - UTF-16 资源字符串含 `LMCL`、`Lumina Minecraft Launcher`、`Copyright (C) 2025 huangyuhui; Modifications Copyright (C) 2026 LMCL Team`；无 `.hmcl` 搜索目录。
 - DLL 依赖仅 `ADVAPI32`/`KERNEL32`/`SHELL32`/`USER32`/`VERSION`/`msvcrt`（Win7 可用）。
 - `HMCL_LAUNCHER_EXE` 指向该文件后 `:HMCL:makeExecutables` 成功：jar **11,156,135 B**（SHA-256 `0626a033…`）、exe **12,357,287 B**（SHA-256 `2a9e0e7a…`）；`exe[:len(stub)] == stub`、`exe[len(stub):len(stub)+4] == b'PK\x03\x04'` 均通过。
@@ -338,10 +339,20 @@ i686-w64-mingw32-g++-posix -std=c++20 -Os -s -municode -mwindows   -ffunction-se
 2. 确认 `HMCLauncher.exe` 为 PE32/i386，且不含 `PK\x03\x04`。
 3. 用新 stub 执行 `:HMCL:makeExecutables`，断言前缀/jar 偏移。
 4. 按 §3.5 跑 10 项行为对等（尤其无 Java 提示、中文路径、`LMCL_JAVA_HOME`/兼容别名、内置 JRE、32 位、英文/中文对话框）。
-5. 干净 Windows 虚拟机双击 `home4-stub` 的 `LMCL.exe`；若失败，回退 home3（官方 stub）。
+5. 干净 Windows 虚拟机双击当前 `m3spike9` 的 `LMCL.exe`；若失败，回退 home3（官方 stub）。
 6. 记录 stub SHA-256，更新 `BRANDING.md` 的图标/Java 链接状态，再决定是否替换默认包。
 
-### 7.6 风险与回退
+### 7.6 v3.16.8 stub 版本对齐（当前）
+
+启动器产品版本改为 `1.0.0` 后，stub 的资源版本同步对齐，避免 Windows 文件属性仍显示 `3.16.1000.0`：
+
+- `hmclauncher/CMakeLists.txt`：`project(HMCLauncher LANGUAGES CXX VERSION 1.0.0.0)`（提交 `802853c`）。
+- 生成 `config.h` 的 `HMCL_LAUNCHER_VERSION` 为 `L"1.0.0.0"`；生成 `HMCL.rc` 的 `FILEVERSION`/`PRODUCTVERSION` 为 `1,0,0,0`，`FileVersion`/`ProductVersion` 为 `1.0.0.0`。
+- MinGW i686 重新编译：`HMCLauncher.exe` 1,201,152 B，SHA-256 `ded29e28971755afc83041f91dec9fce7ff4f4a130c0bb07983b4a42f8f3370b`；PE32 GUI i386，`strings` 含 `1.0.0.0`、不含 `3.16.1000.0`。
+- 用该 stub 重建 `HMCL-1.0.0.exe`：exe 13,050,225 B（`4dcb508f…`），jar 11,849,073 B（`c1d264c7…`）；`exe[:stub]==stub`、`exe[stub:]==jar`。
+- 同步更新了 `README.md` 的品牌/版本说明与 `BRANDING.md` 的待办状态；Windows/MSVC 构建与 10 项行为验收仍未执行。
+
+### 7.7 风险与回退
 
 - **未实机启动**：`home4-stub` 只作测试，不替换已验收的 home3；`HMCL_LAUNCHER_EXE` 置空即回官方 stub。
 - **MinGW CRT 差异**：本 stub 用 MinGW 静态 CRT，体积 1.2 MB（官方约 454 KB），依赖面已压到 Win7 系统 DLL；MSVC 正式构建仍应作为发布基线。
