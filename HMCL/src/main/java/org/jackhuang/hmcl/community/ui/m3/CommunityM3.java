@@ -27,6 +27,7 @@ import org.jackhuang.hmcl.setting.FontManager;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.URL;
 
@@ -51,8 +52,8 @@ public final class CommunityM3 {
     /// 在指定子树安装 M3 Expressive 主题。
     ///
     /// 必须在 JavaFX 线程调用；主题以 `Themes.getColorScheme()` 为颜色来源，
-    /// 字体跟随 `FontManager`。安装后追加 [#STYLESHEET]，用于修正 `.m3-root`
-    /// 带来的字体和背景污染。
+    /// 字体跟随 `FontManager`（未配置自定义字体时继承组件默认字体）。
+    /// 安装后追加 [#STYLESHEET]，用于修正 `.m3-root` 带来的背景和文字色。
     ///
     /// @param root 主题作用范围的根节点
     public static void install(@NotNull Parent root) {
@@ -63,6 +64,7 @@ public final class CommunityM3 {
         M3Theme theme = M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, Themes.getColorScheme());
         M3ThemeManager.install(root, theme);
         root.getProperties().put(INSTALLED_PROPERTY, theme);
+        root.getStyleClass().add("community-m3-host");
 
         URL stylesheet = CommunityM3.class.getResource(STYLESHEET);
         if (stylesheet != null) {
@@ -72,7 +74,24 @@ public final class CommunityM3 {
             }
         }
 
-        FontManager.FontReference font = FontManager.getFont();
-        root.setStyle("-fx-font-family: \"" + font.family() + "\"; -fx-background-color: transparent;");
+        // FontManager.getFont() 在用户没有自定义字体且系统默认字体探测失败时为 null，
+        // 此时不要写 inline style，让 m3fx / 上游 CSS 的字体继承继续生效。
+        String style = fontStyle(FontManager.getFont());
+        if (style != null) {
+            root.setStyle(style);
+        }
+    }
+
+    /// 生成字体覆盖样式；字体未解析时返回 `null`，由调用方保留继承字体。
+    ///
+    /// 单独拆出便于测试空字体与引号/反斜杠转义，避免再次出现
+    /// `FontManager.getFont()` 为 null 时的 NPE。
+    @Nullable
+    static String fontStyle(@Nullable FontManager.FontReference font) {
+        if (font == null) {
+            return null;
+        }
+        String family = font.family().replace("\\", "\\\\").replace("\"", "\\\"");
+        return "-fx-font-family: \"" + family + "\"; -fx-background-color: transparent;";
     }
 }
