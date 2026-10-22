@@ -19,16 +19,29 @@
  */
 package org.jackhuang.hmcl.community.ui.m3;
 
+import javafx.animation.Animation;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.util.Duration;
 import org.glavo.m3fx.controls.M3Button;
 import org.glavo.m3fx.controls.M3ButtonVariant;
 import org.glavo.m3fx.controls.M3Card;
@@ -138,8 +151,8 @@ public final class M3SpikePane extends VBox {
         return section("Card variants", row);
     }
 
-    /// M3 Expressive 规范推荐的 wavy 进度条尺寸。
-    private static final double TRACK_THICKNESS = 10;
+    /// M3 Expressive 规范推荐的 wavy 进度条尺寸；桌面端 4 px 线宽与 2.5 px 振幅更接近上一版观感。
+    private static final double TRACK_THICKNESS = 4;
     private static final double TRACK_GAP = 4;
     private static final double STOP_SIZE = 4;
     private static final double WAVELENGTH = 40;
@@ -152,9 +165,13 @@ public final class M3SpikePane extends VBox {
                 progressRow("Wavy 65%", 0.65, 2.5),
                 progressRow("Flat 65%", 0.65, 0.0));
 
-        M3ProgressBar indeterminate = new M3ProgressBar(ProgressIndicator.INDETERMINATE_PROGRESS);
-        configure(indeterminate);
-        indeterminate.setWaveAmplitude(2.5);
+        // m3fx 的确定进度条视觉可用，但它的 indeterminate 动画从 0.18 开始循环，
+        // 每轮都会在左侧露出半截进度段，看起来像生硬地跳回前面。这里用连续
+        // 传送带式波形替代：每个周期位移恰好一个轨道宽度，首尾图案相同。
+        ContinuousWavyBar indeterminate = new ContinuousWavyBar();
+        indeterminate.setPrefWidth(420);
+        indeterminate.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(indeterminate, Priority.ALWAYS);
         column.getChildren().add(progressLine("Indeterminate", indeterminate));
 
         HBox indicators = new HBox(24);
@@ -226,5 +243,103 @@ public final class M3SpikePane extends VBox {
         box.setPadding(new Insets(4, 0, 2, 0));
         VBox.setVgrow(content, Priority.NEVER);
         return box;
+    }
+
+    /// 连续波形的 indeterminate 进度条。
+    ///
+    /// 用「轨道宽度的整数倍」作为循环位移：每轮结束时所有活动段正好平移
+    /// 一整条轨道，首尾图案完全一致，因此不会在左侧突然跳出一截。
+    /// 活动段按 0.58 个轨道宽、间隔 1 个轨道宽排布，始终有一段从左进入、
+    /// 另一段从右离开。
+    private static final class ContinuousWavyBar extends Region {
+        private static final double SEGMENT_RATIO = 0.58;
+        private static final double AMPLITUDE = 2.5;
+        private static final Duration CYCLE = Duration.millis(2200);
+
+        private final Rectangle track = new Rectangle();
+        private final Rectangle clip = new Rectangle();
+        private final Path wave = new Path();
+        private final DoubleProperty offset = new SimpleDoubleProperty(0);
+        private final Timeline timeline;
+
+        private ContinuousWavyBar() {
+            getStyleClass().add("community-wavy-spike");
+            track.getStyleClass().add("track");
+            wave.getStyleClass().add("wave");
+            wave.setFill(null);
+            wave.setStrokeLineCap(StrokeLineCap.ROUND);
+
+            getChildren().addAll(track, wave);
+            setClip(clip);
+            setPrefHeight(TRACK_THICKNESS + AMPLITUDE * 2 + 4);
+            setMinHeight(TRACK_THICKNESS + AMPLITUDE * 2 + 4);
+
+            offset.addListener((observable, oldValue, newValue) -> rebuild());
+            timeline = new Timeline(new KeyFrame(CYCLE, new KeyValue(offset, 1.0, Interpolator.LINEAR)));
+            timeline.setCycleCount(Animation.INDEFINITE);
+            sceneProperty().addListener((observable, oldScene, newScene) -> {
+                if (newScene == null) {
+                    timeline.stop();
+                } else {
+                    timeline.play();
+                }
+            });
+        }
+
+        @Override
+        protected void layoutChildren() {
+            double width = getWidth();
+            double height = getHeight();
+            double centerY = height / 2;
+
+            track.setX(0);
+            track.setY(centerY - TRACK_THICKNESS / 2);
+            track.setWidth(width);
+            track.setHeight(TRACK_THICKNESS);
+            track.setArcWidth(TRACK_THICKNESS);
+            track.setArcHeight(TRACK_THICKNESS);
+
+            double clipHeight = TRACK_THICKNESS + AMPLITUDE * 2;
+            clip.setX(0);
+            clip.setY(centerY - clipHeight / 2);
+            clip.setWidth(width);
+            clip.setHeight(clipHeight);
+            clip.setArcWidth(TRACK_THICKNESS);
+            clip.setArcHeight(TRACK_THICKNESS);
+
+            rebuild();
+        }
+
+        private void rebuild() {
+            wave.getElements().clear();
+            double width = getWidth();
+            if (width <= 0) {
+                return;
+            }
+
+            double centerY = getHeight() / 2;
+            double segment = Math.max(Math.min(width, 48), width * SEGMENT_RATIO);
+            double patternOffset = offset.get() * width;
+
+            for (int k = -2; k <= 3; k++) {
+                double segmentStart = -segment + patternOffset + k * width;
+                if (segmentStart > width || segmentStart + segment < 0) {
+                    continue;
+                }
+
+                int steps = Math.max(2, (int) Math.ceil(segment / 2));
+                for (int i = 0; i <= steps; i++) {
+                    double localX = segment * i / steps;
+                    double x = segmentStart + localX;
+                    double y = centerY + Math.sin(2 * Math.PI * localX / WAVELENGTH) * AMPLITUDE;
+                    if (i == 0) {
+                        wave.getElements().add(new MoveTo(x, y));
+                    } else {
+                        wave.getElements().add(new LineTo(x, y));
+                    }
+                }
+            }
+            wave.setStrokeWidth(TRACK_THICKNESS);
+        }
     }
 }

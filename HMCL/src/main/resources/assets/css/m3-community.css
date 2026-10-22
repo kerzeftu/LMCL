@@ -28,3 +28,14 @@
     -fx-text-fill: -m3-color-on-surface-variant;
     -fx-font-size: 12px;
 }
+
+/* 连续 indeterminate 波形：轨道与活动段均从 m3fx 主题色取值。 */
+.community-wavy-spike .track {
+    -fx-fill: -m3-color-secondary-container;
+}
+
+.community-wavy-spike .wave {
+    -fx-fill: transparent;
+    -fx-stroke: -m3-color-primary;
+    -fx-stroke-width: 4px;
+}
