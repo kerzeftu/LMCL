@@ -40,6 +40,7 @@ import org.jackhuang.hmcl.ui.animation.Motion;
 import org.jackhuang.hmcl.ui.animation.TransitionPane.AnimationProducer;
 import org.jackhuang.hmcl.ui.construct.JFXDialogPane;
 import org.jackhuang.hmcl.ui.construct.Navigator;
+import org.jackhuang.hmcl.ui.main.RootPage;
 import org.jackhuang.hmcl.ui.wizard.Refreshable;
 import org.jackhuang.hmcl.ui.wizard.WizardProvider;
 import org.jackhuang.hmcl.util.platform.OperatingSystem;
@@ -196,12 +197,15 @@ public class DecoratorController {
             decorator.canRefreshProperty().set(false);
         }
 
-        decorator.canCloseProperty().set(navigator.size() > 2);
+        // LMCL: the home page itself must not show the top-left home shortcut.
+        // Back buttons on other pages are unaffected.
+        boolean home = to instanceof RootPage;
+        decorator.canCloseProperty().set(!home && navigator.size() > 2);
 
         if (to instanceof DecoratorPage) {
-            decorator.showCloseAsHomeProperty().set(!((DecoratorPage) to).isPageCloseable());
+            decorator.showCloseAsHomeProperty().set(!home && !((DecoratorPage) to).isPageCloseable());
         } else {
-            decorator.showCloseAsHomeProperty().set(true);
+            decorator.showCloseAsHomeProperty().set(!home);
         }
 
         decorator.setNavigationDirection(event.getDirection());

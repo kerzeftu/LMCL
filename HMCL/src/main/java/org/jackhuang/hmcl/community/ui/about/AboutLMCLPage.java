@@ -62,6 +62,9 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 @NotNullByDefault
 public final class AboutLMCLPage extends SpinnerPane {
 
+    private static final String KERZE_AVATAR = "/assets/about/avatars/kerze.jpg";
+    private static final String ICON_DESIGNER_AVATAR = "/assets/about/avatars/muzidai.jpg";
+
     private final WeakListenerHolder holder = new WeakListenerHolder();
     private final VBox content = new VBox();
 
@@ -125,19 +128,35 @@ public final class AboutLMCLPage extends SpinnerPane {
     private ComponentList buildDevelopers() {
         LineButton developer = new LineButton();
         developer.setLargeTitle(true);
-        developer.setLeading(SVG.PERSON.createIcon(32));
+        setAvatar(developer, KERZE_AVATAR);
         developer.setTitle("指尖的宇宙 kerze");
         developer.setSubtitle(i18n("community.about.developer.role"));
 
         LineButton iconDesigner = new LineButton();
         iconDesigner.setLargeTitle(true);
-        iconDesigner.setLeading(SVG.PERSON.createIcon(32));
+        setAvatar(iconDesigner, ICON_DESIGNER_AVATAR);
         iconDesigner.setTitle("木子呆、法棍与仰望星空派");
         iconDesigner.setSubtitle(i18n("community.about.developer.icon"));
 
         ComponentList list = new ComponentList();
         list.getContent().setAll(developer, iconDesigner);
         return list;
+    }
+
+    /// 设置开发人员头像；资源缺失时回退到通用人员图标。
+    ///
+    /// @param button 目标按钮
+    /// @param resource 内置头像路径
+    private static void setAvatar(@NotNull LineButton button, @NotNull String resource) {
+        Image image = loadImage(resource);
+        if (image == null) {
+            button.setLeading(SVG.PERSON.createIcon(32));
+            return;
+        }
+        ImageContainer view = new ImageContainer(32, 32);
+        view.setImage(image);
+        view.setMouseTransparent(true);
+        button.setLeading(view);
     }
 
     /// 上游致谢列表；不截断、不筛选。
