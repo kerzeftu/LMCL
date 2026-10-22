@@ -1456,7 +1456,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 
 - [ ] 编译通过；
 - [ ] 5 类组件可见、可点击/可输入；
-- [ ] 进度条波浪可见（Wavy 2.5 / Flat 0 对照、thickness 10 / gap 4 / stop 4 / wavelength 40 截图）；
+- [ ] 进度条波浪可见（Wavy 2.5 / Flat 0 对照、thickness 4 / gap 4 / stop 4 / wavelength 40 截图）；
 - [ ] 现有主页/设置页无字体/背景突变；
 - [ ] 启动增量 ≤ 300ms；
 - [ ] 记录 JitPack fallback。
@@ -1477,7 +1477,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 | 依赖坐标 | `com.github.Glavo:m3fx:2481f88fd6`（JitPack）；根构建已含 `https://jitpack.io` 仓库 |
 | Gradle 声明 | `gradle/libs.versions.toml` 的 `m3fx`；`HMCL/build.gradle.kts` 的 `implementation(libs.m3fx)` |
 | 主题桥接 | `community/ui/m3/CommunityM3.java`：`M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, Themes.getColorScheme())` + `M3ThemeManager.install(root, theme)`，只装传入子树；追加 `assets/css/m3-community.css`；仅当 `FontManager` 解析到字体时覆盖 `font-family`，否则继承组件字体 |
-| Spike 面板 | `community/ui/m3/M3SpikePane.java`：5 种 `M3ButtonVariant`、3 种 `M3CardVariant`、2 条确定进度（Wavy 65% amplitude 2.5 / Flat 65% amplitude 0，thickness 10 / gap 4 / stop 4 / wavelength 40）+ 1 条不确定进度、`M3LoadingIndicator` + `M3ProgressIndicator`、`M3Switch`/`M3Slider`/`M3TextField` |
+| Spike 面板 | `community/ui/m3/M3SpikePane.java`：5 种 `M3ButtonVariant`、3 种 `M3CardVariant`、2 条确定进度（Wavy 65% amplitude 2.5 / Flat 65% amplitude 0，thickness 4 / gap 4 / stop 4 / wavelength 40）+ 1 条连续自绘不确定波形、`M3LoadingIndicator` + `M3ProgressIndicator`、`M3Switch`/`M3Slider`/`M3TextField` |
 | 覆盖 CSS | `HMCL/src/main/resources/assets/css/m3-community.css`：`.m3-root` 透明背景、状态文字色 |
 | 调试入口 | `HomePane.buildHeader()`：仅 `-Dlmcl.m3.spike=true` 时显示 `[M3 Spike]`，点击弹 `DialogPane`（`ScrollPane`，640 高） |
 | 第三方许可 | `META-INF/LICENSE-m3fx.txt`（Apache-2.0 全文 + 来源/commit）；包内另附 `THIRD-PARTY-NOTICES.txt` |
@@ -1488,9 +1488,9 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 - `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` **153 / 0 failures / 0 errors / 0 skipped**；全量 `:HMCL:test` **263 / 0 failures / 0 errors / 2 skipped**；`:HMCL:checkTranslations` 通过；
 - `:HMCL:makeExecutables` 成功：jar **11,785,366 B** SHA-256 `e0ed2f50ce1005f7fdb3b7e88f122215ddc54f7071180794b35f8b197a4f0c04`；exe **12,986,518 B** SHA-256 `82ce6ac847a175fc3eccfb8633a5036e5d6ced27c37a1216c55ac39b541199a5`；stub **1,201,152 B** `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`、PK 偏移 1,201,152；jar 含 376 个 `org/glavo/m3fx/` class；
 - 相对 v3.15 的 jar `11,220,705 B`，增量 **+563,049 B**，低于 Go/No-Go 的 2 MB 门槛；
-- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike3.zip` **66,003,199 B** SHA-256 `07fca89c3c5c6951e9385cbcd994cce725df634d4721d29e808fdaff41838357`；323 entries、`testzip=None`；含 `run-m3-spike.bat`、`THIRD-PARTY-NOTICES.txt`、`jre-x64/bin/java.exe`；
+- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike4.zip` **66,010,237 B** SHA-256 `c33b55b3cc1b0201b0d9e35a4cfe27c1bb29c289bd6b1563b1e28ff394a09711`；323 entries、`testzip=None`；含 `run-m3-spike.bat`、`THIRD-PARTY-NOTICES.txt`、`jre-x64/bin/java.exe`；
 - 本机 `:HMCL:run` 无法完成 GUI 启动：`/home/kerze/.local/share/LMCL: Read-only file system`，且 WSL2 无 X11（`AWTError: Can't connect to X11 window server using ':0'`）。这是运行环境限制，不是编译/依赖错误；
-- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike3` 测试包完成；
+- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike4` 测试包完成；
 - 代码提交 `73e3438ba feat(24): M3 Expressive phase 0 spike via m3fx`，文档提交 `da4b94bb4 docs: v3.16 M3 Expressive phase 0 spike`（分支 `feature/24-m3`）。
 
 修复（2026-10-22，m3spike2）：
@@ -1503,10 +1503,18 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 
 修复（2026-10-22，m3spike3）：
 
-- 进度条观感：用户反馈 `[M3 Spike]` 中波浪进度“有点怪”。原阶段 0 用 thickness 4 + amplitude 0/2.5/4 三条对照，桌面端像细线且强波浪比例失衡；改为 Material 3 Expressive 规范尺寸 thickness 10 / gap 4 / stop 4 / wavelength 40，仅保留 Wavy 65%（amplitude 2.5）与 Flat 65%（amplitude 0）两条对照，移除振幅 4.0；`progressLine` 撑满宽度避免进度条只占半行。
+- 进度条观感：用户反馈 `[M3 Spike]` 中波浪进度“有点怪”。原阶段 0 用 thickness 4 + amplitude 0/2.5/4 三条对照，桌面端像细线且强波浪比例失衡；改为 Material 3 Expressive 规范尺寸 thickness 10 / gap 4 / stop 4 / wavelength 40，仅保留 Wavy 65%（amplitude 2.5）与 Flat 65%（amplitude 0）两条对照，移除振幅 4.0；`progressLine` 撑满宽度避免进度条只占半行。 **该 10 px 方案随后被用户判定过粗，m3spike4 已恢复到 4 px，见本节下方修复记录。**
 - 内置插件端点：零内置只适用于 Minecraft 游戏本体/加载器/资源索引；Modrinth/CurseForge 的 API 与 CDN 属于协议端点，不能依赖 BMCLAPI 兼容镜像。新增 `CommunityAddonSources` 放行 4 个官方 HTTPS 主机（`api.modrinth.com`、`cdn.modrinth.com`、`api.curseforge.com`、`edge.forgecdn.net`），`MissingDownloadProvider` 仅对这些地址放行；其余 URL 继续抛缺源异常。
 - 测试：新增 `CommunityAddonSourcesTest` 4 个测试（官方端点、相似域名/非 HTTPS 拒绝、Missing 放行、Minecraft URL 仍拒绝）；community **153/0**、全量 **263/0/2 skipped**。
 - 新产物：jar **11,785,366 B**（`e0ed2f50…`）、exe **12,986,518 B**（`82ce6ac8…`）、`m3spike3` zip **66,003,199 B**（`07fca89c…`）；代码提交 `6ccf011c3 fix(24): tune wavy progress and keep addon endpoints built in`。`m3spike2` 包被取代。
+
+修复（2026-10-22，m3spike4）：
+
+- 线宽回归：用户反馈 `m3spike3` 的 10 px 线太粗，上一版 4 px 合适；`M3SpikePane.TRACK_THICKNESS` 恢复 4，gap 4 / stop 4 / wavelength 40 不变，Wavy 65% 与 Flat 65% 两条确定进度仍保留。
+- 连续波形：m3fx `M3ProgressBarSkin` 的 indeterminate 动画从固定起点 `0.18` 循环，每轮在左侧露出约四分之一段，造成“跳回前面”。新增 `M3SpikePane.ContinuousWavyBar`：轨道宽度的周期位移（每轮恰好平移一整条轨道，首尾图案相同），活动段 0.58 轨道宽、间隔 1 个轨道宽，一段从左进入的同时另一段从右离开；`m3-community.css` 增加 `.community-wavy-spike .track/.wave` 的 m3fx 主题色规则。
+- 验证：`:HMCL:compileJava` 通过；community **153/0**；全量 **263/0/2 skipped**；`:HMCL:checkTranslations` 通过。
+- 新产物：jar **11,788,701 B** SHA-256 `6b1ffcee0c1098dd011cdd95141b7b3b33e114f95056bf4e9f51c55e190465ac`；exe **12,989,853 B** SHA-256 `dafe151cd8ebfcb0874b2260418ba754fcad8bad9970ea45a7e57205f678ebae`；stub 1,201,152 B `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`、PK 偏移 1,201,152。
+- `m3spike4` zip **66,010,237 B** SHA-256 `c33b55b3cc1b0201b0d9e35a4cfe27c1bb29c289bd6b1563b1e28ff394a09711`；323 entries、`testzip=None`；代码提交 `539449b31 fix(24): continuous wavy indeterminate progress and 4px track`。`m3spike3` 包被取代。
 
 打开方式：
 
@@ -2198,7 +2206,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 
 D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保留 `visual.glass` 与按钮包装层的可替换结构，后续可切换 C/FAB。D8 未确认，暂按 8–11 周估算；D5 按 2.5 执行。
 
-**阶段 0 spike 状态（2026-10-22）**：代码已落盘，编译/community 测试/构建通过，JitPack 依赖可用；Windows 实机视觉/启动增量尚未验证，Go/No-Go 未正式通过。测试包命名 `m3spike3`（m3spike1 因 null font NPE 作废；m3spike2 被进度条/内置插件端点修订取代）。
+**阶段 0 spike 状态（2026-10-22）**：代码已落盘，编译/community 测试/构建通过，JitPack 依赖可用；Windows 实机视觉/启动增量尚未验证，Go/No-Go 未正式通过。测试包命名 `m3spike4`（m3spike1 因 null font NPE 作废；m3spike2 被进度条/内置插件端点修订取代；m3spike3 被 4 px/连续波形修订取代）。
 
 ---
 
@@ -2225,5 +2233,5 @@ D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保
 | 2026-10-22 | D2 毛玻璃 | 暂定选 A 壁纸快照磨砂；保留后续 C 实验位 |
 | 2026-10-22 | D7 启动按钮 | 暂定选形态 1 保留双段按钮只做 M3 视觉 |
 | 待定 | D8 排期 | 暂按 MVP 8–11 周估算，待实机后确认 |
-| 2026-10-22 | 阶段 0 spike | 代码/编译/构建完成；Windows 实机视觉验收待 `m3spike3` 测试包 |
+| 2026-10-22 | 阶段 0 spike | 代码/编译/构建完成；Windows 实机视觉验收待 `m3spike4` 测试包 |
 | 待定 | 本文整体 | 已批准范围/依赖/侧栏/进度侵入/玻璃/按钮；D8 待确认 |
