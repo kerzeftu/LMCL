@@ -1476,7 +1476,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 |---|---|
 | 依赖坐标 | `com.github.Glavo:m3fx:2481f88fd6`（JitPack）；根构建已含 `https://jitpack.io` 仓库 |
 | Gradle 声明 | `gradle/libs.versions.toml` 的 `m3fx`；`HMCL/build.gradle.kts` 的 `implementation(libs.m3fx)` |
-| 主题桥接 | `community/ui/m3/CommunityM3.java`：`M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, Themes.getColorScheme())` + `M3ThemeManager.install(root, theme)`，只装传入子树；追加 `assets/css/m3-community.css`，并覆盖字体/透明背景 |
+| 主题桥接 | `community/ui/m3/CommunityM3.java`：`M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, Themes.getColorScheme())` + `M3ThemeManager.install(root, theme)`，只装传入子树；追加 `assets/css/m3-community.css`；仅当 `FontManager` 解析到字体时覆盖 `font-family`，否则继承组件字体 |
 | Spike 面板 | `community/ui/m3/M3SpikePane.java`：5 种 `M3ButtonVariant`、3 种 `M3CardVariant`、3 条确定进度（amplitude 0/2.5/4）+ 1 条不确定进度、`M3LoadingIndicator` + `M3ProgressIndicator`、`M3Switch`/`M3Slider`/`M3TextField` |
 | 覆盖 CSS | `HMCL/src/main/resources/assets/css/m3-community.css`：`.m3-root` 透明背景、状态文字色 |
 | 调试入口 | `HomePane.buildHeader()`：仅 `-Dlmcl.m3.spike=true` 时显示 `[M3 Spike]`，点击弹 `DialogPane`（`ScrollPane`，640 高） |
@@ -1485,13 +1485,21 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 验证：
 
 - `:HMCL:compileJava` **BUILD SUCCESSFUL**，m3fx JitPack 解析成功，仅 3 条既有 JavaFX `--add-exports` 警告；
-- `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` **147 / 0 failures / 0 errors / 0 skipped**；全量 `:HMCL:test` **257 / 0 failures / 0 errors / 2 skipped**；`:HMCL:checkTranslations` 通过；
-- `:HMCL:makeExecutables` 成功：jar **11,783,508 B** SHA-256 `3744363a02fb4cea66c092dd8600af77c9394175038156a267741473e0c2d6b1`；exe **12,984,660 B** SHA-256 `534a36233b5cd9ca561eb5d18344780d03e4c32237250ac475398ba7f648888a`；stub **1,201,152 B** `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`、PK 偏移 1,201,152；jar 含 376 个 `org/glavo/m3fx/` class；
-- 相对 v3.15 的 jar `11,220,705 B`，增量 **+562,803 B**，低于 Go/No-Go 的 2 MB 门槛；
-- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike1.zip` **66,265,358 B** SHA-256 `bb73376368698dc40013aebeea44efc0d39967b0c306910b2ec515d640e1ed2a`；323 entries、`testzip=None`；含 `run-m3-spike.bat`、`THIRD-PARTY-NOTICES.txt`、`jre-x64/bin/java.exe`；
+- `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` **149 / 0 failures / 0 errors / 0 skipped**；全量 `:HMCL:test` **259 / 0 failures / 0 errors / 2 skipped**；`:HMCL:checkTranslations` 通过；
+- `:HMCL:makeExecutables` 成功：jar **11,783,754 B** SHA-256 `39f25911f2fa046879856990543e278cdef263ed8add95991ead33be5defade1`；exe **12,984,906 B** SHA-256 `b2dece722a5f85837694f425584e733beb1b7941d9449a2e49b0376e6f095cb1`；stub **1,201,152 B** `89b58fa0…`；`exe[:stub]==stub`、`exe[stub:]==jar`、PK 偏移 1,201,152；jar 含 376 个 `org/glavo/m3fx/` class；
+- 相对 v3.15 的 jar `11,220,705 B`，增量 **+563,049 B**，低于 Go/No-Go 的 2 MB 门槛；
+- 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike2.zip` **66,266,200 B** SHA-256 `dbd7d1b57398075ee87f2ce38bab4377c4633da2c77ac5841bb2eea407d5d150`；323 entries、`testzip=None`；含 `run-m3-spike.bat`、`THIRD-PARTY-NOTICES.txt`、`jre-x64/bin/java.exe`；
 - 本机 `:HMCL:run` 无法完成 GUI 启动：`/home/kerze/.local/share/LMCL: Read-only file system`，且 WSL2 无 X11（`AWTError: Can't connect to X11 window server using ':0'`）。这是运行环境限制，不是编译/依赖错误；
-- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike1` 测试包完成；
+- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike2` 测试包完成；
 - 代码提交 `73e3438ba feat(24): M3 Expressive phase 0 spike via m3fx`，文档提交 `da4b94bb4 docs: v3.16 M3 Expressive phase 0 spike`（分支 `feature/24-m3`）。
+
+修复（2026-10-22，m3spike2）：
+
+- 现场：用户点击 `[M3 Spike]` 弹出错误框，`NullPointerException: Cannot invoke "org.jackhuang.hmcl.setting.FontManager$FontReference.family()" because "font" is null`，位置 `CommunityM3.java:76`；Windows 11 + Java 17.0.20.1。
+- 根因：`FontManager.getFont()` 并非保证非 null；当用户没有自定义字体且默认字体探测失败时返回 null，旧代码无条件 `font.family()`。
+- 修复：抽出 `CommunityM3.fontStyle(@Nullable FontReference)`；null 时返回 null，`install` 不写 inline font 样式，继续继承组件字体；有字体时才设置并转义引号/反斜杠；`CommunityM3` 还给子树加 `community-m3-host` 类。
+- 回归：新增 `CommunityM3Test` 2 个测试（null 字体、字体名转义）；community **149/0**、全量 **259/0/2 skipped**。
+- 新产物：jar **11,783,754 B**（`39f25911…`）、exe **12,984,906 B**（`b2dece72…`）、`m3spike2` zip **66,266,200 B**（`dbd7d1b5…`）；代码提交 `f8cd1b9ec fix(24): avoid null FontManager font in M3 spike`。
 
 打开方式：
 
@@ -2183,7 +2191,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 
 D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保留 `visual.glass` 与按钮包装层的可替换结构，后续可切换 C/FAB。D8 未确认，暂按 8–11 周估算；D5 按 2.5 执行。
 
-**阶段 0 spike 状态（2026-10-22）**：代码已落盘，编译/community 测试/构建通过，JitPack 依赖可用；Windows 实机视觉/启动增量尚未验证，Go/No-Go 未正式通过。测试包命名 `m3spike1`。
+**阶段 0 spike 状态（2026-10-22）**：代码已落盘，编译/community 测试/构建通过，JitPack 依赖可用；Windows 实机视觉/启动增量尚未验证，Go/No-Go 未正式通过。测试包命名 `m3spike2`（m3spike1 因 null font NPE 作废）。
 
 ---
 
@@ -2210,5 +2218,5 @@ D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保
 | 2026-10-22 | D2 毛玻璃 | 暂定选 A 壁纸快照磨砂；保留后续 C 实验位 |
 | 2026-10-22 | D7 启动按钮 | 暂定选形态 1 保留双段按钮只做 M3 视觉 |
 | 待定 | D8 排期 | 暂按 MVP 8–11 周估算，待实机后确认 |
-| 2026-10-22 | 阶段 0 spike | 代码/编译/构建完成；Windows 实机视觉验收待 `m3spike1` 测试包 |
+| 2026-10-22 | 阶段 0 spike | 代码/编译/构建完成；Windows 实机视觉验收待 `m3spike2` 测试包 |
 | 待定 | 本文整体 | 已批准范围/依赖/侧栏/进度侵入/玻璃/按钮；D8 待确认 |
