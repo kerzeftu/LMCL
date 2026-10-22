@@ -30,6 +30,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /// 下载源配置的纯函数测试（不依赖 JavaFX/磁盘）。
@@ -130,20 +131,29 @@ public final class CommunityDownloadSourcesTest {
         assertEquals("https://a.example", CommunityDownloadSources.findDuplicate(urls));
     }
 
-    /// 候选顺序：主源 → 镜像 → 官方源；空配置只有官方源。
+    /// 空配置返回 MissingDownloadProvider，不携带任何官方/内置 URL。
+    @Test
+    public void emptyConfigurationUsesMissingProvider() {
+        DownloadProvider empty = CommunityDownloadInstaller.build(CommunityDownloadSources.empty());
+        assertTrue(empty instanceof MissingDownloadProvider);
+        assertEquals(List.of(), empty.getVersionListURLs());
+        assertTrue(empty.getVersionListById("game") instanceof MissingVersionList);
+        assertThrows(CommunityDownloadSourceMissingException.class,
+                () -> empty.injectURL("https://piston-meta.mojang.com/version_manifest_v2.json"));
+    }
+
+    /// 候选顺序：只用主源 → 镜像，不追加官方源。
     @Test
     public void buildsProviderCandidatesInOrder() {
-        DownloadProvider empty = CommunityDownloadInstaller.build(CommunityDownloadSources.empty());
-        List<java.net.URI> emptyUrls = empty.getVersionListURLs();
-        assertTrue(emptyUrls.get(0).toString().contains("mojang.com") || emptyUrls.get(0).toString().contains("launchermeta"));
-
         CommunityDownloadSources sources = new CommunityDownloadSources(
                 CommunityDownloadSource.of("primary", "https://p.example"),
                 List.of(CommunityDownloadSource.of("m1", "https://m1.example")));
         DownloadProvider provider = CommunityDownloadInstaller.build(sources);
         assertTrue(provider instanceof AutoDownloadProvider);
         List<java.net.URI> urls = provider.getVersionListURLs();
+        assertEquals(2, urls.size());
         assertTrue(urls.get(0).toString().startsWith("https://p.example/mc/game/version_manifest.json"));
         assertTrue(urls.get(1).toString().startsWith("https://m1.example/mc/game/version_manifest.json"));
+        assertFalse(urls.stream().anyMatch(url -> url.toString().contains("mojang.com")));
     }
 }

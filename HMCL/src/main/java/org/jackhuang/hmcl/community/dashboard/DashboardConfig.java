@@ -288,6 +288,105 @@ public final class DashboardConfig {
         raw = root;
     }
 
+    /// 导出当前布局为可写入 `.lmcl.json` 的 JSON（不含 `updatedAt`）。
+    ///
+    /// @return 导出的布局对象
+    @NotNull
+    public JsonObject toExportJson() {
+        JsonObject root = new JsonObject();
+        root.addProperty("schema", SCHEMA);
+        root.addProperty("columns", columns);
+
+        JsonArray itemsArray = new JsonArray();
+        for (DashboardItem item : items) {
+            JsonObject itemObject = new JsonObject();
+            itemObject.addProperty("id", item.id());
+            itemObject.addProperty("enabled", item.enabled());
+            itemObject.addProperty("order", item.order());
+            itemObject.addProperty("colSpan", item.colSpan());
+            itemObject.addProperty("rowSpan", item.rowSpan());
+            itemsArray.add(itemObject);
+        }
+        root.add("items", itemsArray);
+
+        JsonArray pinnedArray = new JsonArray();
+        for (String id : pinnedInstanceIds) {
+            pinnedArray.add(id);
+        }
+        root.add("pinnedInstanceIds", pinnedArray);
+        root.add("widgetProps", widgetProps.deepCopy());
+        return root;
+    }
+
+    /// 用导入的布局替换内存状态（不写盘）。
+    ///
+    /// 校验规则：`schema > 1` 拒绝；非法组件 id 跳过；置顶 id 去重并限制 12 个；
+    /// 未知根字段保留在 [raw] 中，下次 [save()] 写回。
+    ///
+    /// @param object 导入的布局对象
+    /// @throws JsonParseException `schema` 高于当前版本时抛出
+    public void replaceFromJson(@NotNull JsonObject object) {
+        int incomingSchema = JsonUtils.getInt(object, "schema", SCHEMA);
+        if (incomingSchema > SCHEMA) {
+            throw new JsonParseException("dashboard schema " + incomingSchema + " is newer than " + SCHEMA);
+        }
+
+        List<DashboardItem> parsedItems = new ArrayList<>();
+        JsonElement itemsElement = object.get("items");
+        if (itemsElement instanceof JsonArray array) {
+            int index = 0;
+            for (JsonElement element : array) {
+                if (!(element instanceof JsonObject itemObject)) {
+                    continue;
+                }
+                String id = JsonUtils.getString(itemObject, "id");
+                if (!DashboardItem.isValidId(id)) {
+                    LOG.warning("Ignored imported dashboard item with invalid id: " + id);
+                    continue;
+                }
+                parsedItems.add(new DashboardItem(
+                        id,
+                        JsonUtils.getBoolean(itemObject, "enabled", true),
+                        JsonUtils.getInt(itemObject, "order", index * 10),
+                        JsonUtils.getInt(itemObject, "colSpan", 1),
+                        JsonUtils.getInt(itemObject, "rowSpan", 1)));
+                index++;
+            }
+        }
+
+        List<String> parsedPinned = new ArrayList<>();
+        JsonElement pinnedElement = object.get("pinnedInstanceIds");
+        if (pinnedElement instanceof JsonArray array) {
+            for (JsonElement element : array) {
+                if (element instanceof JsonPrimitive primitive && primitive.isString()) {
+                    String id = primitive.getAsString();
+                    if (!id.isBlank() && !parsedPinned.contains(id) && parsedPinned.size() < 12) {
+                        parsedPinned.add(id);
+                    }
+                }
+            }
+        }
+
+        JsonObject parsedProps = new JsonObject();
+        JsonElement propsElement = object.get("widgetProps");
+        if (propsElement instanceof JsonObject propsObject) {
+            parsedProps = propsObject.deepCopy();
+        }
+
+        raw = object.deepCopy();
+        schema = SCHEMA;
+        columns = "auto";
+        readOnly = false;
+        firstRun = false;
+        items.clear();
+        items.addAll(parsedItems);
+        trimItems();
+        pinnedInstanceIds.clear();
+        pinnedInstanceIds.addAll(parsedPinned);
+        widgetProps = parsedProps;
+        updatedAt = Instant.now();
+    }
+
     /// 返回配置路径。
     ///
     /// @return `dashboard.json` 路径

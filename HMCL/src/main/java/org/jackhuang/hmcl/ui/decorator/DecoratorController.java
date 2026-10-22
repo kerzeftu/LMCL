@@ -27,7 +27,9 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorDnD;
+import org.jackhuang.hmcl.community.config.CommunityConfigDnD;
 import org.jackhuang.hmcl.community.ui.CommunitySideBar;
+import org.jackhuang.hmcl.community.ui.transfer.SettingsImportDialog;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.DialogUtils;
@@ -259,5 +261,8 @@ public class DecoratorController {
         decorator.addEventFilter(DragEvent.DRAG_OVER, AuthlibInjectorDnD.dragOverHandler());
         decorator.addEventFilter(DragEvent.DRAG_DROPPED, AuthlibInjectorDnD.dragDroppedHandler(
                 url -> Controllers.dialog(new AddAuthlibInjectorServerPane(url))));
+        decorator.addEventFilter(DragEvent.DRAG_OVER, CommunityConfigDnD.dragOverHandler());
+        decorator.addEventFilter(DragEvent.DRAG_DROPPED, CommunityConfigDnD.dragDroppedHandler(
+                SettingsImportDialog::open));
     }
 }

@@ -198,7 +198,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         setPadding(HOME_PADDING);
 
-        if (!config.readOnly() && config.items().isEmpty()) {
+        if (!config.readOnly() && config.firstRun() && config.items().isEmpty()) {
             config.setItems(defaultItems());
             persist();
         }

@@ -27,6 +27,8 @@ import javafx.scene.Node;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import org.jackhuang.hmcl.community.download.CommunityDownloadGuard;
+import org.jackhuang.hmcl.community.download.CommunityDownloadInstaller;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.GameDirectoryManager;
 import org.jackhuang.hmcl.ui.Controllers;
@@ -84,6 +86,13 @@ public final class CommunitySideBar extends VBox {
         setPadding(new Insets(12, 8, 12, 8));
         setSpacing(6);
         setAlignment(Pos.TOP_CENTER);
+
+        // 侧栏早于 MainPage 创建；在这里安装下载源，保证打开设置/下载页前缓存已就绪。
+        try {
+            CommunityDownloadInstaller.install();
+        } catch (Throwable e) {
+            LOG.warning("Failed to install community download sources from sidebar", e);
+        }
 
         homeButton = createButton(SVG.HOME, "community.sidebar.home", this::openHome);
         downloadButton = createButton(SVG.DOWNLOAD, "community.sidebar.download", this::openDownloads);
@@ -153,6 +162,10 @@ public final class CommunitySideBar extends VBox {
     /// 打开下载页并定位到游戏下载。
     private void openDownloads() {
         try {
+            javafx.stage.Window owner = getScene() == null ? null : getScene().getWindow();
+            if (!CommunityDownloadGuard.requireConfigured(owner)) {
+                return;
+            }
             Controllers.getDownloadPage().showGameDownloads();
             Controllers.navigate(Controllers.getDownloadPage());
         } catch (Throwable e) {

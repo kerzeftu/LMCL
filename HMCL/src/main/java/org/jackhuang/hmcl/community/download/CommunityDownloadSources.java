@@ -34,8 +34,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 /// 用户自定义下载源集合：1 个可选的主源 + 最多 5 个镜像源。
 ///
-/// 默认（空集合）不内置任何第三方镜像，只使用官方 Mojang 源；
-/// 配置后候选顺序为 主源 → 镜像源（按配置顺序）→ 官方源。
+/// 默认（空集合）不内置任何下载源，包括 Mojang 官方源；未配置时下载入口
+/// 会明确提示先配置。配置后候选顺序为 主源 → 镜像源（按配置顺序）。
 ///
 /// 数据存放在 `<本地根>/config/community-settings.json` 的 `downloadSources` 段：
 /// ```json
@@ -78,7 +78,7 @@ public final class CommunityDownloadSources {
         this.mirrors = List.copyOf(mirrors.size() > MAX_MIRRORS ? mirrors.subList(0, MAX_MIRRORS) : mirrors);
     }
 
-    /// 返回空集合（仅官方源）。
+    /// 返回空集合（未配置任何下载源）。
     ///
     /// @return 空集合
     @NotNull
@@ -155,7 +155,7 @@ public final class CommunityDownloadSources {
         return primary == null && mirrors.isEmpty();
     }
 
-    /// 返回候选顺序：主源 → 镜像源 → 官方源（官方源由调用方追加）。
+    /// 返回候选顺序：主源 → 镜像源（全部为 BMCLAPI 兼容源）。
     ///
     /// @return 自定义源列表
     @NotNull

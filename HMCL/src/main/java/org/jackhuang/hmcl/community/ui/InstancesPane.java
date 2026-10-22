@@ -28,6 +28,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import org.jackhuang.hmcl.community.download.CommunityDownloadGuard;
 import org.jackhuang.hmcl.setting.GameDirectory;
 import org.jackhuang.hmcl.setting.GameDirectoryManager;
 import org.jackhuang.hmcl.ui.Controllers;
@@ -75,12 +76,20 @@ public final class InstancesPane extends VBox {
 
         HBox toolbar = new HBox(8,
                 directoryMenu,
-                borderButton("install.new_game", Versions::addNewGame),
+                borderButton("install.new_game", this::createNewGame),
                 borderButton("install.modpack", Versions::importModpack),
                 borderButton("settings.type.global.manage", page::modifyGlobalGameSettings));
         toolbar.setAlignment(Pos.CENTER_LEFT);
 
         getChildren().addAll(toolbar, page);
+    }
+
+    /// 新建实例前检查下载源；导入整合包不检查，允许纯本地导入。
+    private void createNewGame() {
+        javafx.stage.Window owner = getScene() == null ? null : getScene().getWindow();
+        if (CommunityDownloadGuard.requireConfigured(owner)) {
+            Versions.addNewGame();
+        }
     }
 
     /// 更新目录按钮文案为当前选中目录的显示名。

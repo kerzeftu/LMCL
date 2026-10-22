@@ -27,6 +27,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.dashboard.DashboardContext;
+import org.jackhuang.hmcl.community.download.CommunityDownloadGuard;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidget;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidgetDescriptor;
 import org.jackhuang.hmcl.community.launch.CommunityLaunchHooks;
@@ -333,7 +334,9 @@ public final class LaunchWidget extends DashboardWidget {
     /// 新建实例。
     private static void createInstance() {
         try {
-            addNewGame();
+            if (CommunityDownloadGuard.requireConfigured(null)) {
+                addNewGame();
+            }
         } catch (Throwable e) {
             LOG.warning("Failed to open new instance dialog", e);
         }

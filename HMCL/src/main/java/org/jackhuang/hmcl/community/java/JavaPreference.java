@@ -140,6 +140,24 @@ public final class JavaPreference {
         settings.putSection(SECTION, section);
     }
 
+    /// 写入完整偏好（发行版 + 镜像展示开关）并立即落盘。
+    ///
+    /// @param preference 目标偏好；不得为 `null`
+    public static void set(@NotNull Preference preference) {
+        set(CommunitySettings.get(), preference);
+    }
+
+    /// 从指定设置实例写入完整偏好（测试/导入用）。
+    ///
+    /// @param settings 设置实例
+    /// @param preference 目标偏好
+    static void set(@NotNull CommunitySettings settings, @NotNull Preference preference) {
+        JsonObject section = settings.section(SECTION).deepCopy();
+        section.addProperty(KEY_DISTRIBUTION, preference.storageValue());
+        section.addProperty(KEY_MIRROR_ENABLED, preference.mirrorEnabled());
+        settings.putSection(SECTION, section);
+    }
+
     /// 返回默认偏好（默认 Zulu，镜像按部署配置决定）。
     ///
     /// @return 默认偏好

@@ -18,12 +18,13 @@
 package org.jackhuang.hmcl.setting;
 
 import javafx.beans.InvalidationListener;
+import org.jackhuang.hmcl.community.download.CommunityDownloadSourceMissingException;
+import org.jackhuang.hmcl.community.download.MissingDownloadProvider;
 import org.jackhuang.hmcl.download.*;
 import org.jackhuang.hmcl.task.DownloadException;
 import org.jackhuang.hmcl.task.FetchTask;
 import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.i18n.I18n;
-import org.jackhuang.hmcl.util.i18n.LocaleUtils;
 import org.jackhuang.hmcl.util.io.ResponseCodeException;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -31,7 +32,6 @@ import java.io.FileNotFoundException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
-import java.util.List;
 import java.util.concurrent.CancellationException;
 
 import static org.jackhuang.hmcl.setting.SettingsManager.settings;
@@ -42,19 +42,10 @@ public final class DownloadProviders {
     private DownloadProviders() {
     }
 
-    private static final DownloadProviderWrapper PROVIDER_WRAPPER;
-
-    private static final DownloadProvider MOJANG_PROVIDER;
-    private static final BMCLAPIDownloadProvider BMCLAPI_PROVIDER;
-    private static final DownloadProvider DEFAULT_PROVIDER;
-
-    static {
-        String bmclapiRoot = System.getProperty("hmcl.bmclapi.override", "https://bmclapi2.bangbang93.com");
-        BMCLAPI_PROVIDER = new BMCLAPIDownloadProvider(bmclapiRoot);
-        MOJANG_PROVIDER = new MojangDownloadProvider();
-        DEFAULT_PROVIDER = createDownloadProvider(DownloadSource.DEFAULT, DownloadSource.DEFAULT);
-        PROVIDER_WRAPPER = new DownloadProviderWrapper(DEFAULT_PROVIDER);
-    }
+    /// 下载源由社区模块接管。这里初始为“未配置”provider，
+    /// 在 `CommunityDownloadInstaller.install()` 执行前不会发起任何内置下载请求。
+    private static final DownloadProviderWrapper PROVIDER_WRAPPER =
+            new DownloadProviderWrapper(new MissingDownloadProvider());
 
     /// Initializes download provider settings and synchronizes download thread settings.
     public static void init() {
@@ -66,34 +57,6 @@ public final class DownloadProviders {
         settings().autoDownloadThreadsProperty().addListener(onChangeDownloadThreads);
         settings().downloadThreadsProperty().addListener(onChangeDownloadThreads);
         onChangeDownloadThreads.invalidated(null);
-
-        InvalidationListener onChangeDownloadSource = observable -> {
-            PROVIDER_WRAPPER.setProvider(createDownloadProvider(
-                    settings().versionListSourceProperty().get(),
-                    settings().fileDownloadSourceProperty().get()));
-        };
-        settings().versionListSourceProperty().addListener(onChangeDownloadSource);
-        settings().fileDownloadSourceProperty().addListener(onChangeDownloadSource);
-        onChangeDownloadSource.invalidated(null);
-    }
-
-    /// Creates a download provider with independent version-list and file download preferences.
-    private static DownloadProvider createDownloadProvider(DownloadSource versionListSource, DownloadSource fileDownloadSource) {
-        return new AutoDownloadProvider(
-                getCandidates(versionListSource),
-                getCandidates(fileDownloadSource));
-    }
-
-    /// Returns provider candidates ordered by the given source preference.
-    private static List<DownloadProvider> getCandidates(DownloadSource source) {
-        DownloadSource normalized = source != null ? source : DownloadSource.DEFAULT;
-        return switch (normalized) {
-            case DEFAULT -> LocaleUtils.IS_CHINA_MAINLAND
-                    ? List.of(BMCLAPI_PROVIDER, MOJANG_PROVIDER)
-                    : List.of(MOJANG_PROVIDER, BMCLAPI_PROVIDER);
-            case OFFICIAL -> List.of(MOJANG_PROVIDER);
-            case MIRROR -> List.of(BMCLAPI_PROVIDER, MOJANG_PROVIDER);
-        };
     }
 
     /**
@@ -104,6 +67,10 @@ public final class DownloadProviders {
     }
 
     public static String localizeErrorMessage(Throwable exception) {
+        if (exception instanceof CommunityDownloadSourceMissingException
+                || exception.getCause() instanceof CommunityDownloadSourceMissingException) {
+            return i18n(CommunityDownloadSourceMissingException.I18N_KEY);
+        }
         if (exception instanceof DownloadException) {
             URI uri = ((DownloadException) exception).getUri();
             if (exception.getCause() instanceof SocketTimeoutException) {

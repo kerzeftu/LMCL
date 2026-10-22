@@ -22,6 +22,7 @@ package org.jackhuang.hmcl.community.ui;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import org.jackhuang.hmcl.community.ui.about.AboutLMCLPage;
+import org.jackhuang.hmcl.community.ui.transfer.SettingsTransferPane;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.animation.TransitionPane;
@@ -43,7 +44,7 @@ import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 /// “其他”页：与下载、设置并列的独立页面，左侧为 HMCL 风格二级菜单。
 ///
 /// 分组：
-/// - 工具：内存优化；
+/// - 工具：内存优化、设置导入导出；
 /// - 支持：帮助、反馈、关于 LMCL。
 ///
 /// 账户与实例已迁到 [ManagementPage]；社区设置入口已移除，相关功能分散到
@@ -60,6 +61,7 @@ public final class OtherPage extends DecoratorAnimatedPage implements DecoratorP
 
     private final TransitionPane transitionPane = new TransitionPane();
     private final TabHeader.Tab<MemoryOptimizationView> memoryTab = new TabHeader.Tab<>("communityMemoryOptimizationPage");
+    private final TabHeader.Tab<SettingsTransferPane> transferTab = new TabHeader.Tab<>("communitySettingsTransferPage");
     private final TabHeader.Tab<HelpPage> helpTab = new TabHeader.Tab<>("communityHelpPage");
     private final TabHeader.Tab<FeedbackPage> feedbackTab = new TabHeader.Tab<>("communityFeedbackPage");
     private final TabHeader.Tab<AboutLMCLPage> aboutTab = new TabHeader.Tab<>("communityAboutPage");
@@ -67,16 +69,18 @@ public final class OtherPage extends DecoratorAnimatedPage implements DecoratorP
 
     private OtherPage() {
         memoryTab.setNodeSupplier(MemoryOptimizationView::new);
+        transferTab.setNodeSupplier(SettingsTransferPane::new);
         helpTab.setNodeSupplier(HelpPage::new);
         feedbackTab.setNodeSupplier(FeedbackPage::new);
         aboutTab.setNodeSupplier(AboutLMCLPage::new);
 
-        tab = new TabHeader(transitionPane, memoryTab, helpTab, feedbackTab, aboutTab);
+        tab = new TabHeader(transitionPane, memoryTab, transferTab, helpTab, feedbackTab, aboutTab);
         tab.select(memoryTab);
 
         AdvancedListBox sideBar = new AdvancedListBox()
                 .startCategory(i18n("community.other.category.tools").toUpperCase(Locale.ROOT))
                 .addNavigationDrawerTab(tab, memoryTab, i18n("community.other.tab.memory"), SVG.TUNE, SVG.TUNE)
+                .addNavigationDrawerTab(tab, transferTab, i18n("community.other.tab.transfer"), SVG.FILE_OPEN, SVG.FILE_OPEN)
                 .startCategory(i18n("community.other.category.support").toUpperCase(Locale.ROOT))
                 .addNavigationDrawerTab(tab, helpTab, i18n("community.other.tab.help"), SVG.HELP, SVG.HELP_FILL)
                 .addNavigationDrawerTab(tab, feedbackTab, i18n("community.other.tab.feedback"), SVG.FEEDBACK, SVG.FEEDBACK_FILL)
@@ -102,6 +106,11 @@ public final class OtherPage extends DecoratorAnimatedPage implements DecoratorP
     /// 选中内存优化 tab。
     public void showMemoryOptimization() {
         tab.select(memoryTab, false);
+    }
+
+    /// 选中设置导入导出 tab。
+    public void showSettingsTransfer() {
+        tab.select(transferTab, false);
     }
 
     /// 选中帮助 tab。

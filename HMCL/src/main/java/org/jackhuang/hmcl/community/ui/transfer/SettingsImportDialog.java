@@ -1,0 +1,163 @@
+/*
+ * Hello Minecraft! Launcher
+ * Copyright (C) 2026  huangyuhui <huanghongxun2008@126.com> and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+package org.jackhuang.hmcl.community.ui.transfer;
+
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import org.jackhuang.hmcl.community.config.CommunitySettingsBundle;
+import org.jackhuang.hmcl.community.config.SettingsChange;
+import org.jackhuang.hmcl.community.config.SettingsExportService;
+import org.jackhuang.hmcl.community.config.SettingsImportService;
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
+import org.jackhuang.hmcl.ui.Controllers;
+import org.jackhuang.hmcl.ui.construct.ComponentList;
+import org.jackhuang.hmcl.ui.construct.DialogPane;
+import org.jackhuang.hmcl.ui.construct.LinePane;
+import org.jackhuang.hmcl.task.Schedulers;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.NotNullByDefault;
+
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
+import static org.jackhuang.hmcl.util.logging.Logger.LOG;
+
+/// `.lmcl.json` 导入预览对话框：列出变更，用户点“应用”后才写盘。
+@NotNullByDefault
+public final class SettingsImportDialog extends DialogPane {
+
+    private final CommunitySettingsBundle bundle;
+    private final SettingsImportService.ImportPreview preview;
+
+    private SettingsImportDialog(@NotNull CommunitySettingsBundle bundle,
+                                 @NotNull SettingsImportService.ImportPreview preview) {
+        this.bundle = bundle;
+        this.preview = preview;
+        CommunityStyles.apply(this);
+
+        setTitle(i18n("community.settings.transfer.import.title"));
+        setPrefWidth(680);
+
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(4, 0, 0, 0));
+
+        Label summary = new Label(i18n("community.settings.transfer.import.summary",
+                bundle.product(), bundle.productVersion(), bundle.sections().size(), preview.changes().size()));
+        summary.setWrapText(true);
+        summary.getStyleClass().add("subtitle-label");
+        content.getChildren().add(summary);
+
+        if (!preview.warnings().isEmpty()) {
+            Label warning = new Label(String.join("\n", preview.warnings()));
+            warning.setWrapText(true);
+            warning.getStyleClass().addAll("hint", "warn");
+            content.getChildren().add(warning);
+        }
+        if (!preview.errors().isEmpty()) {
+            Label error = new Label(String.join("\n", preview.errors()));
+            error.setWrapText(true);
+            error.getStyleClass().addAll("hint", "error");
+            content.getChildren().add(error);
+        }
+
+        if (preview.changes().isEmpty()) {
+            Label empty = new Label(i18n("community.settings.transfer.import.no_changes"));
+            empty.getStyleClass().add("subtitle-label");
+            content.getChildren().add(empty);
+        } else {
+            ComponentList list = new ComponentList();
+            int shown = 0;
+            for (SettingsChange change : preview.changes()) {
+                if (shown >= 50) {
+                    break;
+                }
+                list.getContent().add(buildChangeRow(change));
+                shown++;
+            }
+            if (preview.changes().size() > shown) {
+                Label more = new Label(i18n("community.settings.transfer.import.more",
+                        preview.changes().size() - shown));
+                more.getStyleClass().add("subtitle-label");
+                content.getChildren().addAll(list, more);
+            } else {
+                content.getChildren().add(list);
+            }
+        }
+
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+        scroll.setPrefViewportHeight(380);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        setBody(scroll);
+        setValid(preview.errors().isEmpty());
+    }
+
+    private static @NotNull HBox buildChangeRow(@NotNull SettingsChange change) {
+        LinePane row = new LinePane();
+        SettingsExportService.find(change.section());
+        String sectionName = SettingsExportService.find(change.section()) == null
+                ? change.section()
+                : i18n(SettingsExportService.find(change.section()).titleKey());
+        row.setTitle(sectionName + " · " + change.key());
+        String oldValue = change.oldValue() == null ? i18n("community.settings.transfer.value.absent") : change.oldValue();
+        String newValue = change.newValue() == null ? i18n("community.settings.transfer.value.absent") : change.newValue();
+        Label value = new Label(oldValue + "  →  " + newValue);
+        value.getStyleClass().add("subtitle-label");
+        value.setWrapText(false);
+        row.setRight(value);
+        HBox wrapper = new HBox(row);
+        wrapper.setAlignment(Pos.CENTER_LEFT);
+        return wrapper;
+    }
+
+    @Override
+    protected void onAccept() {
+        setLoading();
+        SettingsImportService.ImportResult result = SettingsImportService.apply(bundle);
+        if (!result.success()) {
+            onFailure(i18n("community.settings.transfer.import.failed", result.failures().size()));
+            return;
+        }
+        Controllers.showToast(i18n("community.settings.transfer.import.done", result.applied().size()));
+        onSuccess();
+    }
+
+    /// 从文件异步读取并打开预览；任何失败都弹提示，不抛出。
+    ///
+    /// @param path `.lmcl.json` 路径
+    public static void open(@NotNull Path path) {
+        Schedulers.io().execute(() -> {
+            try {
+                CommunitySettingsBundle bundle = CommunitySettingsBundle.read(path);
+                SettingsImportService.ImportPreview preview = SettingsImportService.preview(bundle);
+                Schedulers.javafx().execute(() -> Controllers.dialog(new SettingsImportDialog(bundle, preview)));
+            } catch (Throwable e) {
+                LOG.warning("Failed to read settings file " + path, e);
+                Schedulers.javafx().execute(() -> Controllers.dialog(
+                        i18n("community.settings.transfer.import.read_failed", e.getMessage()),
+                        i18n("community.settings.transfer.import.title"),
+                        org.jackhuang.hmcl.ui.construct.MessageDialogPane.MessageType.ERROR));
+            }
+        });
+    }
+}

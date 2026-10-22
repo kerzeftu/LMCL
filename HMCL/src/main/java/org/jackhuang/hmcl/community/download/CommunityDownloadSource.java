@@ -30,7 +30,7 @@ import java.net.URISyntaxException;
 ///
 /// 地址语义与上游 `BMCLAPIDownloadProvider` 相同：一个 BMCLAPI 兼容的 API 根，
 /// 需要自行提供 `/mc`、`/assets`、`/libraries`、`/maven`、`/fabric-meta` 等路径。
-/// 官方 Mojang 源由启动器内置，不在这里配置，且始终作为最后的回退。
+/// 官方 Mojang 源也不内置；未配置任何自定义源时，下载入口会明确提示先配置。
 ///
 /// @param name 显示名（不参与下载）
 /// @param url 规范化后的 API 根（无尾斜杠）

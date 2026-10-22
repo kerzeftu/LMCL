@@ -50,7 +50,7 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 /// 下载源设置页：主源 1 个 + 镜像源最多 5 个。
 ///
 /// 交互约定：
-/// - 地址留空表示“不配置”；主源留空即只使用官方源；
+/// - 地址留空表示“不配置”；全部留空时下载入口会提示先配置下载源；
 /// - 每行可单独测试连通性（请求 `/mc/game/version_manifest.json`）；
 /// - 保存后立即写 `community-settings.json` 并重建下载候选链，无需重启。
 @NotNullByDefault
@@ -275,9 +275,13 @@ public final class CommunityDownloadSettingsPane extends VBox {
             try {
                 sources.save();
                 CommunityDownloadInstaller.apply();
+                if (CommunityDownloadGuard.isConfigured() != !sources.isEmpty()) {
+                    throw new IllegalStateException("Configured download sources were not applied");
+                }
+                int count = sources.orderedSources().size();
                 Schedulers.javafx().execute(() -> {
                     setBusy(false);
-                    showMessage(i18n("community.settings.download.saved"), false);
+                    showMessage(i18n("community.settings.download.applied", count), false);
                 });
             } catch (Throwable e) {
                 LOG.warning("Failed to save community download sources", e);
@@ -298,7 +302,7 @@ public final class CommunityDownloadSettingsPane extends VBox {
         return CommunityDownloadSource.of(knownNames.getOrDefault(url, ""), url);
     }
 
-    /// 确认后恢复默认（仅官方源）。
+    /// 确认后清空全部下载源（不内置任何源）。
     private void confirmReset() {
         MessageDialogPane pane = new MessageDialogPane.Builder(
                 i18n("community.settings.download.reset.confirm"),
