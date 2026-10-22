@@ -548,7 +548,7 @@ v3.16.6 时两者均使用 `SVG.PERSON` 32px 图标与 `setLargeTitle(true)`；v
 `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/transfer/SettingsImportDialog.java` 的 `buildChangeRow`：
 
 - 行标题优先 `change.label()`，为空才用 `change.key()`；
-- `newValue` 含换行时，用 `VBox` 逐行 `Label`（`subtitle-label`、不换行、`OverrunStyle.ELLIPSIS`、Tooltip 显示全文），下载源因此一行一个 URL；v3.16.12 已取消 `maxWidth 420` 与 `LinePane` 右贴边结构，改为自建行，见 §6B.11；
+- `newValue` 含换行时，用 `VBox` 逐行 `Label`（`subtitle-label`、不换行、`OverrunStyle.ELLIPSIS`、Tooltip 显示全文），下载源因此一行一个 URL；v3.16.12 已取消 `maxWidth 420` 与 `LinePane` 右贴边结构，改为自建行，见 §6B.11；v3.16.13 起再通过内联 padding 把可见左留白加倍，见 §6B.12；
 - 单行值仍显示 `旧值/（未设置） → 新值`，空值走 `community.settings.transfer.value.absent`；
 - 分组仍由 §6B.8 的 `ComponentSublist` 负责，类目标题不变。
 
@@ -595,8 +595,41 @@ User said (m18043)：“右边的字可以往左移一点，左边占少量空�
 1. WSL2 无 Windows GUI：未实机查看标题列宽度、长 URL 省略、Tooltip、150% DPI 与窄窗口下的实际排版。
 2. 标题列固定最大 140 px；超长类目名会省略，完整文字只在 Tooltip 中可见。若未来需要自适应宽度，应改为按内容测量而不是继续加固定值。
 3. 多行值不换行，超出宽度用省略号 + Tooltip；没有横向滚动条，极长 URL 需悬停查看全文。
-4. 行仍复用 `line-component-container` 的 10/16 padding，外层的 `options-list-item` 背景也保留；`minHeight 48` 只保证紧凑行不因两行值被压扁。
+4. 行原复用 `line-component-container` 的 10/16 padding，外层的 `options-list-item` 背景也保留；v3.16.13 起 HBox 改为内联 `Insets(10, 16, 10, 48)`，可见左留白 32→64 px，见 §6B.12；`minHeight 48` 只保证紧凑行不因两行值被压扁。
 5. 预览仍按类目整体应用，不支持逐项勾选。
+
+## 6B.12 v3.16.13 导入预览行左侧留白加倍（2026-10-23，m18304）
+
+User said (m18304)：“左侧空的距离又有点太小了，把空的距离改成现有的两倍吧”。本节只调整“其他 → 设置导入/导出 → 导入设置”变更预览行的左内边距，不改标题列宽度、右侧对齐、分组或导入应用逻辑。
+
+### 6B.12.1 实现
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/transfer/SettingsImportDialog.java` 的 `buildChangeRow` 在自建 `HBox` 上增加：
+
+```java
+// 外层 ComponentList 的 options-list-item 已有 16px 左内边距；这里用 48px，
+// 使可见左边距从 32px 增至 64px（原来的两倍）。
+line.setPadding(new Insets(10, 16, 10, 48));
+```
+
+- 外层 `ComponentList` 的 `.options-list-item` 提供 16 px 左内边距；
+- 行内 `.line-component-container` 原先由 CSS 提供 16 px，合计可见 32 px；
+- 内联 padding 覆盖 CSS 后为 48 px，合计可见 **64 px**，即原来的两倍；
+- 上/右/下内边距保持 10/16/10，标题 140 px 上限、右侧 `VBox` 左对齐、多行逐行显示均不变；
+- 无 i18n 变更，无新增代码侵入点。
+
+### 6B.12.2 验证
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过（仅 3 条既有 JavaFX `--add-exports` 警告）。
+- community **161 / 0 / 0 / 0**；全量 `:HMCL:test` **271 / 0 / 0 / 2 skipped**。
+- `:HMCL:makeExecutables` 成功：jar **11,872,587 B** SHA-256 `3acdba8cf11585500ea3dd7bcc38f210c1fe9a7c378498f700f26f812c55089b`；exe **13,073,739 B** SHA-256 `e0a7bbad99f46f7debfd820595da7537433ffa5f23b6948625596881a14e4e25`；stub **1,201,152 B** `ded29e28…`；`exe[:stub] == stub`、`exe[stub:] == jar`，jar 内 `Main-Class` 仍为 `CommunityBootstrap`。
+- 测试包 `dist/LMCL-1.0.0-win-x64-m3spike14.zip` **74,635,308 B** SHA-256 `15b52429787d3f64b199fe7ad94fb66a7e5f93a2ba26e0296b35caa36385035e`；327 entries、`testzip=None`；包内 326 个文件 `SHA256SUMS` 全部通过；`dist/SHA256SUMS` 968 行全部通过；旧 `m3spike13` 目录已改名为 `m3spike14`，旧 zip 已删除。
+
+### 6B.12.3 偏差与未验证
+
+1. WSL2 无 Windows GUI：未实机确认 64 px 左留白在 1280×720、150% DPI 与窄窗口下的观感，也未点验标题省略、Tooltip 与多行 URL。
+2. 左留白固定 64 px（外层 16 + 内联 48），不随窗口宽度缩放；极窄窗口下可用于显示内容的宽度会更少。
+3. 标题列仍固定最大 140 px；多行值仍不换行，超出用省略号 + Tooltip。
 
 ## 6. 实现偏差与已知问题
 
