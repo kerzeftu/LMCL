@@ -254,6 +254,7 @@ public final class M3SpikePane extends VBox {
     private static final class ContinuousWavyBar extends Region {
         private static final double SEGMENT_RATIO = 0.58;
         private static final double AMPLITUDE = 2.5;
+        private static final double WAVE_CYCLES = 2;
         private static final Duration CYCLE = Duration.millis(2200);
 
         private final Rectangle track = new Rectangle();
@@ -320,6 +321,8 @@ public final class M3SpikePane extends VBox {
             double centerY = getHeight() / 2;
             double segment = Math.max(Math.min(width, 48), width * SEGMENT_RATIO);
             double patternOffset = offset.get() * width;
+            // 让波形自身在垂直方向连续起伏；每个循环走整数个波，重置时相位相同。
+            double wavePhase = offset.get() * 2 * Math.PI * WAVE_CYCLES;
 
             for (int k = -2; k <= 3; k++) {
                 double segmentStart = -segment + patternOffset + k * width;
@@ -331,7 +334,7 @@ public final class M3SpikePane extends VBox {
                 for (int i = 0; i <= steps; i++) {
                     double localX = segment * i / steps;
                     double x = segmentStart + localX;
-                    double y = centerY + Math.sin(2 * Math.PI * localX / WAVELENGTH) * AMPLITUDE;
+                    double y = centerY + Math.sin(2 * Math.PI * localX / WAVELENGTH + wavePhase) * AMPLITUDE;
                     if (i == 0) {
                         wave.getElements().add(new MoveTo(x, y));
                     } else {
