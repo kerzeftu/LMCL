@@ -138,21 +138,23 @@ public final class M3SpikePane extends VBox {
         return section("Card variants", row);
     }
 
+    /// M3 Expressive 规范推荐的 wavy 进度条尺寸。
+    private static final double TRACK_THICKNESS = 10;
+    private static final double TRACK_GAP = 4;
+    private static final double STOP_SIZE = 4;
+    private static final double WAVELENGTH = 40;
+
     /// Wavy/Flat/Indeterminate 进度与加载指示器。
     @NotNull
     private Node buildProgress() {
-        VBox column = new VBox(14);
+        VBox column = new VBox(18);
         column.getChildren().addAll(
-                progressRow("Flat (amplitude 0)", 0.0),
-                progressRow("Expressive (amplitude 2.5)", 2.5),
-                progressRow("Strong (amplitude 4.0)", 4.0));
+                progressRow("Wavy 65%", 0.65, 2.5),
+                progressRow("Flat 65%", 0.65, 0.0));
 
         M3ProgressBar indeterminate = new M3ProgressBar(ProgressIndicator.INDETERMINATE_PROGRESS);
-        indeterminate.setPrefWidth(360);
-        indeterminate.setTrackThickness(4);
-        indeterminate.setTrackGap(4);
+        configure(indeterminate);
         indeterminate.setWaveAmplitude(2.5);
-        indeterminate.setWavelength(40);
         column.getChildren().add(progressLine("Indeterminate", indeterminate));
 
         HBox indicators = new HBox(24);
@@ -170,15 +172,22 @@ public final class M3SpikePane extends VBox {
 
     /// 生成一条确定进度条。
     @NotNull
-    private Node progressRow(@NotNull String title, double amplitude) {
-        M3ProgressBar bar = new M3ProgressBar(0.65);
-        bar.setPrefWidth(360);
-        bar.setTrackThickness(4);
-        bar.setTrackGap(4);
-        bar.setStopSize(4);
+    private Node progressRow(@NotNull String title, double progress, double amplitude) {
+        M3ProgressBar bar = new M3ProgressBar(progress);
+        configure(bar);
         bar.setWaveAmplitude(amplitude);
-        bar.setWavelength(40);
         return progressLine(title, bar);
+    }
+
+    /// 应用统一的尺寸，避免默认 4 px 细线在桌面端显得像普通细进度条。
+    private static void configure(@NotNull M3ProgressBar bar) {
+        bar.setPrefWidth(420);
+        bar.setMaxWidth(Double.MAX_VALUE);
+        bar.setTrackThickness(TRACK_THICKNESS);
+        bar.setTrackGap(TRACK_GAP);
+        bar.setStopSize(STOP_SIZE);
+        bar.setWavelength(WAVELENGTH);
+        HBox.setHgrow(bar, Priority.ALWAYS);
     }
 
     /// 标题 + 控件的单行布局。
@@ -188,6 +197,7 @@ public final class M3SpikePane extends VBox {
         label.setMinWidth(220);
         HBox line = new HBox(12, label, control);
         line.setAlignment(Pos.CENTER_LEFT);
+        line.setMaxWidth(Double.MAX_VALUE);
         return line;
     }
 

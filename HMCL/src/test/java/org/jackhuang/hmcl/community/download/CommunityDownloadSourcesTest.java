@@ -154,7 +154,7 @@ public final class CommunityDownloadSourcesTest {
         assertEquals("https://a.example", CommunityDownloadSources.findDuplicate(urls));
     }
 
-    /// 空配置返回 MissingDownloadProvider，不携带任何官方/内置 URL。
+    /// 空配置返回 MissingDownloadProvider，不携带游戏下载 URL；插件 API 单独放行。
     @Test
     public void emptyConfigurationUsesMissingProvider() {
         DownloadProvider empty = CommunityDownloadInstaller.build(CommunityDownloadSources.empty());

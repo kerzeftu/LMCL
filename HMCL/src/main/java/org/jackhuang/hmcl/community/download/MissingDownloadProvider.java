@@ -27,7 +27,9 @@ import java.util.List;
 
 /// 未配置任何下载源时使用的 provider。
 ///
-/// 所有可能触发网络的入口都明确失败，绝不回落到 Mojang/BMCLAPI 等内置源。
+/// 游戏本体、加载器和资源索引等下载入口都明确失败，绝不回落到 Mojang/BMCLAPI
+/// 等内置源；但 Modrinth / CurseForge 的插件 API 与 CDN 属于协议端点，即使没有
+/// 配置游戏下载源也直接放行（见 [CommunityAddonSources]）。
 /// UI 应优先用 [CommunityDownloadGuard] 在进入下载流程前拦截，这个类只负责兜底。
 @NotNullByDefault
 public final class MissingDownloadProvider implements DownloadProvider {
@@ -44,11 +46,17 @@ public final class MissingDownloadProvider implements DownloadProvider {
 
     @Override
     public String injectURL(String baseURL) {
+        if (CommunityAddonSources.isBuiltinAddonUrl(baseURL)) {
+            return baseURL;
+        }
         throw new CommunityDownloadSourceMissingException();
     }
 
     @Override
     public List<URI> injectURLWithCandidates(String baseURL) {
+        if (CommunityAddonSources.isBuiltinAddonUrl(baseURL)) {
+            return List.of(URI.create(baseURL));
+        }
         throw new CommunityDownloadSourceMissingException();
     }
 
