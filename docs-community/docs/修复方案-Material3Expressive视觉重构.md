@@ -1490,7 +1490,8 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 - 相对 v3.15 的 jar `11,220,705 B`，增量 **+562,803 B**，低于 Go/No-Go 的 2 MB 门槛；
 - 测试包 `dist/LMCL-3.16.1000-win-x64-m3spike1.zip` **66,265,358 B** SHA-256 `bb73376368698dc40013aebeea44efc0d39967b0c306910b2ec515d640e1ed2a`；323 entries、`testzip=None`；含 `run-m3-spike.bat`、`THIRD-PARTY-NOTICES.txt`、`jre-x64/bin/java.exe`；
 - 本机 `:HMCL:run` 无法完成 GUI 启动：`/home/kerze/.local/share/LMCL: Read-only file system`，且 WSL2 无 X11（`AWTError: Can't connect to X11 window server using ':0'`）。这是运行环境限制，不是编译/依赖错误；
-- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike1` 测试包完成。
+- 未生成 Windows 截图，未测启动增量/内存；Windows 实机验收由 `m3spike1` 测试包完成；
+- 代码提交 `73e3438ba feat(24): M3 Expressive phase 0 spike via m3fx`，文档提交 `da4b94bb4 docs: v3.16 M3 Expressive phase 0 spike`（分支 `feature/24-m3`）。
 
 打开方式：
 
