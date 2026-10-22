@@ -20,14 +20,20 @@ package org.jackhuang.hmcl.community.download;
 import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTextField;
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
@@ -40,6 +46,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +60,13 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 ///
 /// 交互约定：
 /// - 地址留空表示该槽位不配置；全部留空时下载入口会提示先配置下载源；
+/// - 地址、增删行、单项测试或 [测速排序] 完成后自动保存并应用（700 ms 防抖），
+///   不再依赖手动点 [保存并应用]；
 /// - 每个源可以单独测试连通性并显示延迟；
-/// - [测速排序] 立即测试全部源，并按延迟从低到高重排列表（只改界面，保存后才落盘）；
+/// - [测速排序] 立即测试全部源，按延迟从低到高重排列表；重排期间保持当前滚动位置；
 /// - 保存后立即写 `community-settings.json` 并重建下载候选链，无需重启；
-/// - 每次进入下载入口或保存后都会自动重新测速（5 分钟 TTL）。
+/// - 每次进入下载入口或开始文件下载前都会静默重新测速（见
+///   [CommunityDownloadRanker]），先应用新顺序再继续下载。
 @NotNullByDefault
 public final class CommunityDownloadSettingsPane extends VBox {
 
@@ -96,9 +106,42 @@ public final class CommunityDownloadSettingsPane extends VBox {
     /// 最近创建的设置页；导入完成后用于刷新仍可见的列表。
     private static volatile @Nullable WeakReference<CommunityDownloadSettingsPane> lastInstance;
 
+    /// 当前设置页是否显示在窗口中；自动测速排序落盘时避免覆盖正在编辑的列表。
+    private static volatile boolean instanceVisible;
+
+    /// 编辑后的自动保存防抖。
+    private final PauseTransition autoSaveTimer = new PauseTransition(Duration.millis(700));
+
+    /// 是否正在从磁盘装载（装载期间不触发自动保存）。
+    private boolean loading;
+
+    /// 是否已有自动保存任务在 IO 线程执行。
+    private boolean autoSaveInProgress;
+
+    /// 待执行的自动保存是否需要强制重新测速（源集合变化时需要）。
+    private boolean autoSaveForceRanking;
+
+    /// 编辑代数：每次编辑自增；自动保存完成时若代数已变化则再存一次。
+    private long editGeneration;
+
+    /// 排序进行中标记，避免重复点击。
+    private boolean sorting;
+
+    /// 串行化手动/自动保存，避免旧快照晚于新快照落盘。
+    private final Object saveLock = new Object();
+
+    /// 保存快照序号；后发起的保存序号更大。
+    private long saveSequence;
+
+    /// 已经落盘的最大保存序号；IO 线程用它丢弃过期快照。
+    private volatile long lastWrittenSequence;
+
     /// 构造设置页并从磁盘加载当前配置。
     public CommunityDownloadSettingsPane() {
         lastInstance = new WeakReference<>(this);
+        sceneProperty().addListener((observable, oldScene, newScene) ->
+                instanceVisible = newScene != null && this == visibleInstance());
+        autoSaveTimer.setOnFinished(event -> autoSaveNow());
         CommunityStyles.apply(this);
         setSpacing(10);
         setPadding(new Insets(10));
@@ -122,6 +165,7 @@ public final class CommunityDownloadSettingsPane extends VBox {
         addSourceButton.setOnAction(e -> {
             addSourceRow(null);
             refreshSourceRows();
+            onSourcesEdited(true);
         });
         sortButton.setOnAction(e -> speedTestAndSort());
         saveButton.setOnAction(e -> save());
@@ -153,6 +197,21 @@ public final class CommunityDownloadSettingsPane extends VBox {
         loadFromDisk();
     }
 
+    /// 当前是否有下载源设置页显示在窗口中。
+    ///
+    /// 自动测速排序完成后，若用户正在编辑下载源，则只应用内存顺序、不写盘，
+    /// 避免把用户尚在输入的列表覆盖掉。
+    static boolean isInstanceVisible() {
+        return instanceVisible;
+    }
+
+    /// 最近创建的设置页实例，或 `null`。
+    @Nullable
+    private static CommunityDownloadSettingsPane visibleInstance() {
+        WeakReference<CommunityDownloadSettingsPane> reference = lastInstance;
+        return reference == null ? null : reference.get();
+    }
+
     /// 刷新当前仍可见的设置页；由导入完成后调用。
     ///
     /// 未显示时不做事，页面下次显示会走 [CommunityDownloadSettingsPane#reloadIfChanged()]。
@@ -175,19 +234,25 @@ public final class CommunityDownloadSettingsPane extends VBox {
 
     /// 从磁盘读取配置并填充 UI。
     private void loadFromDisk() {
-        long revision = CommunityDownloadSources.revision();
-        sources.clear();
-        knownNames.clear();
-        CommunityDownloadSources loaded = CommunityDownloadSources.load();
-        for (CommunityDownloadSource source : loaded.sources()) {
-            knownNames.put(source.url(), source.name());
-            addSourceRow(source.url());
+        autoSaveTimer.stop();
+        loading = true;
+        try {
+            long revision = CommunityDownloadSources.revision();
+            sources.clear();
+            knownNames.clear();
+            CommunityDownloadSources loaded = CommunityDownloadSources.load();
+            for (CommunityDownloadSource source : loaded.sources()) {
+                knownNames.put(source.url(), source.name());
+                addSourceRow(source.url());
+            }
+            refreshSourceRows();
+            message.setText("");
+            message.setManaged(false);
+            message.setVisible(false);
+            loadedRevision = revision;
+        } finally {
+            loading = false;
         }
-        refreshSourceRows();
-        message.setText("");
-        message.setManaged(false);
-        message.setVisible(false);
-        loadedRevision = revision;
     }
 
     /// 新增一个源行。
@@ -198,6 +263,8 @@ public final class CommunityDownloadSettingsPane extends VBox {
         if (url != null) {
             row.urlField.setText(url);
         }
+        row.urlField.textProperty().addListener((observable, oldValue, newValue) ->
+                onSourcesEdited(true));
         sources.add(row);
     }
 
@@ -216,7 +283,23 @@ public final class CommunityDownloadSettingsPane extends VBox {
                 nodes.add(row.pane);
             }
         }
-        sourcesCard.getContent().setAll(nodes);
+        ObservableList<Node> content = sourcesCard.getContent();
+        if (content.size() == nodes.size()
+                && content.containsAll(nodes)
+                && nodes.containsAll(content)) {
+            // 仅顺序变化时原地交换，避免先清空再填满导致 ScrollPane 跳到顶部。
+            for (int i = 0; i < nodes.size(); i++) {
+                Node desired = nodes.get(i);
+                if (content.get(i) != desired) {
+                    int currentIndex = content.indexOf(desired);
+                    if (currentIndex > i) {
+                        Collections.swap(content, i, currentIndex);
+                    }
+                }
+            }
+        } else {
+            content.setAll(nodes);
+        }
         sourceCount.setText(i18n("community.settings.download.count", sources.size(),
                 CommunityDownloadSources.MAX_SOURCES));
         addSourceButton.setDisable(sources.size() >= CommunityDownloadSources.MAX_SOURCES);
@@ -248,13 +331,57 @@ public final class CommunityDownloadSettingsPane extends VBox {
                         } else {
                             row.setSubtitle(i18n("community.settings.download.test.fail"));
                         }
+                        // 用户点“测试”说明这个源已经可用，顺手自动保存并应用。
+                        onSourcesEdited(false);
                     }));
         });
         return button;
     }
 
-    /// 校验并保存当前配置。
+    /// 编辑发生后启动 700 ms 防抖自动保存。
+    ///
+    /// @param forceRanking 源集合变化时需要强制重新测速；仅测试/排序时可为 `false`
+    private void onSourcesEdited(boolean forceRanking) {
+        if (loading) {
+            return;
+        }
+        editGeneration++;
+        autoSaveForceRanking |= forceRanking;
+        autoSaveTimer.playFromStart();
+    }
+
+    /// 防抖到期后自动保存；输入尚未合法时静默等待下一次编辑。
+    private void autoSaveNow() {
+        if (loading) {
+            return;
+        }
+        if (autoSaveInProgress) {
+            // 上一次保存在 IO 线程还没完成；等它结束后再尝试。
+            autoSaveTimer.playFromStart();
+            return;
+        }
+        List<SourceRow> nonEmpty = new ArrayList<>();
+        List<String> urls = new ArrayList<>();
+        String error = collectValidSources(nonEmpty, urls);
+        if (error != null) {
+            // 用户可能正输入到一半（如只输了 https://），手动保存才提示错误。
+            return;
+        }
+        for (SourceRow row : sources) {
+            if (CommunityDownloadSource.normalizeUrl(row.urlField.getText()).isEmpty()) {
+                // 空白行是“待填写”的占位，自动保存时不要把它当成删除。
+                return;
+            }
+        }
+        boolean forceRanking = autoSaveForceRanking;
+        autoSaveForceRanking = false;
+        autoSaveInProgress = true;
+        persist(configuredSources(nonEmpty), forceRanking, true, editGeneration);
+    }
+
+    /// 校验并手动保存当前配置。
     private void save() {
+        autoSaveTimer.stop();
         List<SourceRow> nonEmpty = new ArrayList<>();
         List<String> urls = new ArrayList<>();
         String error = collectValidSources(nonEmpty, urls);
@@ -263,39 +390,104 @@ public final class CommunityDownloadSettingsPane extends VBox {
             return;
         }
 
+        setBusy(true);
+        autoSaveForceRanking = false;
+        persist(configuredSources(nonEmpty), true, false, editGeneration);
+    }
+
+    /// 由非空行构造下载源，尽量复用已有显示名。
+    ///
+    /// @param nonEmpty 非空行
+    /// @return 下载源列表
+    @NotNull
+    private List<CommunityDownloadSource> configuredSources(@NotNull List<SourceRow> nonEmpty) {
         List<CommunityDownloadSource> configured = new ArrayList<>(nonEmpty.size());
         for (SourceRow row : nonEmpty) {
             configured.add(toSource(CommunityDownloadSource.normalizeUrl(row.urlField.getText())));
         }
-        CommunityDownloadSources sourcesToSave = new CommunityDownloadSources(configured);
+        return configured;
+    }
 
-        setBusy(true);
+    /// 异步保存并应用下载源；自动/手动共用。
+    ///
+    /// @param configured 已校验的下载源
+    /// @param forceRanking 是否强制重新测速
+    /// @param automatic 是否为自动保存
+    /// @param generation 触发保存时的编辑代数
+    private void persist(@NotNull List<CommunityDownloadSource> configured,
+                         boolean forceRanking,
+                         boolean automatic,
+                         long generation) {
+        CommunityDownloadSources sourcesToSave = new CommunityDownloadSources(configured);
+        long sequence = ++saveSequence;
         Schedulers.io().execute(() -> {
             try {
-                sourcesToSave.save();
-                CommunityDownloadInstaller.apply();
-                // 保存后立即按新配置测速，避免沿用旧源的 5 分钟缓存。
-                CommunityDownloadRanker.refreshAsync(true);
-                if (CommunityDownloadGuard.isConfigured() != !sourcesToSave.isEmpty()) {
-                    throw new IllegalStateException("Configured download sources were not applied");
+                boolean written;
+                synchronized (saveLock) {
+                    written = sequence >= lastWrittenSequence;
+                    if (written) {
+                        sourcesToSave.save();
+                        CommunityDownloadInstaller.apply();
+                        // 保存后立即按新配置测速，避免沿用旧源的 5 分钟缓存。
+                        CommunityDownloadRanker.refreshAsync(forceRanking);
+                        if (CommunityDownloadGuard.isConfigured() != !sourcesToSave.isEmpty()) {
+                            throw new IllegalStateException("Configured download sources were not applied");
+                        }
+                        lastWrittenSequence = sequence;
+                    }
                 }
+                if (!written) {
+                    // 更晚的保存已经落盘，这里只复位忙碌标记，不覆盖新配置。
+                    Schedulers.javafx().execute(() -> {
+                        if (automatic) {
+                            autoSaveInProgress = false;
+                        } else {
+                            setBusy(false);
+                        }
+                    });
+                    return;
+                }
+                long revision = CommunityDownloadSources.revision();
                 int count = sourcesToSave.size();
                 Schedulers.javafx().execute(() -> {
-                    setBusy(false);
-                    showMessage(i18n("community.settings.download.applied", count), false);
+                    loadedRevision = revision;
+                    if (automatic) {
+                        autoSaveInProgress = false;
+                        if (generation == editGeneration) {
+                            showMessage(i18n("community.settings.download.auto_saved", count), false);
+                        } else {
+                            autoSaveTimer.playFromStart();
+                        }
+                    } else {
+                        setBusy(false);
+                        showMessage(i18n("community.settings.download.applied", count), false);
+                    }
                 });
             } catch (Throwable e) {
                 LOG.warning("Failed to save community download sources", e);
                 Schedulers.javafx().execute(() -> {
-                    setBusy(false);
+                    if (automatic) {
+                        autoSaveInProgress = false;
+                    } else {
+                        setBusy(false);
+                    }
                     showMessage(i18n("community.settings.download.save_failed"), true);
+                    if (generation != editGeneration) {
+                        autoSaveTimer.playFromStart();
+                    }
                 });
             }
         });
     }
 
-    /// 立即测速全部源，按延迟升序重排界面行；结果需保存后才落盘。
+    /// 立即测速全部源，按延迟升序重排界面行，并自动保存应用。
+    ///
+    /// 重排期间保留外层 [ScrollPane] 的滚动位置，避免用户点“测速排序”后
+    /// 页面突然跳到下半部分。
     private void speedTestAndSort() {
+        if (sorting) {
+            return;
+        }
         List<SourceRow> rows = new ArrayList<>();
         List<String> urls = new ArrayList<>();
         String error = collectValidSources(rows, urls);
@@ -308,6 +500,12 @@ public final class CommunityDownloadSettingsPane extends VBox {
             return;
         }
 
+        autoSaveTimer.stop();
+        sorting = true;
+        ScrollPane scrollPane = findScrollPane();
+        double scrollV = scrollPane == null ? 0 : scrollPane.getVvalue();
+        double scrollH = scrollPane == null ? 0 : scrollPane.getHvalue();
+
         setBusy(true);
         showMessage(i18n("community.settings.download.sort.running"), false);
 
@@ -317,44 +515,79 @@ public final class CommunityDownloadSettingsPane extends VBox {
         }
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
                 .whenComplete((ignored, failure) -> Schedulers.javafx().execute(() -> {
-                    List<RowResult> results = new ArrayList<>(rows.size());
-                    for (int i = 0; i < rows.size(); i++) {
-                        DownloadSourceTester.Result result;
-                        try {
-                            result = futures.get(i).join();
-                        } catch (Throwable e) {
-                            result = DownloadSourceTester.Result.failure();
+                    boolean ok = false;
+                    try {
+                        List<RowResult> results = new ArrayList<>(rows.size());
+                        for (int i = 0; i < rows.size(); i++) {
+                            DownloadSourceTester.Result result;
+                            try {
+                                result = futures.get(i).join();
+                            } catch (Throwable e) {
+                                result = DownloadSourceTester.Result.failure();
+                            }
+                            results.add(new RowResult(rows.get(i), result));
                         }
-                        results.add(new RowResult(rows.get(i), result));
-                    }
-                    results.sort((a, b) -> {
-                        if (a.result().available() != b.result().available()) {
-                            return a.result().available() ? -1 : 1;
-                        }
-                        if (!a.result().available()) {
-                            return 0;
-                        }
-                        return Long.compare(a.result().latencyMillis(), b.result().latencyMillis());
-                    });
+                        results.sort((a, b) -> {
+                            if (a.result().available() != b.result().available()) {
+                                return a.result().available() ? -1 : 1;
+                            }
+                            if (!a.result().available()) {
+                                return 0;
+                            }
+                            return Long.compare(a.result().latencyMillis(), b.result().latencyMillis());
+                        });
 
-                    sources.clear();
-                    for (RowResult result : results) {
-                        sources.add(result.row());
-                        if (result.result().available()) {
-                            result.row().pane.setSubtitle(i18n("community.settings.download.test.ok.ms",
-                                    result.result().latencyMillis()));
-                        } else {
-                            result.row().pane.setSubtitle(i18n("community.settings.download.test.fail"));
+                        sources.clear();
+                        List<String> sortedUrls = new ArrayList<>(results.size());
+                        for (RowResult result : results) {
+                            sources.add(result.row());
+                            sortedUrls.add(CommunityDownloadSource.normalizeUrl(
+                                    result.row().urlField.getText()));
+                            if (result.result().available()) {
+                                result.row().pane.setSubtitle(i18n("community.settings.download.test.ok.ms",
+                                        result.result().latencyMillis()));
+                            } else {
+                                result.row().pane.setSubtitle(i18n("community.settings.download.test.fail"));
+                            }
                         }
+                        CommunityDownloadRanker.acceptRanking(sortedUrls);
+                        refreshSourceRows();
+                        ok = true;
+                    } catch (Throwable e) {
+                        LOG.warning("Failed to apply download source ranking", e);
+                    } finally {
+                        setBusy(false);
+                        sorting = false;
                     }
-                    refreshSourceRows();
-                    setBusy(false);
-                    if (failure != null) {
+                    if (!ok || failure != null) {
                         showMessage(i18n("community.settings.download.sort.failed"), true);
-                    } else {
-                        showMessage(i18n("community.settings.download.sort.done"), false);
+                        return;
+                    }
+                    showMessage(i18n("community.settings.download.sort.done"), false);
+                    // 测速结果就是用户想要的顺序，自动保存并应用，无需再点保存。
+                    onSourcesEdited(false);
+                    if (scrollPane != null) {
+                        Platform.runLater(() -> {
+                            scrollPane.setVvalue(scrollV);
+                            scrollPane.setHvalue(scrollH);
+                        });
                     }
                 }));
+    }
+
+    /// 从当前节点向上查找包裹设置内容的滚动容器。
+    ///
+    /// @return 滚动容器；不存在时返回 `null`
+    @Nullable
+    private ScrollPane findScrollPane() {
+        Parent current = this;
+        while (current != null) {
+            if (current instanceof ScrollPane scrollPane) {
+                return scrollPane;
+            }
+            current = current.getParent();
+        }
+        return null;
     }
 
     /// 收集非空源行并校验；返回错误文案或 `null`。
@@ -491,6 +724,7 @@ public final class CommunityDownloadSettingsPane extends VBox {
             removeButton.setOnAction(e -> {
                 sources.remove(this);
                 refreshSourceRows();
+                onSourcesEdited(true);
             });
         }
     }

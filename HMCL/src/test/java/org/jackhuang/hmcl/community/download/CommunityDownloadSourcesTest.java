@@ -202,6 +202,20 @@ public final class CommunityDownloadSourcesTest {
         assertTrue(urls.get(2).toString().startsWith("https://b.example/mc/game/version_manifest.json"));
     }
 
+    /// 手动测速排序结果会被立即用于后续候选顺序。
+    @Test
+    public void acceptsManualRanking() {
+        CommunityDownloadSources sources = new CommunityDownloadSources(List.of(
+                CommunityDownloadSource.of("a", "https://a.example"),
+                CommunityDownloadSource.of("b", "https://b.example")));
+
+        CommunityDownloadRanker.acceptRanking(List.of("https://b.example", "https://a.example"));
+
+        assertEquals(List.of("https://b.example", "https://a.example"),
+                CommunityDownloadRanker.order(sources.sources()).stream()
+                        .map(CommunityDownloadSource::url).toList());
+    }
+
     /// 测速排序：成功按延迟升序，失败按原顺序排在最后。
     @Test
     public void ranksByLatencyWithFailuresLast() {

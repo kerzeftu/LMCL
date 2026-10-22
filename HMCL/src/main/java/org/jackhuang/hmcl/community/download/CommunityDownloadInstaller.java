@@ -87,7 +87,12 @@ public final class CommunityDownloadInstaller {
                 return;
             }
             CommunityDownloadSources sources = CommunityDownloadSources.load();
-            wrapper.setProvider(build(sources));
+            DownloadProvider provider = build(sources);
+            if (!sources.isEmpty()) {
+                // 文件请求前等待测速排序；空配置仍由 MissingDownloadProvider 明确失败。
+                provider = new RankingDownloadProvider(provider);
+            }
+            wrapper.setProvider(provider);
             CommunityDownloadGuard.refresh(!sources.isEmpty());
             if (scheduleRanking && !sources.isEmpty()) {
                 CommunityDownloadRanker.refreshAsync(false);
