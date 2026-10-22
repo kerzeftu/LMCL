@@ -1,10 +1,10 @@
-# 步骤 22 · 其他页与“关于 LMCL”（v3.9 六 tab 历史；v3.10 四 tab）
+# 步骤 22 · 其他页与“关于 LMCL”（v3.12 五 tab）
 
 > **阶段** 四（补丁） ｜ **优先级** P1 ｜ **工期** 1 周（第一阶段 4 人日 + 阶段 E 约 2 人日） ｜ **前置** [21](21-主页重构与侧边栏移除.md) ｜ **后续** — ｜ **侵入点** `LauncherSettingsPage.java`（第 8 处）、`Controllers.java`（第 9 处）；阶段 E 无新增上游侵入
 >
-> **状态**：v3.9 六 tab 已实现并编译验证；**v3.10 起账户/实例迁到步骤 23 的 `ManagementPage`，社区设置项删除，`OtherPage` 只保留内存优化/帮助/反馈/关于四 tab**。下文 §3.1/§3.1A 的账户、实例、社区设置内嵌为 v3.9 历史，现行结构见[步骤 23](23-管理页与启动内存优化.md)。GUI 未在 Windows 实机验证。
+> **状态**：v3.12 五 tab（内存优化 / 设置导入导出 / 帮助 / 反馈 / 关于 LMCL）已实现并编译验证；v3.10 起账户、实例迁到步骤 23 的 `ManagementPage`，社区设置项删除。§3.1A 的账户、实例、社区设置内嵌为 v3.9 历史；v3.12 新增的第五 tab 见 §9。GUI 未在 Windows 实机验证。
 >
-> **v3.9 变更（2026-10-22）**：第一阶段只做帮助/反馈/关于；用户 m10461 要求继续完成阶段 E 并移除主页 storage/memory，现将账户、实例、社区设置也内嵌为 tab，页面共六个 tab；设置页仍只保留五个 tab。
+> **v3.12 变更（2026-10-22）**：新增“设置导入 / 导出”tab（`ui/transfer/SettingsTransferPane`），对应 `.lmcl.json` 的 5 类 `SettingsSectionExporter`；`OtherPage` 左侧“工具”分类变为“内存优化 / 设置导入-导出”，“支持”分类不变；拖入识别仍挂在 `DecoratorController`（已有第 7 处侵入，无新增）。
 
 ## 1. 目标
 
@@ -56,20 +56,27 @@ User said (m10129)：
 
 ## 3. 实现
 
-### 3.1 `OtherPage`
+### 3.1 `OtherPage`（v3.12 现行结构）
 
 `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/OtherPage.java`
 
 - `@NotNullByDefault public final class OtherPage extends DecoratorAnimatedPage implements DecoratorPage, PageAware`；
 - 单例 `getInstance()`，只在 FX 线程创建；
-- 六个 `TabHeader.Tab`：`accountsTab`（`AccountsPane`）、`instancesTab`（`InstancesPane`）、`communityTab`（`CommunitySettingsView`）、`helpTab`（`HelpPage`）、`feedbackTab`（`FeedbackPage`）、`aboutTab`（`AboutLMCLPage`）；
-- `tab.select(accountsTab)` 作为默认 tab；
-- 左侧 `AdvancedListBox` 两个分类：
-  - 管理：账户、实例、社区设置；
+- 五个 `TabHeader.Tab`，顺序固定：
+  1. `memoryTab`（id `communityMemoryOptimizationPage`，`MemoryOptimizationView`）
+  2. `transferTab`（id `communitySettingsTransferPage`，`SettingsTransferPane`）
+  3. `helpTab`（`HelpPage`）
+  4. `feedbackTab`（`FeedbackPage`）
+  5. `aboutTab`（`AboutLMCLPage`）
+- `tab.select(memoryTab)` 作为默认 tab；
+- 左侧 `AdvancedListBox`（200 px）两个分类：
+  - 工具：内存优化（`SVG.TUNE`）、设置导入 / 导出（`SVG.SAVE`）；
   - 支持：帮助、反馈、关于 LMCL；
 - `FXUtils.setLimitWidth(sideBar, 200); setLeft(sideBar); setCenter(transitionPane);`
-- `showAccounts()/showInstances()/showCommunitySettings()/showHelp()/showFeedback()/showAbout()` 供站内链接/外部调用；
+- `showMemoryOptimization()/showSettingsTransfer()/showHelp()/showFeedback()/showAbout()` 供侧栏、站内链接与主页调用；
 - `onPageShown()/onPageHidden()` 转发给 `TabHeader`，保证 tab 生命周期。
+
+> v3.9 的六 tab（账户/实例/社区设置/帮助/反馈/关于）与 `showAccounts()/showInstances()/showCommunitySettings()` 已删除；账户、实例入口现在只在 `ManagementPage`（步骤 23）。v3.12 的 transfer tab 细节见 §9。
 
 ### 3.1A 内嵌账户、实例、社区设置（v3.9 阶段 E）
 
@@ -311,6 +318,114 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 3. 账户页认证服务器菜单每次 `setOnShowing` 重建，未做搜索/分组。
 4. 独立设置对话框 `CommunitySettingsPanel.open(...)` 仍保留，供侧栏齿轮/下载源按钮使用；内嵌视图与其共享 `buildBody`。
 5. GUI 未在 Windows 实机验证。
+
+## 6B. v3.12 设置导入 / 导出（第五 tab）
+
+### 6B.1 目标与边界
+
+- 把“可迁移的启动器设置”打包成一个 `.lmcl.json` 文件，支持其他页面的“设置导入 / 导出”tab 与拖入窗口两条入口；
+- 首批固定 5 类：`downloadSources`（下载源）、`appearance`（外观）、`home`（主页布局）、`memory`（内存优化）、`java`（Java 偏好）；
+- 不包含：账号、实例/世界、日志、缓存、背景图片文件、更新通道、绝对路径；这些要么涉及隐私，要么与当前机器绑定；
+- 导入是“合并/覆盖当前设置”，不是恢复出厂；应用后不回滚已成功的段，失败逐段显示；
+- 0 新增上游侵入：拖入识别复用 `DecoratorController`（第 7 处），导出入口在 `OtherPage`（已有）。
+
+### 6B.2 文件格式
+
+```json
+{
+  "format": "lmcl.settings",
+  "version": 1,
+  "product": "LMCL",
+  "productVersion": "3.16.1000",
+  "createdAt": "2026-10-22T05:00:00Z",
+  "sections": {
+    "downloadSources": { "schema": 1, "primary": { "name": "BMCLAPI", "url": "https://bmclapi2.bangbang93.com" }, "mirrors": [] }
+  }
+}
+```
+
+- `CommunitySettingsBundle.FORMAT = "lmcl.settings"`、`VERSION = 1`、`FILE_SUFFIX = ".lmcl.json"`、`MAX_BYTES = 2 MiB`；
+- `sections` 只允许已注册的 5 个 id；未知段保留在内存中但只记 `warnings`，不参与导入；
+- 没有任何受支持段时抛 `JsonParseException`；`format` 不匹配或 `version > 1` 同样拒绝；
+- 写文件使用 UTF-8、原子写；导出文件名 `LMCL-settings-<yyyyMMdd-HHmmss>.lmcl.json`（`SettingsExportService.suggestedFileName()`）。
+
+### 6B.3 服务 API
+
+`HMCL/src/main/java/org/jackhuang/hmcl/community/config/`：
+
+| 类型 | 关键签名 | 说明 |
+|---|---|---|
+| `CommunitySettingsBundle` | `read(Path)`、`parse(String)`、`create(Map<String,JsonObject>)`、`toJson()`、`write(Path)`、`sections()`、`warnings()` | 格式与解析；`read` 检查后缀/大小 |
+| `SettingsSectionExporter` | `id()`、`titleKey()`、`exportNow()`、`preview(JsonObject)`（默认字段级 diff）、`apply(JsonObject)` | 每个实现只在 FX 线程调用 |
+| `SettingsChange` | `record(String section, String key, String oldValue, String newValue)` + `display(JsonElement)` | 预览行；`display` 对 `null` 返回空串 |
+| `SettingsExportService` | `exporters()`、`find(String)`、`export(Set<String>)`、`write(Path, Set<String>)`、`suggestedFileName()` | 固定 5 个导出器，顺序即应用顺序 |
+| `SettingsImportService` | `preview(bundle)`、`apply(bundle)` | 逐段 try/catch；失败不中断后续段 |
+| `SettingsImportService.ImportPreview` | `record(int sectionCount, List<SettingsChange> changes, List<String> warnings, List<String> errors)` | 预览 |
+| `SettingsImportService.ImportResult` | `record(List<String> applied, List<SectionFailure> failures)` + `success()` | 应用结果 |
+| `CommunityConfigDnD` | `install(...)` | 只识别 `.lmcl.json` 后缀，`TransferMode.COPY` |
+
+导出器实现位于 `config/section/`：
+
+- `DownloadSourcesSectionExporter`：解析 → `save()` → `CommunityDownloadInstaller.apply()`；导入后立即生效，无需重启；段非法时整体拒绝，保留旧配置；
+- `AppearanceSectionExporter`：19 个白名单键（`language`、`selectedTheme`、`themeAppearanceOverrides`、`customThemeColor`、`themeBrightnessMode`、`builtinBackgroundId`、`logFontFamily`、`launcherFontFamily`、`titleBarTransparent`、`windowTransparent`、`animationDisabled`、`backgroundOpacity`、`logFontSize`、`themeColorType`、`themeColorStyle`、`backgroundType`、`networkBackgroundImageCachePolicy`、`backgroundFallbackType`、`backgroundLoadPolicy`）；先完整解析，任一键非法则不写入（全有或全无）；
+- `HomeSectionExporter`：`DashboardConfig.load(Metadata.HMCL_LOCAL_HOME/config/dashboard.json)` → 只读则拒绝 → `replaceFromJson` → `save()` → `HomePane.notifyConfigurationChanged()`；
+- `MemorySectionExporter`：`MemoryBaseSettings` + 默认 `GameSettings.Preset` 的 `memoryOptimizationOnLaunchProperty()`；
+- `JavaSectionExporter`：`JavaPreference.get()/set()`。
+
+### 6B.4 UI
+
+- `ui/transfer/SettingsTransferPane`（`extends VBox`）：标题、说明、5 个 `CheckBox`（默认勾选下载源/外观/主页，其余不勾）、[全选]/[全不选]、[导入…]/[导出…]、状态 label；
+- 导出：`FileChooser`（`*.lmcl.json`）→ `Schedulers.io()` 写盘 → 回 FX 显示“已导出 N 类设置”；
+- 导入：`FileChooser` → `Schedulers.io()` 读文件 + `SettingsImportService.preview` → 回 FX `SettingsImportDialog`；
+- `SettingsImportDialog extends DialogPane`（宽 680）：段数、变更摘要（最多 50 条）、警告、预览错误；`[导入]` 调 `apply`，失败列出 `sectionId: message`；`[取消]` 不写任何设置；
+- 拖入：任意页面把 `.lmcl.json` 拖到窗口 → 同一个 `SettingsImportDialog`；非该后缀不接收，不干扰 authlib 拖入；
+- i18n：`community.settings.transfer.*` 共 23 个 key（标题/说明/5 类/按钮/状态/预览/错误），三份语言文件一致。
+
+### 6B.5 安全与降级
+
+- 只接受 `.lmcl.json` 后缀且 ≤2 MiB，解析失败不应用任何段；
+- 不写可执行文件、不写绝对路径、不写背景图片路径、不写账号令牌；
+- 单段失败继续后续段，但 UI 必须显示失败段；退出码不因此中断启动器；
+- 主页布局 `schema > 1` 时拒绝导入并提示版本过新；下载源段为空表示“零内置”，导入后仍由守卫提示配置；
+- 外观应用后部分控件立即生效，标题栏/窗口透明等下次启动生效，界面需提示“部分设置需重启”。
+
+### 6B.6 文件清单
+
+新增：
+
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/config/CommunitySettingsBundle.java`
+- `.../config/SettingsSectionExporter.java`
+- `.../config/SettingsChange.java`
+- `.../config/SettingsExportService.java`
+- `.../config/SettingsImportService.java`
+- `.../config/CommunityConfigDnD.java`
+- `.../config/section/DownloadSourcesSectionExporter.java`
+- `.../config/section/AppearanceSectionExporter.java`
+- `.../config/section/HomeSectionExporter.java`
+- `.../config/section/MemorySectionExporter.java`
+- `.../config/section/JavaSectionExporter.java`
+- `.../ui/transfer/SettingsTransferPane.java`
+- `.../ui/transfer/SettingsImportDialog.java`
+- `HMCL/src/test/java/org/jackhuang/hmcl/community/config/CommunitySettingsBundleTest.java`（5 个）
+
+修改：
+
+- `.../community/ui/OtherPage.java`（第五 tab 与工具分类）
+- `.../community/dashboard/DashboardConfig.java`（`toExportJson()`、`replaceFromJson()`）
+- `.../community/java/JavaPreference.java`（`set(Preference)`）
+- `.../community/ui/CommunitySideBar.java`（构造时 `CommunityDownloadInstaller.install()`）
+- `HMCL/src/main/java/org/jackhuang/hmcl/ui/decorator/DecoratorController.java`（拖入识别，复用第 7 处）
+- `HMCL/src/test/java/.../dashboard/DashboardConfigTest.java`（新增 2 个测试）
+- 三份 `HMCL/src/main/resources/assets/lang/I18N*.properties`
+- `docs-community` 同步、README/00/审查记录
+
+### 6B.7 验证与偏差
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **143/0/0/0**，全量 `:HMCL:test` **253/0/0/2 skipped**；
+- `settings1` 包内附 `LMCL-download-source-sample.lmcl.json`，手工验收步骤见[步骤 07 §5.2](07-下载源配置.md)；
+- 未做：GUI 实机（WSL2 无 DISPLAY）、跨机器导入、导出后重新导入的完整回环、`CommunityConfigDnD` 单测；
+- 偏差：`SettingsImportDialog` 最多显示 50 条变更，不显示逐段勾选；导入按文件中的段全量应用，不支持只导入某一段（导出支持选择）；
+- 注意：`CommunitySettings` 是独立文件，不是上游 `LauncherSettings`，导入不会触碰账号/上游设置。
 
 ## 6. 实现偏差与已知问题
 
