@@ -429,8 +429,8 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 
 ### 6B.7 验证与偏差
 
-- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **146/0/0/0**，全量 `:HMCL:test` **256/0/0/2 skipped**；
-- `settings3` 包内附 `LMCL-download-source-sample.lmcl.json`（schema 2，BMCLAPI / openbmclapi / bmclapi 备用共 3 个源），手工验收步骤见[步骤 07 §5.2](07-下载源配置.md) 与 §9.4；
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **146/0/0/0**，全量 `:HMCL:test` **256/0/0/2 skipped**（v3.15 后为 147/257，见[步骤 07 §10](07-下载源配置.md)）；
+- `settings4` 包内附 `LMCL-download-source-sample.lmcl.json`（schema 2，BMCLAPI / openbmclapi / bmclapi 备用共 3 个源），手工验收步骤见[步骤 07 §5.2](07-下载源配置.md) 与 §10.6；
 - 未做：GUI 实机（WSL2 无 DISPLAY）、跨机器导入、导出后重新导入的完整回环、`CommunityConfigDnD` 单测；
 - 偏差：`SettingsImportDialog` 最多显示 50 条变更，不显示逐段勾选；导入按文件中的段全量应用，不支持只导入某一段（导出支持选择）；
 - 注意：`CommunitySettings` 是独立文件，不是上游 `LauncherSettings`，导入不会触碰账号/上游设置。
