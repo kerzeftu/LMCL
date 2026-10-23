@@ -3,10 +3,10 @@
 > **状态（2026-10-24 规划优化）：切片 A 基座已实现并默认关闭；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B–G 仍待 Windows 对切片 A 的验收。**
 >
 > - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.4
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.4 交付后 `main`；切片 A 的 `m3expressive1` 已由 `m3expressive6` 取代
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.5 交付后 `main`；切片 A 的 `m3expressive1` 已由 `m3expressive7` 取代
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   `-Dlmcl.visual.m3=on` 时只给壳层子树安装 m3fx，默认关闭时与 1.0.0 一致。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive6`（v3.17.4 账户卡 + 7×5 日历 + 右栏统计 + 明暗自适应色阶）。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive7`（v3.17.5 每日一言 + 账户卡/7×5 日历 + 右栏统计 + 明暗自适应色阶）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 > - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
@@ -2288,8 +2288,8 @@ D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保
 | **B. 壳层与玻璃** | 壁纸快照、`GlassBackdrop`/`GlassSurface`/`GlassCard`；侧栏玻璃与 M3 激活胶囊；标题栏/窗口背景兜底 | 4–6 人日 | `m3expressive2` |
 | **C. 主页** | 头部、9 卡、按钮、指标、日历、空态/错误态统一 M3；卡片玻璃 | 4–6 人日 | `m3expressive3` |
 | **D. 四个入口页** | 管理/其他/设置/下载：200px 导航、列表、表单、按钮、页头 | 5–7 人日 | `m3expressive4` |
-| **E. 进度与加载** | 生产级 Wavy 线性/环形、`TaskListPane`/`SpinnerPane`/`DialogPane` 三处侵入 | 2–3 人日 | `m3expressive6` |
-| **F. 对话框与独立窗口** | `DialogPane`、`MessageDialogPane`、`JFXPopup`、独立 Stage 的主题安装 | 3–5 人日 | `m3expressive6` |
+| **E. 进度与加载** | 生产级 Wavy 线性/环形、`TaskListPane`/`SpinnerPane`/`DialogPane` 三处侵入 | 2–3 人日 | `m3expressive8+` |
+| **F. 对话框与独立窗口** | `DialogPane`、`MessageDialogPane`、`JFXPopup`、独立 Stage 的主题安装 | 3–5 人日 | `m3expressive8+` |
 | **G. 收口** | 无障碍、对比度、RTL、性能、4K/HiDPI、回归与文档 | 4–6 人日 | 候选发布包 |
 
 每个切片结束必须：编译 + community 测试 + 全量测试 + `checkTranslations` + `makeExecutables` +
@@ -2570,13 +2570,13 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 |---|---|---|
 | 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
 | 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
-| 当前测试包 | `m3expressive1` | `m3expressive6`（jar 11,900,517 B / zip 74,953,903 B） |
+| 当前测试包 | `m3expressive1` | `m3expressive7`（jar 11,966,257 B / zip 74,810,072 B） |
 | 切片 A 状态 | 待 Windows 验收 | 仍待 Windows 实机验收；默认关闭，未改发布默认值 |
-| 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转 |
+| 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转；v3.17.5 问候语下改为每日一言 |
 
 ### 19.8 下一步建议
 
-1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)已按 m20100/m20500/m20901 实施、验证并打包 `m3expressive6`，不并入 M3 B–G；
-2. 用户先对 `m3expressive6` 做 Windows 实机验收（账户卡展开、日历 5×7、右栏统计、设置·统计跳转、明暗主题色阶、动画/DPI）；
+1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)与[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)均已实施、验证并打包 `m3expressive7`，不并入 M3 B–G；
+2. 用户先对 `m3expressive7` 做 Windows 实机验收（账户卡展开、日历 5×7、右栏统计、设置·统计跳转、明暗主题色阶、每日一言 10 分钟刷新/多源随机/静默回退、动画/DPI）；
 3. M3 切片 B（侧栏/主页玻璃）继续等 Windows 对切片 A 的验收结论；
 4. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
