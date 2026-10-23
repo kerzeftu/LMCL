@@ -57,21 +57,61 @@ public final class CommunityM3 {
     ///
     /// @param root 主题作用范围的根节点
     public static void install(@NotNull Parent root) {
-        if (root.getProperties().get(INSTALLED_PROPERTY) != null) {
+        if (isInstalled(root)) {
             return;
         }
+        apply(root);
+    }
 
+    /// 重新安装主题，用于主题色/字体变化。
+    ///
+    /// 先卸载旧的 M3 样式类，再按当前颜色方案安装，避免深色/浅色样式类同时存在。
+    ///
+    /// @param root 主题作用范围的根节点
+    public static void refresh(@NotNull Parent root) {
+        M3ThemeManager.uninstall(root);
+        root.getProperties().remove(INSTALLED_PROPERTY);
+        apply(root);
+    }
+
+    /// 卸载主题与社区样式表；重复调用无副作用。
+    ///
+    /// @param root 主题作用范围的根节点
+    public static void uninstall(@NotNull Parent root) {
+        if (!isInstalled(root)) {
+            return;
+        }
+        M3ThemeManager.uninstall(root);
+        root.getProperties().remove(INSTALLED_PROPERTY);
+        root.getStyleClass().remove("community-m3-host");
+        String stylesheet = stylesheetUrl();
+        if (stylesheet != null) {
+            root.getStylesheets().remove(stylesheet);
+        }
+    }
+
+    /// 返回主题是否已安装。
+    ///
+    /// @param root 根节点
+    /// @return 是否已安装
+    public static boolean isInstalled(@NotNull Parent root) {
+        return root.getProperties().get(INSTALLED_PROPERTY) != null;
+    }
+
+    /// 实际安装主题、样式表和字体覆盖。
+    ///
+    /// @param root 根节点
+    private static void apply(@NotNull Parent root) {
         M3Theme theme = M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, Themes.getColorScheme());
         M3ThemeManager.install(root, theme);
         root.getProperties().put(INSTALLED_PROPERTY, theme);
-        root.getStyleClass().add("community-m3-host");
+        if (!root.getStyleClass().contains("community-m3-host")) {
+            root.getStyleClass().add("community-m3-host");
+        }
 
-        URL stylesheet = CommunityM3.class.getResource(STYLESHEET);
-        if (stylesheet != null) {
-            String url = stylesheet.toExternalForm();
-            if (!root.getStylesheets().contains(url)) {
-                root.getStylesheets().add(url);
-            }
+        String stylesheet = stylesheetUrl();
+        if (stylesheet != null && !root.getStylesheets().contains(stylesheet)) {
+            root.getStylesheets().add(stylesheet);
         }
 
         // FontManager.getFont() 在用户没有自定义字体且系统默认字体探测失败时为 null，
@@ -80,6 +120,15 @@ public final class CommunityM3 {
         if (style != null) {
             root.setStyle(style);
         }
+    }
+
+    /// 返回社区样式表 URL；资源缺失时返回 `null`。
+    ///
+    /// @return URL 字符串或 `null`
+    @Nullable
+    private static String stylesheetUrl() {
+        URL url = CommunityM3.class.getResource(STYLESHEET);
+        return url == null ? null : url.toExternalForm();
     }
 
     /// 生成字体覆盖样式；字体未解析时返回 `null`，由调用方保留继承字体。

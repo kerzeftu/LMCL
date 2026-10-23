@@ -39,3 +39,42 @@
     -fx-stroke: -m3-color-primary;
     -fx-stroke-width: 4px;
 }
+
+/* 阶段 A：M3 宿主只做基础 token 映射，不改变现有页面布局。 */
+.lmcl-m3-host {
+    -fx-background-color: transparent;
+}
+
+.lmcl-m3-host .title-label {
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.lmcl-m3-host .subtitle-label {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.lmcl-m3-host .scroll-bar .thumb {
+    -fx-background-color: -m3-color-outline-variant;
+}
+
+.lmcl-m3-host .scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+/* 基础表面与文本 token；阶段 B 再细化卡片/侧栏。 */
+.lmcl-m3 .card {
+    -fx-background-color: -m3-color-surface-container-low;
+}
+
+.lmcl-m3 .jfx-button {
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.lmcl-m3 .jfx-text-field,
+.lmcl-m3 .jfx-combo-box {
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.lmcl-m3 .md-list-cell {
+    -fx-text-fill: -m3-color-on-surface;
+}

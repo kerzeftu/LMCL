@@ -31,6 +31,8 @@ import org.jackhuang.hmcl.community.config.CommunityConfigDnD;
 import org.jackhuang.hmcl.community.ui.CommunitySideBar;
 import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.community.ui.OtherPage;
+import org.jackhuang.hmcl.community.ui.m3.M3Host;
+import org.jackhuang.hmcl.community.ui.m3.M3Settings;
 import org.jackhuang.hmcl.community.ui.transfer.SettingsImportDialog;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jackhuang.hmcl.ui.Controllers;
@@ -70,7 +72,7 @@ public class DecoratorController {
         shell.setFillHeight(true);
         HBox.setHgrow(navigator, Priority.ALWAYS);
         navigator.setMaxWidth(Double.MAX_VALUE);
-        decorator.getContent().setAll(shell);
+        decorator.getContent().setAll(M3Settings.isM3Enabled() ? new M3Host(shell) : shell);
         decorator.onCloseNavButtonActionProperty().set(e -> close());
         decorator.onBackNavButtonActionProperty().set(e -> back());
         decorator.onRefreshNavButtonActionProperty().set(e -> refresh());
