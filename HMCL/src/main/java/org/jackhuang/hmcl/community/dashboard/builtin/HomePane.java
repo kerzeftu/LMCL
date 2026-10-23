@@ -22,16 +22,23 @@ package org.jackhuang.hmcl.community.dashboard.builtin;
 
 import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import com.jfoenix.controls.JFXButton;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.community.dashboard.DashboardConfig;
@@ -44,6 +51,10 @@ import org.jackhuang.hmcl.community.launch.CommunityLaunchHooks;
 import org.jackhuang.hmcl.community.launch.LaunchEvent;
 import org.jackhuang.hmcl.community.launch.LaunchEventListener;
 import org.jackhuang.hmcl.community.launch.LaunchEventKind;
+import org.jackhuang.hmcl.community.quote.DailyQuote;
+import org.jackhuang.hmcl.community.quote.DailyQuoteEvents;
+import org.jackhuang.hmcl.community.quote.DailyQuoteService;
+import org.jackhuang.hmcl.community.quote.DailyQuoteSettings;
 import org.jackhuang.hmcl.community.ui.CommunitySettingsPanel;
 import org.jackhuang.hmcl.community.ui.m3.M3Settings;
 import org.jackhuang.hmcl.community.ui.m3.M3SpikePane;
@@ -64,6 +75,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -141,6 +153,48 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 问候语。
     private final Label greeting = new Label();
 
+    /// 每日一言。
+    private final Label quoteLabel = new Label();
+
+    /// 每日一言的完整文本提示。
+    private final Tooltip quoteTooltip = new Tooltip();
+
+    /// 每日一言服务。
+    private final DailyQuoteService quoteService = new DailyQuoteService();
+
+    /// 每日一言自动刷新计时器。
+    private final Timeline quoteTimer = new Timeline();
+
+    /// 当前挂载的窗口。
+    private @Nullable Window quoteWindow;
+
+    /// 每日一言显隐变化。
+    private final ChangeListener<Boolean> quoteVisibilityListener =
+            (observable, oldValue, newValue) -> updateQuoteTimer();
+
+    /// 窗口聚焦变化。
+    private final ChangeListener<Boolean> quoteFocusListener =
+            (observable, oldValue, newValue) -> updateQuoteTimer();
+
+    /// Scene 的窗口变化。
+    private final ChangeListener<Window> quoteWindowListener =
+            (observable, oldValue, newValue) -> attachQuoteWindow(newValue);
+
+    /// Scene 变化。
+    private final ChangeListener<Scene> quoteSceneListener = (observable, oldScene, newScene) -> {
+        if (oldScene != null) {
+            oldScene.windowProperty().removeListener(quoteWindowListener);
+        }
+        detachQuoteWindow();
+        if (newScene != null) {
+            newScene.windowProperty().addListener(quoteWindowListener);
+            attachQuoteWindow(newScene.getWindow());
+        }
+    };
+
+    /// 设置页修改每日一言后刷新。
+    private final Runnable quoteChangedListener = this::onQuoteSettingsChanged;
+
     /// 左信息栏独立滚动容器。
     private final ScrollPane infoScroll = new ScrollPane();
 
@@ -209,6 +263,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         getChildren().add(buildColumns());
 
         rebuildBody();
+        installQuoteRefresh();
 
         Accounts.selectedAccountProperty().addListener(accountListener);
         CommunityLaunchHooks.addListener(launchListener);
@@ -231,6 +286,16 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         }
         disposed = true;
         saveDebounce.stop();
+        quoteTimer.stop();
+        quoteTimer.getKeyFrames().clear();
+        detachQuoteWindow();
+        Scene quoteScene = getScene();
+        if (quoteScene != null) {
+            quoteScene.windowProperty().removeListener(quoteWindowListener);
+        }
+        sceneProperty().removeListener(quoteSceneListener);
+        visibleProperty().removeListener(quoteVisibilityListener);
+        DailyQuoteEvents.removeListener(quoteChangedListener);
         if (dirty) {
             dirty = false;
             persist();
@@ -303,6 +368,125 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         }
     }
 
+    /// 初始化每日一言：内置回退、10 分钟计时、可见/聚焦控制与设置变更监听。
+    private void installQuoteRefresh() {
+        // 先用内置语料占位；设置从 io 线程读取，避免 FX 线程磁盘 IO。
+        applyQuote(quoteService.initialQuote());
+        applyQuoteConfiguration();
+        quoteService.reloadConfigAsync(config -> {
+            if (!disposed) {
+                applyQuoteConfiguration();
+            }
+        });
+
+        quoteTimer.getKeyFrames().setAll(new KeyFrame(Duration.minutes(10), event -> {
+            if (!disposed && quoteService.canAutoRefresh(Instant.now())) {
+                quoteService.refresh(false, result -> {
+                    if (!disposed) {
+                        applyQuote(result.quote());
+                    }
+                });
+            }
+        }));
+        quoteTimer.setCycleCount(Animation.INDEFINITE);
+
+        sceneProperty().addListener(quoteSceneListener);
+        visibleProperty().addListener(quoteVisibilityListener);
+        DailyQuoteEvents.addListener(quoteChangedListener);
+        if (getScene() != null) {
+            getScene().windowProperty().addListener(quoteWindowListener);
+            attachQuoteWindow(getScene().getWindow());
+        }
+    }
+
+    /// 应用一条每日一言。
+    private void applyQuote(@NotNull DailyQuote quote) {
+        String line = quote.displayLine();
+        quoteLabel.setText(line);
+        quoteTooltip.setText(line);
+    }
+
+    /// 根据配置显示/隐藏每日一言，并更新计时器状态。
+    private void applyQuoteConfiguration() {
+        DailyQuoteSettings.Config config = quoteService.config();
+        boolean visible = config.enabled();
+        quoteLabel.setVisible(visible);
+        quoteLabel.setManaged(visible);
+        updateQuoteTimer();
+    }
+
+    /// 设置页修改每日一言配置后重新读取并刷新。
+    private void onQuoteSettingsChanged() {
+        if (disposed) {
+            return;
+        }
+        quoteService.reloadConfigAsync(config -> {
+            if (disposed) {
+                return;
+            }
+            applyQuoteConfiguration();
+            if (!config.enabled()) {
+                applyQuote(quoteService.initialQuote());
+            }
+        });
+    }
+
+    /// 请求刷新每日一言；失败时服务会静默回退到内置静态语料。
+    private void refreshQuote(boolean manual) {
+        if (disposed) {
+            return;
+        }
+        quoteService.refresh(manual, result -> {
+            if (!disposed) {
+                applyQuote(result.quote());
+            }
+        });
+    }
+
+    /// 仅在主页可见且窗口聚焦时运行 10 分钟计时器。
+    private void updateQuoteTimer() {
+        boolean active = !disposed
+                && quoteLabel.isVisible()
+                && isVisible()
+                && getScene() != null
+                && getScene().getWindow() != null
+                && getScene().getWindow().isFocused();
+        if (active) {
+            // 主页重新可见/窗口重新聚焦时，如果已过刷新时间就立即补一次，
+            // 而不是再等一个 10 分钟周期。
+            if (quoteService.canAutoRefresh(Instant.now())) {
+                refreshQuote(false);
+            }
+            if (quoteTimer.getStatus() != Animation.Status.RUNNING) {
+                quoteTimer.play();
+            }
+        } else {
+            quoteTimer.stop();
+        }
+    }
+
+    /// 绑定窗口焦点监听。
+    private void attachQuoteWindow(@Nullable Window window) {
+        if (quoteWindow == window) {
+            updateQuoteTimer();
+            return;
+        }
+        detachQuoteWindow();
+        quoteWindow = window;
+        if (window != null) {
+            window.focusedProperty().addListener(quoteFocusListener);
+        }
+        updateQuoteTimer();
+    }
+
+    /// 解除窗口焦点监听。
+    private void detachQuoteWindow() {
+        if (quoteWindow != null) {
+            quoteWindow.focusedProperty().removeListener(quoteFocusListener);
+            quoteWindow = null;
+        }
+    }
+
     /// 构建顶部：问候与运行状态。
     ///
     /// 实例/下载/设置入口在全局 `CommunitySideBar`；账户入口在左栏账户卡（打开 `ManagementPage` 的账户页）。
@@ -313,13 +497,25 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         greeting.getStyleClass().addAll("title-label", "community-headline");
 
         runStatus.getStyleClass().addAll("subtitle-label", "community-label", "community-status", "community-status-idle");
-        HBox statusRow = new HBox(8, BuiltinWidgets.caption(i18n("community.home.subtitle")), runStatus);
+        quoteLabel.getStyleClass().addAll("subtitle-label", "community-label", "community-daily-quote");
+        quoteLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+        quoteLabel.setMinWidth(0);
+        quoteLabel.setMaxWidth(Double.MAX_VALUE);
+        quoteLabel.setPrefWidth(0);
+        quoteLabel.setTooltip(quoteTooltip);
+        HBox.setHgrow(quoteLabel, Priority.ALWAYS);
+        runStatus.setMinWidth(Region.USE_PREF_SIZE);
+        HBox statusRow = new HBox(8, quoteLabel, runStatus);
         statusRow.setAlignment(Pos.CENTER_LEFT);
+        statusRow.setMaxWidth(Double.MAX_VALUE);
         VBox titles = new VBox(4, greeting, statusRow);
 
         JFXButton customizeButton = BuiltinWidgets.borderButton(
                 i18n("community.home.customize"), this::startEditing);
-        HBox header = new HBox(10, titles, BuiltinWidgets.spacer(), customizeButton);
+        Region headerSpacer = BuiltinWidgets.spacer();
+        HBox.setHgrow(headerSpacer, Priority.NEVER);
+        HBox header = new HBox(10, titles, headerSpacer, customizeButton);
+        HBox.setHgrow(titles, Priority.ALWAYS);
         if (M3Settings.isM3Enabled()) {
             Label m3Badge = new Label("M3");
             m3Badge.getStyleClass().add("community-m3-badge");

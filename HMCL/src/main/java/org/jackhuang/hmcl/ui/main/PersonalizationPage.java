@@ -45,6 +45,7 @@ import org.glavo.monetfx.Brightness;
 import org.glavo.monetfx.ColorStyle;
 import org.glavo.uuid.UUIDs;
 import org.jackhuang.hmcl.community.dashboard.builtin.HomeCustomizationPane;
+import org.jackhuang.hmcl.community.ui.DailyQuoteSettingsPane;
 import org.jackhuang.hmcl.setting.BackgroundType;
 import org.jackhuang.hmcl.setting.FontManager;
 import org.jackhuang.hmcl.setting.LauncherSettings;
@@ -119,6 +120,9 @@ public class PersonalizationPage extends StackPane {
 
     /// 主页组件自定义区。
     private final HomeCustomizationPane homeCustomizationPane;
+
+    /// 每日一言设置区。
+    private final DailyQuoteSettingsPane dailyQuoteSettingsPane;
 
     /// Snaps a percent value to the nearest 5% opacity tick.
     private static double snapOpacity(double val) {
@@ -432,6 +436,7 @@ public class PersonalizationPage extends StackPane {
         scrollPane.setFitToWidth(true);
         getChildren().setAll(scrollPane);
         homeCustomizationPane = new HomeCustomizationPane();
+        dailyQuoteSettingsPane = new DailyQuoteSettingsPane();
 
         ComponentList themeList = new ComponentList();
         {
@@ -1320,7 +1325,9 @@ public class PersonalizationPage extends StackPane {
 
         content.getChildren().addAll(
                 ComponentList.createComponentListTitle(i18n("community.home.widgets.title")),
-                homeCustomizationPane);
+                homeCustomizationPane,
+                ComponentList.createComponentListTitle(i18n("community.dailyQuote.title")),
+                dailyQuoteSettingsPane);
     }
 
     /// 滚动到“主页组件”自定义区；由主页“自定义”按钮调用。

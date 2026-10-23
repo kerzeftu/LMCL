@@ -318,3 +318,15 @@
     -fx-text-fill: -monet-on-surface-variant;
     -fx-font-size: 11px;
 }
+
+.community-daily-quote {
+    -fx-text-fill: -monet-on-surface-variant;
+}
+
+.community-daily-quote-preview {
+    -fx-background-color: -monet-surface-container-low;
+    -fx-background-radius: 12;
+    -fx-padding: 12 14 12 14;
+    -fx-text-fill: -monet-on-surface;
+    -fx-font-size: 14px;
+}
