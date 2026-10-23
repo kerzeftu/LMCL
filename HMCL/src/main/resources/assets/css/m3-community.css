@@ -40,6 +40,69 @@
     -fx-stroke-width: 4px;
 }
 
+
+/* 阶段 A 可见基线：只换表面/圆角/文字层级，不改布局与业务行为。 */
+.lmcl-m3 .community-sidebar {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-border-color: transparent -m3-color-outline-variant transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.lmcl-m3 .community-sidebar-button {
+    -fx-background-radius: 16;
+}
+
+.lmcl-m3 .community-sidebar-button:hover {
+    -fx-background-color: -m3-color-surface-container-high;
+}
+
+.lmcl-m3 .community-sidebar-button .svg {
+    -fx-fill: -m3-color-on-surface-variant;
+}
+
+.lmcl-m3 .community-sidebar-button.active {
+    -fx-background-color: -m3-color-primary-container;
+}
+
+.lmcl-m3 .community-sidebar-button.active .svg {
+    -fx-fill: -m3-color-on-primary-container;
+}
+
+.lmcl-m3 .community-headline {
+    -fx-font-size: 28px;
+    -fx-font-weight: 500;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.lmcl-m3 .jfx-button-border,
+.lmcl-m3 .jfx-button-raised {
+    -fx-background-color: -m3-color-primary-container;
+    -fx-text-fill: -m3-color-on-primary-container;
+    -fx-background-radius: 20;
+    -fx-padding: 8 18 8 18;
+}
+
+.lmcl-m3 .jfx-button-border:hover,
+.lmcl-m3 .jfx-button-raised:hover {
+    -fx-background-color: derive(-m3-color-primary-container, -6%);
+}
+
+.lmcl-m3 .card {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-background-radius: 16;
+    -fx-border-color: -m3-color-outline-variant;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+}
+
+.lmcl-m3 .community-m3-badge {
+    -fx-background-color: -m3-color-primary;
+    -fx-text-fill: -m3-color-on-primary;
+    -fx-background-radius: 999;
+    -fx-padding: 2 10 2 10;
+    -fx-font-size: 11px;
+}
+
 /* 阶段 A：M3 宿主只做基础 token 映射，不改变现有页面布局。 */
 .lmcl-m3-host {
     -fx-background-color: transparent;
