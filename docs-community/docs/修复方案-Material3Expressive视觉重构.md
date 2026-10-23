@@ -1,16 +1,17 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-23 切片 A）：M3 基座已实现并生成 `m3expressive1` 测试包，默认关闭，待 Windows 实机验收；切片 B–G 尚未开工。**
+> **状态（2026-10-24 规划优化）：切片 A 基座已实现并默认关闭；v3.17.1 主页卡片动态高度已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；账户卡/5×7 日历改版另见 [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)，尚未开工。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17
-> - 当前代码：`/home/kerze/hmclce/lmcl`，HEAD `99f2e8fc2`（切片 A），工作区 clean
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.1
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.1 交付后 `main`（文档提交 `61392b6cd`）；切片 A 的 `m3expressive1` 已由 `m3expressive3` 取代
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   `-Dlmcl.visual.m3=on` 时只给壳层子树安装 m3fx，默认关闭时与 1.0.0 一致。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包已切换到 `m3expressive1`。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive3`（v3.17.1 主页动态高度）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
+> - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
 > 本文回答“怎么做、分几步、每步改哪些文件、怎么验收、失败了怎么退”。
-> 阶段 0 的 spike 已按用户 m14676 开工并落盘；切片 A 已实现；B–G 仍需逐切片批准。
+> 阶段 0 spike 已落盘；切片 A 已实现；B–G 仍需逐切片批准。
 
 ---
 
@@ -153,13 +154,17 @@ D6（进度侵入）**已批准**；D7（启动按钮是否 FAB）与 D8（MVP �
 `HMCL/src/main/java/org/jackhuang/hmcl/community/dashboard/builtin/HomePane.java`：
 
 - `extends VBox`，`HOME_PADDING = Insets(10,12,12,12)`；
-- 左列 `infoColumn`（宽 340）：账户卡 + `activity-calendar`(318) + `recent-worlds`(272)；
-- 右列 `instanceColumn`：`launch`(168)、`pinned-instances`(188)、`java-recommend`(168)、
-  `snapshot`(176)、`crash-history`(176)、`health-check`(154)、`network`(142)；
-- 左右各一个 `ScrollPane`；`addWidget` 设 `minHeight` 槽位，`prefHeight` 随内容；
-- 共 9 张卡，无 memory 卡（v3.5 移除）。
+- 左列 `infoColumn`（宽 340）：固定账户卡 + `activity-calendar` + `recent-worlds`；
+- 右列 `instanceColumn`：`launch`、`pinned-instances`、`java-recommend`、
+  `snapshot`、`crash-history`、`health-check`、`network`；
+- 左右各一个独立 `ScrollPane`；账户卡固定左栏，不进入可拖拽组件列表；
+- 共 9 张组件卡，无 memory/storage 卡（v3.5 移除 memory，v3.9 移除 storage）；
+- **v3.17.1 已删除固定槽位表**：`HomePane.addWidget` 设 `minHeight=USE_PREF_SIZE`、
+  `prefHeight=USE_COMPUTED_SIZE`、`maxHeight=USE_PREF_SIZE`，卡片高度 = 标题 + 实际内容 + footer；
+- 卡片 footer 统一由 `BuiltinWidgets.cardFooter` / `cardContent` 生成：一个按钮靠右，
+  恰好两个一左一右，三个及以上靠右成组；正文 `VBox` 吸收多余高度，footer 贴底。
 
-**结论**：布局已稳定，M3 化只换表面与字体/按钮，不动槽位顺序。
+**结论**：布局已稳定，M3 化只换表面与字体/按钮；**不要重新引入固定卡片高度或槽位表**。
 
 ### 2.3 进度/加载现状
 
@@ -2460,3 +2465,118 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 1. 用户用 `m3expressive1` 包做 off/on 对照截图，确认默认关闭无回归、开启后页面可打开。
 2. 根据截图修 A 的布局/CSS 问题，必要时补 `visual` 设置入口。
 3. A 验收通过后再规划 B：64px 侧栏毛玻璃、主页头部/卡片玻璃、壁纸快照与降级。
+
+---
+
+## 19. 执行规范：从参考主提示词吸收的约束与工作法
+
+> 本节依据用户 2026-10-24 提供的《HMCL × Material 3 Expressive 重构 —— 主提示词》
+> （附件 `HMCL_M3E重构_AI提示词..md`）整理，并结合 LMCL 已批准的 D1–D7 与现有代码基线。
+> 它**补充** §4/§5，不替代已批准的决策；冲突时以本文 §0.4/§14 的决策表和用户最新指令为准。
+
+### 19.1 硬约束（违反即返工）
+
+| # | 约束 | 在 LMCL 的落点 |
+|---|---|---|
+| H1 | 禁止引入 Jetpack Compose、Android、Web 前端 API | 只允许 JavaFX 21 + 现有 HMCL/m3fx API；不引入 WebView 方案 |
+| H2 | 不改 `HMCLCore` 的下载、认证、游戏版本、任务框架逻辑 | M3 切片只改 `HMCL/src/main/java/org/jackhuang/hmcl/community/**`、CSS、资源；上游侵入只走已登记的 13 处 |
+| H3 | 不修改既有 i18n key 的含义/拼写 | M3 重构阶段不重命名上游 key；只新增 `community.*` key，并跑 `:HMCL:checkTranslations` |
+| H4 | 每个切片必须能过构建 | `:HMCL:compileJava`、`:HMCL:checkTranslations`、community 测试；切片合并前再跑全量测试 |
+| H5 | 尊重 reduced motion；触控目标 ≥ 48dp（桌面按钮至少 36–40px 视觉 + 足够点击区） | 复用 `animationDisabled` 与 `M3Settings.reducedMotion`；图标按钮不缩小到不可点 |
+| H6 | 颜色角色必须配对使用 | `primary/onPrimary`、`surface/onSurface`、`surfaceContainer/onSurface` 成对；玻璃表面文字对比度 ≥ 4.5:1 |
+| H7 | GPLv3 + Apache-2.0 合规 | 保留 m3fx `LICENSE`/`NOTICE`/来源 commit；vendor 源码修改处标注修改人与日期；包内 `THIRD-PARTY-NOTICES.txt` 同步 |
+| H8 | 一次只改一个切片/一个页面 | 每个 PR 的 diff 要能单独回退；不把“换主题”和“重写交互”混在一起 |
+
+**与参考稿的差异**：参考稿写“i18n key 一个字符都不能动”；LMCL 的社区功能本来就有自己的
+`community.*` key，因此本方案解释为“**不改上游既有 key**，社区新增 key 必须三份语言同步”。
+
+### 19.2 JavaFX 能力缺口与我们的决策
+
+参考稿列出的 M3E 能力缺口，逐项落到 LMCL 的实现策略：
+
+| M3E 能力 | JavaFX 现实 | 本方案决策 | 明确不做 |
+|---|---|---|---|
+| Spring 物理动画 | 无刚度-阻尼模型；`Timeline` 打断会跳变 | 优先用 m3fx 的 motion API；只给 1–2 个 hero moment 做弹性；其余用 `Timeline` + `EASE_BOTH` | 不给所有 hover/展开都加 spring；不自研通用物理引擎 |
+| Shape morphing（35 形状） | 无任意多边形顶点插值 | 只用圆角/胶囊/圆形三类 shape token；需要 shape 变化时用固定两态切换 | 不逐帧插值 35 种形状；不在首版做 SVGPath morph |
+| 可变字体轴/连续字重 | `-fx-font-weight` 基本失效，Prism 降级为 bold 布尔 | 用字号、颜色、字距、留白建立层级；不伪造 350/450/550 字重 | 不引入可变字体渲染器；不承诺连续字重 |
+| Ripple / state layer | CSS `:hover/:pressed` 可用；JFXRippler 可复用 | 复用现有 JFXRippler 或 CSS 状态层；只给主要按钮加 ripple | 不重写全部控件的手势系统 |
+| 新组件族（ButtonGroup/SplitButton/FAB Menu/LoadingIndicator/Wavy…） | 没有原生实现 | 用 m3fx 已有组件；m3fx 没有的，用 HMCL 现有控件 + CSS 降级 | 不一次性自研整套 M3 组件库 |
+| 动态色角色扩展 | MonetFX 已生成 `-monet-*`；缺 vibrant/harmonization/12 fixed accent/5 级 surface container | 在 `M3Host` 的主题桥接里补少量角色映射；缺的角色用最接近的 `-monet-*` 兜底 | 不引入第二套 HCT/CAM16 实现 |
+| Reduced motion 系统开关 | JavaFX 无系统级查询 | 用 `visual.reducedMotion` + `animationDisabled` 两个显式开关；`M3MotionSupport` 统一桥接 | 不假装能读 Windows“减少动画”系统设置 |
+| Haptics / Wear 圆屏 | 桌面端无硬件形态 | 直接砍掉 | 不投入预算 |
+
+**结论**：把“形状 + 大色块 + 字号层级”作为主要表达手段；“弹簧动效”只用于 1–2 个 hero moment。
+这条结论与参考稿的“重构重心排序”一致。
+
+### 19.3 参考资源与使用边界
+
+以下资源只用于**查 token/规范/交互**，不自动成为运行时依赖；引入代码前必须核对许可证：
+
+| 资源 | 用途 | 许可证/边界 |
+|---|---|---|
+| `Glavo/m3fx` 与其 `hmcl-md3-demo` | 组件、主题、motion、HMCL 结构参考 | Apache-2.0；当前 JitPack，阶段 1 起 vendor 源码 |
+| verve-tokens | 35 个 Expressive shape、12 个 spring token、HCT/CAM16 | MIT；只抄 token/算法，保留版权 |
+| `@materialwebunofficial/md3e-web` | 36 组件规格、spring 阻尼参考 | 先核对仓库许可证；不直接复制运行时 |
+| `@ibx34/m3x` | 闭式 spring solver 参考 | 先核对许可证；只参考公式 |
+| MD3E frontend skill | `md3e-tokens.css` / `md3e-motion.css` / 组件规格 / 审计脚本 | 先核对许可证；不把 skill 当运行时依赖 |
+| Compose Material3 Expressive Catalog | 权威视觉对照 | 只做截图对照，不移植 Compose 代码 |
+| AtlantaFX | SASS 模块化 token、Sampler 热重载思路 | MIT；只参考组织方式 |
+| JMetro | 零耦合、Skin API 增强现有控件的思路 | BSD-3；不复制整库 |
+| `Redlnn/md3-HMCL-demo` | **明确排除** | 非自由软件；只看公开截图找灵感，不参考实现、不复制代码 |
+
+**执行要求**：任何“参考实现”进入代码前，在 PR/文档里写清来源 URL、commit、许可证、
+复制范围；不能确认许可证的，只写规格结论，不贴代码。
+
+### 19.4 工作方法：token → 控件 → 页面 → hero
+
+每个切片按同一顺序，不允许从页面硬编码颜色开始：
+
+1. **token 层**：先确认需要哪些 color/type/shape/motion token；缺的补到 `m3-community.css`
+   或 `CommunityM3` 的映射，不在页面里写 hex。
+2. **基础控件**：只改该切片需要的按钮/输入/卡片/进度；用 `CommunityControls` 或 m3fx 工厂，
+   不新造平行控件。
+3. **页面**：把 token/控件装到页面；一次只做一个页面或一个页面组。
+4. **hero 动效**：最后加，最多 1–2 个；其余保持安静。
+
+补充纪律：
+
+- 每个切片单独分支/提交，diff 小、可回滚；
+- 不把“视觉替换”和“交互重写”放在同一个 PR；
+- 先跑 demo/spike 看方向，再改正式页面；
+- 遇到 API 不确定时，先写最小验证，不凭记忆编 API 名；
+- 每屏最多 1–2 个 hero moment，禁止“到处都在弹”。
+
+### 19.5 每个切片的交付物（强制）
+
+参考稿要求每步四项，LMCL 再加两项工程项：
+
+1. **token 变更**：改了哪些 token、为什么；没有就写“无”。
+2. **代码 diff**：精确到文件；列新增/修改/删除。
+3. **前后对比截图**：light/dark 各一组；Windows 实机；WSL2 无 GUI 时明确写“未验证”。
+4. **不确定清单**：没把握的 API、平台限制、需要用户拍板的点；不知道就写不知道。
+5. **验证记录**：编译、翻译检查、community/全量测试、`makeExecutables` 结果。
+6. **回退方式**：关了哪个开关/还原哪些文件能回到上一版。
+
+### 19.6 与现有 §5 阶段计划的关系
+
+- §5 的阶段划分、文件清单、工期仍然有效；
+- §19 补充“每步怎么做、做到什么程度、交付什么”；
+- 如果 §5 的旧验收与 §19 冲突，以 §19 的硬约束和交付物为准；
+- 阶段 0 的历史记录保留，不再重复“Go/No-Go 已通过”的表述；当前状态是“切片 A 已实现、默认关闭、Windows 实机待验收”。
+
+### 19.7 当前基线校正（避免按旧数字执行）
+
+| 项 | 旧方案写法 | 2026-10-24 实际 |
+|---|---|---|
+| 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
+| 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
+| 当前测试包 | `m3expressive1` | `m3expressive3`（jar 11,879,951 B / zip 74,936,223 B） |
+| 切片 A 状态 | 待 Windows 验收 | 仍待 Windows 实机验收；默认关闭，未改发布默认值 |
+| 主页账户卡/日历 | 未涉及 | 另有[主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)规划稿，未开工 |
+
+### 19.8 下一步建议
+
+1. 用户先确认[主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)的三个待确认点；
+2. 该改版作为独立切片实施、验证、打包，不并入 M3 B–G；
+3. M3 切片 B（侧栏/主页玻璃）继续等 Windows 对切片 A 的验收结论；
+4. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
