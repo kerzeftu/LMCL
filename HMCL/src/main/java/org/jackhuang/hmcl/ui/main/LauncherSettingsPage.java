@@ -19,6 +19,7 @@ package org.jackhuang.hmcl.ui.main;
 
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import org.jackhuang.hmcl.community.ui.StatisticsPage;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.GameSettings;
 import org.jackhuang.hmcl.setting.GameDirectoryManager;
@@ -40,6 +41,7 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
     private final TabHeader.Tab<GameSettingsPage<GameSettings.Preset>> gameTab = new TabHeader.Tab<>("versionSettingsPage");
     private final TabHeader.Tab<SettingsPage> settingsTab = new TabHeader.Tab<>("settingsPage");
     private final TabHeader.Tab<PersonalizationPage> personalizationTab = new TabHeader.Tab<>("personalizationPage");
+    private final TabHeader.Tab<StatisticsPage> statisticsTab = new TabHeader.Tab<>("statisticsPage");
     private final TabHeader.Tab<DownloadSettingsPage> downloadTab = new TabHeader.Tab<>("downloadSettingsPage");
     private final TransitionPane transitionPane = new TransitionPane();
 
@@ -47,8 +49,9 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
         gameTab.setNodeSupplier(() -> new GameSettingsPage<>(GameSettings.Preset.class));
         settingsTab.setNodeSupplier(SettingsPage::new);
         personalizationTab.setNodeSupplier(PersonalizationPage::new);
+        statisticsTab.setNodeSupplier(StatisticsPage::new);
         downloadTab.setNodeSupplier(DownloadSettingsPage::new);
-        tab = new TabHeader(transitionPane, gameTab, settingsTab, personalizationTab, downloadTab);
+        tab = new TabHeader(transitionPane, gameTab, settingsTab, personalizationTab, statisticsTab, downloadTab);
 
         tab.select(gameTab);
         addEventHandler(Navigator.NavigationEvent.NAVIGATED, event -> gameTab.getNode().loadInstance(GameDirectoryManager.getSelectedRepository(), null));
@@ -58,6 +61,7 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
                 .startCategory(i18n("launcher").toUpperCase(Locale.ROOT))
                 .addNavigationDrawerTab(tab, settingsTab, i18n("settings.launcher.general"), SVG.TUNE)
                 .addNavigationDrawerTab(tab, personalizationTab, i18n("settings.launcher.appearance"), SVG.STYLE, SVG.STYLE_FILL)
+                .addNavigationDrawerTab(tab, statisticsTab, i18n("settings.statistics"), SVG.GRAPH2)
                 .addNavigationDrawerTab(tab, downloadTab, i18n("download"), SVG.DOWNLOAD);
         FXUtils.setLimitWidth(sideBar, 200);
         setLeft(sideBar);
@@ -89,6 +93,12 @@ public class LauncherSettingsPage extends DecoratorAnimatedPage implements Decor
     public void showHomeCustomization() {
         tab.select(personalizationTab, false);
         personalizationTab.getNode().scrollToHomeCustomization();
+    }
+
+    /// 选中“统计”设置 tab 并滚动到日历设置；主页日历卡使用。
+    public void showStatisticsCalendar() {
+        tab.select(statisticsTab, false);
+        statisticsTab.getNode().scrollToCalendarSettings();
     }
 
     @Override

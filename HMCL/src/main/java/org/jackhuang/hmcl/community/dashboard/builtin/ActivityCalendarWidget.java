@@ -20,7 +20,6 @@ package org.jackhuang.hmcl.community.dashboard.builtin;
 import javafx.animation.PauseTransition;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.GridPane;
@@ -38,6 +37,7 @@ import org.jackhuang.hmcl.community.play.PlayRecordStore;
 import org.jackhuang.hmcl.community.play.PlayRecordStore.DayRecord;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
+import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
@@ -48,9 +48,7 @@ import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
-import static org.jackhuang.hmcl.ui.FXUtils.openFolder;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
@@ -66,6 +64,11 @@ public final class ActivityCalendarWidget extends DashboardWidget {
 
     private final Label summary = BuiltinWidgets.body("");
     private final Label hint = BuiltinWidgets.caption(i18n("community.calendar.hint"));
+    private final Label todayValue = metricValue();
+    private final Label todayUnit = metricUnit(i18n("community.calendar.unit.minutes"));
+    private final Label todaySessions = BuiltinWidgets.caption("");
+    private final Label weekValue = metricValue();
+    private final Label weekUnit = metricUnit(i18n("community.calendar.unit.minutes"));
     private final GridPane grid = new GridPane();
     private HBox footer;
     private final PauseTransition refreshDelay = new PauseTransition(Duration.seconds(5));
@@ -91,11 +94,34 @@ public final class ActivityCalendarWidget extends DashboardWidget {
         hint.getStyleClass().add("community-hint");
 
         footer = new HBox(8, hint, BuiltinWidgets.spacer(),
-                BuiltinWidgets.borderButton(i18n("community.calendar.settings"), this::openSettings));
+                BuiltinWidgets.borderButton(i18n("community.calendar.settings"), this::openCalendarSettings));
         footer.setAlignment(Pos.CENTER_RIGHT);
-        VBox body = new VBox(4, summary, grid);
+
+        HBox todayLine = new HBox(3, todayValue, todayUnit);
+        todayLine.setAlignment(Pos.BASELINE_LEFT);
+        HBox weekLine = new HBox(3, weekValue, weekUnit);
+        weekLine.setAlignment(Pos.BASELINE_LEFT);
+
+        VBox todayStats = new VBox(2,
+                BuiltinWidgets.caption(i18n("community.calendar.today_play")),
+                todayLine,
+                todaySessions,
+                weekSpacer(),
+                BuiltinWidgets.caption(i18n("community.calendar.week_total")),
+                weekLine);
+        todayStats.getStyleClass().add("community-calendar-stats");
+        todayStats.setMinWidth(100);
+        todayStats.setPrefWidth(112);
+        todayStats.setMaxWidth(124);
+        todayStats.setMaxHeight(Double.MAX_VALUE);
+        todayStats.setFillWidth(true);
+        HBox.setHgrow(todayStats, Priority.NEVER);
+
+        HBox calendarRow = new HBox(8, grid, BuiltinWidgets.spacer(), todayStats);
+        calendarRow.setAlignment(Pos.CENTER_LEFT);
+        VBox body = new VBox(4, summary, calendarRow);
         body.setFillWidth(true);
-        VBox.setVgrow(grid, Priority.ALWAYS);
+        VBox.setVgrow(calendarRow, Priority.ALWAYS);
 
         refreshDelay.setOnFinished(event -> requestRefresh());
         onDispose(installLaunchListener());
@@ -192,6 +218,7 @@ public final class ActivityCalendarWidget extends DashboardWidget {
         }
 
         updateSummary();
+        updateTodayStats();
         hint.setText(enabled ? i18n("community.calendar.hint") : i18n("community.calendar.disabled"));
     }
 
@@ -211,45 +238,72 @@ public final class ActivityCalendarWidget extends DashboardWidget {
         summary.setText(i18n("community.calendar.summary", days, formatHours(seconds)));
     }
 
-    private void openSettings() {
-        PlayRecordStore store = PlayRecordStore.get();
-        CheckBox enabledBox = new CheckBox(i18n("community.calendar.enabled"));
-        enabledBox.setSelected(store.enabled());
+    /// 更新“本日游玩时长”和“本周累计”两栏。
+    private void updateTodayStats() {
+        LocalDate today = LocalDate.now();
+        DayRecord todayRecord = data.get(today);
+        long todaySeconds = todayRecord == null ? 0 : todayRecord.playSeconds();
+        int todaySessionsCount = todayRecord == null ? 0 : todayRecord.sessions();
+        setMetric(todayValue, todayUnit, todaySeconds);
+        todaySessions.setText(todaySeconds <= 0
+                ? i18n("community.calendar.today.none")
+                : i18n("community.calendar.today.sessions", Math.max(1, todaySessionsCount)));
 
-        Label note = BuiltinWidgets.caption(i18n("community.calendar.enabled.note"));
-        HBox buttons = new HBox(8,
-                BuiltinWidgets.borderButton(i18n("community.calendar.open_folder"),
-                        () -> openFolder(store.dataFile().getParent())),
-                BuiltinWidgets.spacer(),
-                BuiltinWidgets.borderButton(i18n("community.calendar.clear"), () -> {
-                    Controllers.confirm(i18n("community.calendar.clear.confirm"), i18n("community.calendar.clear"), () -> {
-                        CompletableFuture.runAsync(() -> {
-                            try {
-                                store.clear();
-                            } catch (Throwable e) {
-                                LOG.warning("Failed to clear play records", e);
-                            }
-                        }, Schedulers.io()).thenRunAsync(this::requestRefresh, Schedulers.javafx());
-                    }, null);
-                }));
-        buttons.setAlignment(Pos.CENTER_LEFT);
+        LocalDate weekStart = today.with(DayOfWeek.MONDAY);
+        long weekSeconds = 0;
+        for (Map.Entry<LocalDate, DayRecord> entry : data.entrySet()) {
+            LocalDate date = entry.getKey();
+            if (!date.isBefore(weekStart) && !date.isAfter(today)) {
+                weekSeconds += entry.getValue().playSeconds();
+            }
+        }
+        setMetric(weekValue, weekUnit, weekSeconds);
+    }
 
-        VBox content = new VBox(10, enabledBox, note, buttons);
-        enabledBox.setOnAction(event -> {
-            boolean selected = enabledBox.isSelected();
-            enabledBox.setDisable(true);
-            CompletableFuture.runAsync(() -> {
-                try {
-                    store.setEnabled(selected);
-                } catch (Throwable e) {
-                    LOG.warning("Failed to save play record switch", e);
-                }
-            }, Schedulers.io()).thenRunAsync(() -> {
-                enabledBox.setDisable(false);
-                requestRefresh();
-            }, Schedulers.javafx());
-        });
-        Controllers.dialog(BuiltinWidgets.dialogRoot(i18n("community.calendar.settings"), content, 420));
+    /// 打开设置 → 统计 → 日历设置。
+    private void openCalendarSettings() {
+        try {
+            LauncherSettingsPage page = Controllers.getSettingsPage();
+            page.showStatisticsCalendar();
+            Controllers.navigate(page);
+        } catch (Throwable e) {
+            LOG.warning("Failed to open calendar settings", e);
+        }
+    }
+
+    /// 把秒数写入“数值 + 单位”两个标签；不足一小时显示分钟。
+    private static void setMetric(@NotNull Label value, @NotNull Label unit, long seconds) {
+        if (seconds >= 3600) {
+            value.setText(String.format(Locale.ROOT, "%.1f", seconds / 3600.0));
+            unit.setText(i18n("community.calendar.unit.hours"));
+        } else {
+            value.setText(Long.toString(seconds / 60));
+            unit.setText(i18n("community.calendar.unit.minutes"));
+        }
+    }
+
+    /// 创建统计大数字标签。
+    @NotNull
+    private static Label metricValue() {
+        Label label = new Label("0");
+        label.getStyleClass().add("community-calendar-metric");
+        return label;
+    }
+
+    /// 创建统计单位标签。
+    @NotNull
+    private static Label metricUnit(@NotNull String text) {
+        Label label = new Label(text);
+        label.getStyleClass().add("community-calendar-metric-unit");
+        return label;
+    }
+
+    /// 创建统计栏内的可伸缩空白。
+    @NotNull
+    private static Region weekSpacer() {
+        Region spacer = new Region();
+        VBox.setVgrow(spacer, Priority.ALWAYS);
+        return spacer;
     }
 
     private static int levelOf(@Nullable DayRecord record) {
