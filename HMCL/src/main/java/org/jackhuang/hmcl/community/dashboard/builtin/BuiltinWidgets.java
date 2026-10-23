@@ -175,6 +175,49 @@ final class BuiltinWidgets {
         return box;
     }
 
+    /// 创建首页卡片底部的操作行。
+    ///
+    /// 规则（m19511）：一个按钮靠右；恰好两个按钮时一左一右，中间由可伸缩
+    /// 空白撑开；三个及以上靠右成组。调用方只传按钮，状态/提示文字应放在
+    /// body 中，避免抢占左右位置。
+    ///
+    /// @param buttons 按钮
+    /// @return 底部操作行
+    @NotNull
+    static HBox cardFooter(@NotNull Node... buttons) {
+        HBox footer = new HBox(8);
+        footer.getStyleClass().add("community-card-actions");
+        footer.setAlignment(Pos.CENTER_RIGHT);
+        footer.setFillHeight(true);
+        if (buttons.length == 2) {
+            footer.getChildren().addAll(buttons[0], spacer(), buttons[1]);
+        } else {
+            footer.getChildren().add(spacer());
+            footer.getChildren().addAll(buttons);
+        }
+        return footer;
+    }
+
+    /// 把卡片正文与底部操作行组合成“正文可增长、footer 贴底”的结构。
+    ///
+    /// 卡片高度由自身 `prefHeight` 决定；父容器额外给高度时，正文容器吃掉
+    /// 多余空间，footer 保持在卡片底部。
+    ///
+    /// @param body 正文
+    /// @param footer 底部操作行
+    /// @return 卡片内容根
+    @NotNull
+    static VBox cardContent(@NotNull Node body, @NotNull Node footer) {
+        VBox bodyBox = new VBox(body);
+        bodyBox.setFillWidth(true);
+        bodyBox.setMaxHeight(Double.MAX_VALUE);
+        VBox.setVgrow(bodyBox, Priority.ALWAYS);
+
+        VBox content = new VBox(6, bodyBox, footer);
+        content.setFillWidth(true);
+        return content;
+    }
+
     /// 截断过长的实例 id，保留可辨识前缀。
     ///
     /// @param text 原文

@@ -78,6 +78,9 @@ public final class RecentWorldsWidget extends DashboardWidget {
     /// 绝对时间格式。
     private static final DateTimeFormatter ABSOLUTE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+    /// 卡片最多展示的存档数；更多存档进入“全部存档”。
+    private static final int MAX_VISIBLE = 3;
+
     private final VBox rows = new VBox(4);
     private final Label empty = BuiltinWidgets.caption(i18n("community.worlds.empty"));
     private final Label partial = BuiltinWidgets.caption(i18n("community.worlds.partial"));
@@ -88,7 +91,6 @@ public final class RecentWorldsWidget extends DashboardWidget {
     private boolean partialFailure;
     private @Nullable Throwable loadError;
     private @Nullable String actionError;
-    private int renderedRows = -1;
 
     /// 构造最近存档卡。
     ///
@@ -106,16 +108,13 @@ public final class RecentWorldsWidget extends DashboardWidget {
         partial.setVisible(false);
         partial.getStyleClass().add("community-warning");
 
-        HBox footer = new HBox(8, allButton, BuiltinWidgets.spacer(), refreshButton);
-        footer.setAlignment(Pos.CENTER_LEFT);
-
-        VBox box = new VBox(4, rows, empty, partial, footer);
-        box.setFillWidth(true);
+        HBox footer = BuiltinWidgets.cardFooter(allButton, refreshButton);
+        VBox body = new VBox(4, rows, empty, partial);
+        body.setFillWidth(true);
         VBox.setVgrow(rows, Priority.ALWAYS);
 
-        heightProperty().addListener((observable, oldValue, newValue) -> render());
         onDispose(installLaunchListener());
-        return box;
+        return BuiltinWidgets.cardContent(body, footer);
     }
 
     @Override
@@ -178,17 +177,12 @@ public final class RecentWorldsWidget extends DashboardWidget {
         this.partialFailure = result.partialFailure();
         this.loadError = result.error();
         this.actionError = null;
-        this.renderedRows = -1;
         render();
     }
 
-    /// 按当前高度渲染 1/3/6 条。
+    /// 渲染最近存档，最多 [MAX_VISIBLE] 条。
     private void render() {
-        int visible = visibleRows();
-        if (visible == renderedRows && !rows.getChildren().isEmpty()) {
-            return;
-        }
-        renderedRows = visible;
+        int visible = Math.min(MAX_VISIBLE, entries.size());
         rows.getChildren().clear();
         boolean hasError = loadError != null;
         boolean showPartial = (partialFailure || actionError != null) && !entries.isEmpty() && !hasError;
@@ -202,7 +196,7 @@ public final class RecentWorldsWidget extends DashboardWidget {
             rows.getChildren().add(BuiltinWidgets.body(i18n("community.worlds.error")));
             return;
         }
-        for (int i = 0; i < Math.min(visible, entries.size()); i++) {
+        for (int i = 0; i < visible; i++) {
             rows.getChildren().add(createRow(entries.get(i)));
         }
     }
@@ -251,7 +245,6 @@ public final class RecentWorldsWidget extends DashboardWidget {
             LOG.warning("Failed to launch world " + entry.fileName() + " of " + entry.instanceId(), e);
             actionError = i18n("community.launch.failed",
                     e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-            renderedRows = -1;
             render();
         }
     }
@@ -310,17 +303,6 @@ public final class RecentWorldsWidget extends DashboardWidget {
                 Schedulers.javafx().execute(delay::playFromStart);
             }
         }
-    }
-
-    private int visibleRows() {
-        double height = getHeight();
-        if (height >= 300) {
-            return 6;
-        }
-        if (height >= 170) {
-            return 3;
-        }
-        return 1;
     }
 
     @NotNull

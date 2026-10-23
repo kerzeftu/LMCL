@@ -22,7 +22,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.dashboard.DashboardContext;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidget;
@@ -81,14 +80,14 @@ public final class SnapshotWidget extends DashboardWidget {
     @Override
     @NotNull
     protected Node createContent() {
-        HBox buttons = new HBox(8, rollbackButton, markButton, manageButton);
-        VBox content = new VBox(4, lastLabel, detailLabel, sharedLabel, statusLabel, buttons);
-        content.setMinWidth(0);
-        HBox.setHgrow(detailLabel, Priority.ALWAYS);
+        HBox buttons = BuiltinWidgets.cardFooter(rollbackButton, markButton, manageButton);
+        VBox body = new VBox(4, lastLabel, detailLabel, sharedLabel, statusLabel);
+        body.setMinWidth(0);
+        body.setFillWidth(true);
         context.selectedInstanceId().addListener(selectionListener);
         onDispose(() -> context.selectedInstanceId().removeListener(selectionListener));
         updateButtons();
-        return content;
+        return BuiltinWidgets.cardContent(body, buttons);
     }
 
     @Override

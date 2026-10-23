@@ -126,6 +126,10 @@
     -fx-text-fill: -monet-tertiary;
 }
 
+.community-error {
+    -fx-text-fill: -monet-error;
+}
+
 /* Settings > Appearance > Home widgets: left/right/disabled drag columns. */
 .community-widget-column {
     -fx-background-color: -monet-surface-container-low;
@@ -159,4 +163,51 @@
 
 .community-widget-drag-handle .svg {
     -fx-fill: -monet-on-surface-variant;
+}
+
+/* Home dashboard: cards size to content; footer stays at the bottom. */
+.community-home .card {
+    -fx-background-radius: 16;
+    -fx-padding: 12;
+}
+
+.community-home .title-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: 600;
+}
+
+.community-home .community-headline {
+    -fx-font-size: 26px;
+}
+
+.community-home .community-card-actions {
+    -fx-padding: 2 0 0 0;
+}
+
+.community-home .community-card-actions .jfx-button {
+    -fx-min-height: 30;
+}
+
+.community-home .community-source-row {
+    -fx-padding: 3 0 3 0;
+}
+
+.community-home .community-source-name {
+    -fx-text-fill: -monet-on-surface;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.community-home .community-source-url {
+    -fx-text-fill: -monet-on-surface-variant;
+    -fx-font-size: 11px;
+}
+
+.community-home .community-source-empty {
+    -fx-padding: 4 0 4 0;
+}
+
+.community-home .community-source-hint {
+    -fx-text-fill: -monet-on-surface-variant;
+    -fx-font-size: 11px;
 }

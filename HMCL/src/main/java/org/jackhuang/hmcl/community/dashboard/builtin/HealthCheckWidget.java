@@ -18,7 +18,6 @@
 package org.jackhuang.hmcl.community.dashboard.builtin;
 
 import javafx.animation.PauseTransition;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -92,15 +91,12 @@ public final class HealthCheckWidget extends DashboardWidget {
         error.setVisible(false);
         error.setManaged(false);
 
-        footer = new HBox(8, recheck, BuiltinWidgets.spacer());
-        footer.setAlignment(Pos.CENTER_LEFT);
-
-        VBox box = new VBox(3, summary, time, stale, details, error, footer);
-        box.setFillWidth(true);
+        footer = BuiltinWidgets.cardFooter(recheck);
+        VBox body = new VBox(4, summary, time, stale, details, error);
+        body.setFillWidth(true);
         VBox.setVgrow(details, Priority.ALWAYS);
-        heightProperty().addListener((observable, oldValue, newValue) -> render());
         onDispose(installLaunchListener());
-        return box;
+        return BuiltinWidgets.cardContent(body, footer);
     }
 
     @Override
@@ -122,9 +118,8 @@ public final class HealthCheckWidget extends DashboardWidget {
 
     private void render() {
         details.getChildren().clear();
-        boolean compact = getHeight() < 170;
-        time.setVisible(!compact);
-        time.setManaged(!compact);
+        time.setVisible(true);
+        time.setManaged(true);
         if (report == null) {
             summary.setText(i18n("community.health.empty"));
             time.setText("");
@@ -148,27 +143,24 @@ public final class HealthCheckWidget extends DashboardWidget {
         time.setText(i18n("community.health.time", formatTime(report.at())));
 
         boolean isStale = report.at().isBefore(Instant.now().minus(java.time.Duration.ofDays(STALE_DAYS)));
-        stale.setVisible(isStale && !compact);
-        stale.setManaged(isStale && !compact);
+        stale.setVisible(isStale);
+        stale.setManaged(isStale);
         error.setVisible(false);
         error.setManaged(false);
 
-        if (compact) {
-            return;
-        }
         int shown = 0;
         for (CheckResult check : report.checks()) {
             if (check.severity() == Severity.OK || check.severity() == Severity.SKIPPED) {
                 continue;
             }
-            if (shown++ >= 2) {
+            if (shown++ >= 4) {
                 break;
             }
             Label line = BuiltinWidgets.caption(i18n("community.preflight.check." + check.id())
                     + " · " + i18n("community.preflight.severity." + check.severity().name().toLowerCase()));
-            line.setStyle(check.severity() == Severity.ERROR
-                    ? "-fx-text-fill: -monet-error;"
-                    : "-fx-text-fill: -monet-tertiary;");
+            line.getStyleClass().add(check.severity() == Severity.ERROR
+                    ? "community-error"
+                    : "community-warning");
             details.getChildren().add(line);
         }
     }

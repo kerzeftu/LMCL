@@ -125,10 +125,6 @@
 }
 
 /* 基础表面与文本 token；阶段 B 再细化卡片/侧栏。 */
-.lmcl-m3 .card {
-    -fx-background-color: -m3-color-surface-container-low;
-}
-
 .lmcl-m3 .jfx-button {
     -fx-text-fill: -m3-color-on-surface;
 }
@@ -140,4 +136,29 @@
 
 .lmcl-m3 .md-list-cell {
     -fx-text-fill: -m3-color-on-surface;
+}
+
+
+/* 首页卡片：与 .community-home 的经典样式共用结构，M3 只补 token。 */
+.lmcl-m3 .community-home .card {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-border-color: -m3-color-outline-variant;
+}
+
+.lmcl-m3 .community-home .community-source-name {
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.lmcl-m3 .community-home .community-source-url,
+.lmcl-m3 .community-home .community-source-hint {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+
+.lmcl-m3 .community-warning {
+    -fx-text-fill: -m3-color-tertiary;
+}
+
+.lmcl-m3 .community-error {
+    -fx-text-fill: -m3-color-error;
 }

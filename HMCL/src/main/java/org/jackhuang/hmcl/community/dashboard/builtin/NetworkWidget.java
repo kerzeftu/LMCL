@@ -20,6 +20,7 @@ package org.jackhuang.hmcl.community.dashboard.builtin;
 import com.jfoenix.controls.JFXButton;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.dashboard.DashboardContext;
@@ -31,25 +32,32 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 首页网络卡：只读展示当前下载源配置，并提供配置入口。
+/// 首页网络卡：只读展示当前全部下载源，并提供配置入口。
 ///
 /// 数据只来自 [CommunityDownloadSources]；不读取上游 `versionListSource` / `fileDownloadSource`，
-/// 也不做任何测速或网络探测。
+/// 也不做任何测速或网络探测。每个已配置源都显示一行名称和一行完整 URL，数量如实显示。
 @NotNullByDefault
 public final class NetworkWidget extends DashboardWidget {
-
-    /// 源行。
-    private final Label sourceLabel = BuiltinWidgets.caption("");
 
     /// 源数量行。
     private final Label countLabel = BuiltinWidgets.caption("");
 
-    /// 零内置说明行（不表示官方兜底）。
-    private final Label fallbackLabel = BuiltinWidgets.caption(i18n("community.network.fallback"));
+    /// 逐源列表。
+    private final VBox sourceList = new VBox(4);
+
+    /// 空态标题。
+    private final Label emptyLabel = BuiltinWidgets.caption(i18n("community.network.empty"));
+
+    /// 空态提示。
+    private final Label emptyHint = BuiltinWidgets.caption(i18n("community.network.empty.hint"));
+
+    /// 空态容器。
+    private VBox emptyBox;
 
     /// 配置按钮。
     private final JFXButton configureButton = BuiltinWidgets.borderButton(
@@ -75,11 +83,16 @@ public final class NetworkWidget extends DashboardWidget {
     protected Node createContent() {
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);
+        emptyHint.getStyleClass().add("community-source-hint");
+        emptyBox = new VBox(2, emptyLabel, emptyHint);
+        emptyBox.getStyleClass().add("community-source-empty");
+        emptyBox.setVisible(false);
+        emptyBox.setManaged(false);
 
-        HBox footer = new HBox(8, fallbackLabel, BuiltinWidgets.spacer(), configureButton);
-        VBox box = new VBox(3, sourceLabel, countLabel, errorLabel, footer);
-        box.setFillWidth(true);
-        return box;
+        HBox footer = BuiltinWidgets.cardFooter(configureButton);
+        VBox body = new VBox(4, countLabel, sourceList, emptyBox, errorLabel);
+        body.setFillWidth(true);
+        return BuiltinWidgets.cardContent(body, footer);
     }
 
     /// 读取下载源配置。
@@ -94,17 +107,54 @@ public final class NetworkWidget extends DashboardWidget {
     private void apply(@NotNull CommunityDownloadSources sources) {
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);
+        sourceList.getChildren().clear();
 
-        if (sources.isEmpty()) {
-            sourceLabel.setText(i18n("community.network.source.none"));
-        } else {
-            CommunityDownloadSource first = sources.sources().get(0);
-            sourceLabel.setText(i18n("community.network.source",
-                    BuiltinWidgets.shorten(first.name(), 16),
-                    CommunityDownloadSource.defaultName(first.url())));
+        int count = sources.size();
+        countLabel.setText(i18n("community.network.count", count, CommunityDownloadSources.MAX_SOURCES));
+
+        boolean empty = sources.isEmpty();
+        emptyBox.setVisible(empty);
+        emptyBox.setManaged(empty);
+        if (empty) {
+            return;
         }
-        countLabel.setText(i18n("community.network.sources",
-                sources.size(), CommunityDownloadSources.MAX_SOURCES));
+
+        for (int i = 0; i < count; i++) {
+            sourceList.getChildren().add(sourceRow(i + 1, sources.sources().get(i)));
+        }
+    }
+
+    /// 构建一个下载源行：第一行序号 + 名称，第二行完整 URL。
+    ///
+    /// @param index 从 1 开始的序号
+    /// @param source 下载源
+    /// @return 源行
+    @NotNull
+    private Node sourceRow(int index, @NotNull CommunityDownloadSource source) {
+        String url = source.url();
+        @Nullable String configuredName = source.name();
+        String name = configuredName == null || configuredName.isBlank()
+                ? CommunityDownloadSource.defaultName(url)
+                : configuredName;
+
+        Label nameLabel = BuiltinWidgets.caption(
+                i18n("community.network.source.item", index, BuiltinWidgets.shorten(name, 32)));
+        nameLabel.getStyleClass().add("community-source-name");
+        nameLabel.setMinWidth(0);
+        nameLabel.setMaxWidth(Double.MAX_VALUE);
+        nameLabel.setTooltip(new Tooltip(name));
+
+        Label urlLabel = BuiltinWidgets.caption(url);
+        urlLabel.getStyleClass().add("community-source-url");
+        urlLabel.setWrapText(true);
+        urlLabel.setMinWidth(0);
+        urlLabel.setMaxWidth(Double.MAX_VALUE);
+        urlLabel.setTooltip(new Tooltip(url));
+
+        VBox row = new VBox(1, nameLabel, urlLabel);
+        row.getStyleClass().add("community-source-row");
+        row.setFillWidth(true);
+        return row;
     }
 
     /// 打开设置页的“下载”tab。

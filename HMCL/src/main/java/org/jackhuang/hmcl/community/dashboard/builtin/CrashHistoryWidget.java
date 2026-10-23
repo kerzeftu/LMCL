@@ -52,11 +52,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 @NotNullByDefault
 public final class CrashHistoryWidget extends DashboardWidget {
 
-    /// 1×1 卡片最多显示两条。
-    private static final int COMPACT_ENTRIES = 2;
-
-    /// 2×1 卡片最多显示四条。
-    private static final int LARGE_ENTRIES = 4;
+    /// 卡片最多显示四条；更早的记录进入“查看全部”。
+    private static final int MAX_ENTRIES = 4;
 
     /// 时间格式。
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm");
@@ -75,9 +72,6 @@ public final class CrashHistoryWidget extends DashboardWidget {
 
     /// 最近一次加载的条目。
     private List<CrashEntry> entries = List.of();
-
-    /// 当前高度下最多显示几条。
-    private int maxEntries = COMPACT_ENTRIES;
 
     /// 查看全部。
     private final JFXButton moreButton = BuiltinWidgets.borderButton(
@@ -106,9 +100,6 @@ public final class CrashHistoryWidget extends DashboardWidget {
         unseenLabel.setVisible(false);
         unseenLabel.setManaged(false);
 
-        HBox footer = new HBox(8, emptyLabel, errorLabel, openFolderButton,
-                BuiltinWidgets.spacer(), unseenLabel, moreButton);
-        footer.setAlignment(Pos.CENTER_LEFT);
         emptyLabel.setVisible(false);
         emptyLabel.setManaged(false);
         errorLabel.setVisible(false);
@@ -116,18 +107,11 @@ public final class CrashHistoryWidget extends DashboardWidget {
         openFolderButton.setVisible(false);
         openFolderButton.setManaged(false);
 
-        VBox box = new VBox(4, list, footer);
-        box.setFillWidth(true);
+        HBox footer = BuiltinWidgets.cardFooter(openFolderButton, moreButton);
+        VBox body = new VBox(4, list, emptyLabel, errorLabel, unseenLabel);
+        body.setFillWidth(true);
         VBox.setVgrow(list, Priority.ALWAYS);
-
-        heightProperty().addListener((observable, oldValue, newValue) -> {
-            int limit = newValue.doubleValue() >= 220 ? LARGE_ENTRIES : COMPACT_ENTRIES;
-            if (limit != maxEntries) {
-                maxEntries = limit;
-                renderRows();
-            }
-        });
-        return box;
+        return BuiltinWidgets.cardContent(body, footer);
     }
 
     /// 读取崩溃历史。
@@ -174,7 +158,7 @@ public final class CrashHistoryWidget extends DashboardWidget {
     /// 按当前卡片高度渲染摘要行。
     private void renderRows() {
         list.getChildren().clear();
-        int limit = Math.min(maxEntries, entries.size());
+        int limit = Math.min(MAX_ENTRIES, entries.size());
         for (int i = 0; i < limit; i++) {
             list.getChildren().add(createRow(entries.get(i)));
         }

@@ -17,6 +17,7 @@
  */
 package org.jackhuang.hmcl.community.dashboard.builtin;
 
+import org.jackhuang.hmcl.community.dashboard.DashboardItem;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidgetDescriptor;
 import org.jackhuang.hmcl.community.dashboard.WidgetRegistry;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,16 @@ public final class CommunityWidgetsProviderTest {
                 "java-recommend", "network", "recent-worlds",
                 "health-check", "activity-calendar")) {
             assertTrue(registry.isRegistered(id), () -> "missing widget: " + id);
+        }
+    }
+
+    @Test
+    public void defaultColumnsOnlyPutPlayInfoOnTheLeft() {
+        assertEquals(DashboardItem.COLUMN_LEFT, HomePane.defaultColumn("activity-calendar"));
+        assertEquals(DashboardItem.COLUMN_LEFT, HomePane.defaultColumn("recent-worlds"));
+        for (String id : List.of("launch", "pinned-instances", "crash-history", "snapshot",
+                "java-recommend", "network", "health-check")) {
+            assertEquals(DashboardItem.COLUMN_RIGHT, HomePane.defaultColumn(id), id);
         }
     }
 

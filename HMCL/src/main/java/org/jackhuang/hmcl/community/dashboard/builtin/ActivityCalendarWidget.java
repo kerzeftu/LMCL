@@ -32,7 +32,6 @@ import org.jackhuang.hmcl.community.dashboard.DashboardContext;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidget;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidgetDescriptor;
 import org.jackhuang.hmcl.community.launch.CommunityLaunchHooks;
-import org.jackhuang.hmcl.community.launch.LaunchEvent;
 import org.jackhuang.hmcl.community.launch.LaunchEventKind;
 import org.jackhuang.hmcl.community.launch.LaunchEventListener;
 import org.jackhuang.hmcl.community.play.PlayRecordStore;
@@ -55,7 +54,7 @@ import static org.jackhuang.hmcl.ui.FXUtils.openFolder;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 游玩日历卡：最近 4/12/26 周的每日游玩时长热力图。
+/// 游玩日历卡：按卡片宽度展示最近 4/12/26 周的每日游玩时长热力图。
 ///
 /// 数据来自 [PlayRecordStore]，卡片只读；打点由 [org.jackhuang.hmcl.community.play.PlayRecordTracker] 完成。
 /// 格子只加 CSS 类，颜色由步骤 19 的 `community.css` 定义，不在 Java 里写颜色值以外的主题假设。
@@ -68,14 +67,12 @@ public final class ActivityCalendarWidget extends DashboardWidget {
     private final Label summary = BuiltinWidgets.body("");
     private final Label hint = BuiltinWidgets.caption(i18n("community.calendar.hint"));
     private final GridPane grid = new GridPane();
-    private final VBox box = new VBox(4);
     private HBox footer;
     private final PauseTransition refreshDelay = new PauseTransition(Duration.seconds(5));
 
     private Map<LocalDate, DayRecord> data = Map.of();
     private boolean enabled = true;
     private int renderedWeeks = -1;
-    private boolean renderedCompact;
 
     /// 构造游玩日历卡。
     ///
@@ -96,16 +93,15 @@ public final class ActivityCalendarWidget extends DashboardWidget {
 
         footer = new HBox(8, hint, BuiltinWidgets.spacer(),
                 BuiltinWidgets.borderButton(i18n("community.calendar.settings"), this::openSettings));
-        footer.setAlignment(Pos.CENTER_LEFT);
-        box.getChildren().addAll(summary, grid, footer);
-        box.setFillWidth(true);
+        footer.setAlignment(Pos.CENTER_RIGHT);
+        VBox body = new VBox(4, summary, grid);
+        body.setFillWidth(true);
         VBox.setVgrow(grid, Priority.ALWAYS);
 
-        heightProperty().addListener((observable, oldValue, newValue) -> rebuild());
         widthProperty().addListener((observable, oldValue, newValue) -> rebuild());
         refreshDelay.setOnFinished(event -> requestRefresh());
         onDispose(installLaunchListener());
-        return box;
+        return BuiltinWidgets.cardContent(body, footer);
     }
 
     /// 监听启动退出，延迟 5 秒刷新，避开打点线程落盘。
@@ -148,21 +144,16 @@ public final class ActivityCalendarWidget extends DashboardWidget {
 
     private void rebuild() {
         int weeks = weeks();
-        boolean compact = getHeight() < 180;
-        if (weeks == renderedWeeks && compact == renderedCompact) {
+        if (weeks == renderedWeeks) {
             updateSummary();
             return;
         }
         renderedWeeks = weeks;
-        renderedCompact = compact;
-        double cellSize = compact ? 6 : CELL_SIZE;
-        double cellGap = compact ? 0 : CELL_GAP;
-        grid.setHgap(cellGap);
-        grid.setVgap(cellGap);
-        summary.setVisible(!compact);
-        summary.setManaged(!compact);
-        hint.setVisible(!compact);
-        hint.setManaged(!compact);
+        double cellSize = CELL_SIZE;
+        summary.setVisible(true);
+        summary.setManaged(true);
+        hint.setVisible(true);
+        hint.setManaged(true);
         grid.getChildren().clear();
 
         LocalDate today = LocalDate.now();
@@ -253,10 +244,10 @@ public final class ActivityCalendarWidget extends DashboardWidget {
     }
 
     private int weeks() {
-        if (getHeight() >= 300) {
+        if (getWidth() >= 720) {
             return 26;
         }
-        return getWidth() >= 480 ? 12 : 4;
+        return getWidth() >= 320 ? 12 : 4;
     }
 
     private static int levelOf(@Nullable DayRecord record) {

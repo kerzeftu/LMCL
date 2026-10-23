@@ -26,7 +26,6 @@ import javafx.animation.PauseTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
@@ -97,20 +96,13 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 更新提示只尝试一次（与旧 `DashboardPane` 的静态去重一致）。
     private static final AtomicBoolean UPDATE_PROMPTED = new AtomicBoolean();
 
-    /// 左信息栏组件及最小高度（像素）。
-    private static final List<Slot> INFO_SLOTS = List.of(
-            new Slot("activity-calendar", 318),
-            new Slot("recent-worlds", 272));
-
-    /// 右实例栏组件及最小高度（像素）。
-    private static final List<Slot> INSTANCE_SLOTS = List.of(
-            new Slot("launch", 168),
-            new Slot("pinned-instances", 188),
-            new Slot("java-recommend", 168),
-            new Slot("snapshot", 176),
-            new Slot("crash-history", 176),
-            new Slot("health-check", 154),
-            new Slot("network", 142));
+    /// 默认放在左信息栏的组件；其余组件默认放右栏。
+    ///
+    /// 这里只描述默认栏位，不再描述高度。卡片高度由标题、内容与 footer 的
+    /// `prefHeight` 自动计算，避免内容不足时出现固定长度的空白条。
+    private static final Set<String> LEFT_COLUMN_WIDGETS = Set.of(
+            "activity-calendar",
+            "recent-worlds");
 
     /// 左信息栏宽度（像素）。
     private static final int INFO_WIDTH = 340;
@@ -199,6 +191,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
                 config.prefs(this::markDirty));
 
         CommunityStyles.apply(this);
+        getStyleClass().add("community-home");
         setSpacing(12);
         setFillWidth(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -403,7 +396,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
             }
             String column = item.column() != null ? item.column() : defaultColumn(item.id());
             VBox target = DashboardItem.COLUMN_LEFT.equals(column) ? infoColumn : instanceColumn;
-            addWidget(target, item.id(), slotHeight(item.id()));
+            addWidget(target, item.id());
         }
 
         if (instanceColumn.getChildren().isEmpty()) {
@@ -443,39 +436,22 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
     /// 组件默认栏位：游玩记录/日历在左，其余在右。
     static String defaultColumn(@NotNull String id) {
-        for (Slot slot : INFO_SLOTS) {
-            if (slot.id().equals(id)) {
-                return DashboardItem.COLUMN_LEFT;
-            }
-        }
-        return DashboardItem.COLUMN_RIGHT;
-    }
-
-    /// 组件默认最小高度。
-    private static double slotHeight(@NotNull String id) {
-        for (Slot slot : INFO_SLOTS) {
-            if (slot.id().equals(id)) {
-                return slot.height();
-            }
-        }
-        for (Slot slot : INSTANCE_SLOTS) {
-            if (slot.id().equals(id)) {
-                return slot.height();
-            }
-        }
-        return 150;
+        return LEFT_COLUMN_WIDGETS.contains(id)
+                ? DashboardItem.COLUMN_LEFT
+                : DashboardItem.COLUMN_RIGHT;
     }
 
     /// 添加一个组件；未登记时跳过。
     ///
-    /// 槽位高度只是最小高度：内容更长时组件按自身 `prefHeight` 增高，
-    /// 避免固定高度裁掉按钮/文字；各列滚动由所属 `ScrollPane` 负责。
-    private void addWidget(@NotNull VBox column, @NotNull String id, double minHeight) {
+    /// 不设置固定高度：`minHeight` 取 `prefHeight`，卡片内容多高就多高；
+    /// 各列滚动由所属 `ScrollPane` 负责。组件内部仍需把多余高度让给 body，
+    /// 使 footer 在卡片被父容器拉高时保持贴底。
+    private void addWidget(@NotNull VBox column, @NotNull String id) {
         DashboardWidget widget = registry.create(id, context);
         if (widget == null) {
             return;
         }
-        widget.setMinHeight(minHeight);
+        widget.setMinHeight(Region.USE_PREF_SIZE);
         widget.setPrefHeight(Region.USE_COMPUTED_SIZE);
         widget.setMaxHeight(Region.USE_PREF_SIZE);
         widget.setMaxWidth(Double.MAX_VALUE);
@@ -642,12 +618,6 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         });
     }
 
-    /// 左信息栏/右实例栏中的一个组件位。
-    ///
-    /// @param id 组件 id
-    /// @param height 最小高度（像素）
-    private record Slot(@NotNull String id, double height) {
-    }
     /// 启动时检查一次更新（仅当配置了仓库）；只提示、不下载。
     private void promptUpdateIfNeeded() {
         if (!CommunityUpdateNotifier.isConfigured() || !UPDATE_PROMPTED.compareAndSet(false, true)) {

@@ -20,7 +20,6 @@ package org.jackhuang.hmcl.community.dashboard.builtin;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXPopup;
 import javafx.beans.value.ChangeListener;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -85,10 +84,10 @@ public final class LaunchWidget extends DashboardWidget {
     private final Label emptyLabel = BuiltinWidgets.body("");
 
     /// 启动 / 切换按钮所在行。
-    private final HBox actions = new HBox(8);
+    private HBox actions;
 
-    /// 空态操作（新��实例 / 管理实例）。
-    private final HBox emptyActions = new HBox(8);
+    /// 空态操作（新建实例 / 管理实例）。
+    private HBox emptyActions;
 
     /// 启动按钮。
     private final JFXButton launchButton = BuiltinWidgets.raisedButton(
@@ -163,18 +162,19 @@ public final class LaunchWidget extends DashboardWidget {
         emptyLabel.setVisible(false);
         emptyLabel.setManaged(false);
 
-        actions.setAlignment(Pos.CENTER_LEFT);
-        actions.getChildren().addAll(launchButton, switchButton);
+        actions = BuiltinWidgets.cardFooter(launchButton, switchButton);
         actions.setVisible(false);
         actions.setManaged(false);
 
-        emptyActions.setAlignment(Pos.CENTER_LEFT);
-        emptyActions.getChildren().addAll(newInstanceButton, manageButton);
+        emptyActions = BuiltinWidgets.cardFooter(newInstanceButton, manageButton);
         emptyActions.setVisible(false);
         emptyActions.setManaged(false);
 
-        VBox box = new VBox(4, instanceLabel, detailLabel, statusLabel, actions, emptyLabel, emptyActions);
-        box.setFillWidth(true);
+        VBox body = new VBox(4, instanceLabel, detailLabel, statusLabel, emptyLabel);
+        body.setFillWidth(true);
+        VBox footer = new VBox(actions, emptyActions);
+        footer.setFillWidth(true);
+        VBox box = BuiltinWidgets.cardContent(body, footer);
 
         context.selectedInstanceId().addListener(selectionListener);
         onDispose(() -> context.selectedInstanceId().removeListener(selectionListener));

@@ -90,10 +90,10 @@ public final class JavaRecommendWidget extends DashboardWidget {
         fallbackLabel.setVisible(false);
         fallbackLabel.setManaged(false);
 
-        HBox actions = new HBox(8, recommendButton, manageButton);
-        VBox box = new VBox(3, preferenceLabel, platformLabel, fallbackLabel, actions);
-        box.setFillWidth(true);
-        return box;
+        HBox actions = BuiltinWidgets.cardFooter(recommendButton, manageButton);
+        VBox body = new VBox(3, preferenceLabel, platformLabel, fallbackLabel);
+        body.setFillWidth(true);
+        return BuiltinWidgets.cardContent(body, actions);
     }
 
     /// 读取偏好。

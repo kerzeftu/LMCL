@@ -38,7 +38,6 @@ import org.jackhuang.hmcl.game.Version;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -98,14 +97,13 @@ public final class PinnedInstancesWidget extends DashboardWidget {
         moreLabel.setVisible(false);
         moreLabel.setManaged(false);
 
-        HBox footer = new HBox(8, BuiltinWidgets.spacer(), moreLabel, manageButton);
-        footer.setAlignment(Pos.CENTER_LEFT);
+        HBox footer = new HBox(8, moreLabel, BuiltinWidgets.spacer(), manageButton);
+        footer.getStyleClass().add("community-card-actions");
+        footer.setAlignment(Pos.CENTER_RIGHT);
 
-        VBox box = new VBox(4, tiles, emptyLabel, footer);
-        box.setFillWidth(true);
-
-        heightProperty().addListener((observable, oldValue, newValue) -> render());
-        return box;
+        VBox body = new VBox(4, tiles, emptyLabel);
+        body.setFillWidth(true);
+        return BuiltinWidgets.cardContent(body, footer);
     }
 
     /// 重新读取实例列表。
@@ -142,7 +140,7 @@ public final class PinnedInstancesWidget extends DashboardWidget {
             }
         }
 
-        int maxVisible = getHeight() >= 200 ? 6 : 3;
+        int maxVisible = 6;
         tiles.getChildren().clear();
         for (int i = 0; i < Math.min(maxVisible, valid.size()); i++) {
             tiles.getChildren().add(createTile(valid.get(i)));
