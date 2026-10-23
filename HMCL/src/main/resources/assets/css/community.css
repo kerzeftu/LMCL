@@ -80,6 +80,39 @@
     -fx-background-color: derive(-monet-primary, -18%);
 }
 
+/* 色阶按卡片表面明暗反转：浅色表面由浅到深，深色表面由暗到亮。 */
+.community-calendar-on-light .community-activity-level-1 {
+    -fx-background-color: derive(-monet-primary, 80%);
+}
+
+.community-calendar-on-light .community-activity-level-2 {
+    -fx-background-color: derive(-monet-primary, 55%);
+}
+
+.community-calendar-on-light .community-activity-level-3 {
+    -fx-background-color: derive(-monet-primary, 25%);
+}
+
+.community-calendar-on-light .community-activity-level-4 {
+    -fx-background-color: derive(-monet-primary, -18%);
+}
+
+.community-calendar-on-dark .community-activity-level-1 {
+    -fx-background-color: derive(-monet-primary, -34%);
+}
+
+.community-calendar-on-dark .community-activity-level-2 {
+    -fx-background-color: derive(-monet-primary, -16%);
+}
+
+.community-calendar-on-dark .community-activity-level-3 {
+    -fx-background-color: -monet-primary;
+}
+
+.community-calendar-on-dark .community-activity-level-4 {
+    -fx-background-color: derive(-monet-primary, 28%);
+}
+
 .community-activity-estimated {
     -fx-border-color: -monet-outline;
     -fx-border-width: 1;

@@ -18,6 +18,7 @@
 package org.jackhuang.hmcl.community.dashboard.builtin;
 
 import javafx.animation.PauseTransition;
+import javafx.beans.value.ChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -36,6 +37,7 @@ import org.jackhuang.hmcl.community.launch.LaunchEventListener;
 import org.jackhuang.hmcl.community.play.PlayRecordStore;
 import org.jackhuang.hmcl.community.play.PlayRecordStore.DayRecord;
 import org.jackhuang.hmcl.task.Schedulers;
+import org.jackhuang.hmcl.theme.Themes;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import javafx.util.Duration;
@@ -61,9 +63,11 @@ public final class ActivityCalendarWidget extends DashboardWidget {
 
     private static final double CELL_SIZE = 22;
     private static final double CELL_GAP = 4;
+    private static final String CALENDAR_DARK_CLASS = "community-calendar-on-dark";
+    private static final String CALENDAR_LIGHT_CLASS = "community-calendar-on-light";
 
     private final Label summary = BuiltinWidgets.body("");
-    private final Label hint = BuiltinWidgets.caption(i18n("community.calendar.hint"));
+    private final Label disabledNote = BuiltinWidgets.caption("");
     private final Label todayValue = metricValue();
     private final Label todayUnit = metricUnit(i18n("community.calendar.unit.minutes"));
     private final Label todaySessions = BuiltinWidgets.caption("");
@@ -91,9 +95,11 @@ public final class ActivityCalendarWidget extends DashboardWidget {
         grid.setHgap(CELL_GAP);
         grid.setVgap(CELL_GAP);
         grid.setAlignment(Pos.CENTER_LEFT);
-        hint.getStyleClass().add("community-hint");
+        disabledNote.getStyleClass().add("community-hint");
+        disabledNote.setManaged(false);
+        disabledNote.setVisible(false);
 
-        footer = new HBox(8, hint, BuiltinWidgets.spacer(),
+        footer = new HBox(8, disabledNote, BuiltinWidgets.spacer(),
                 BuiltinWidgets.borderButton(i18n("community.calendar.settings"), this::openCalendarSettings));
         footer.setAlignment(Pos.CENTER_RIGHT);
 
@@ -125,6 +131,13 @@ public final class ActivityCalendarWidget extends DashboardWidget {
 
         refreshDelay.setOnFinished(event -> requestRefresh());
         onDispose(installLaunchListener());
+
+        updateCalendarTone(Themes.darkModeProperty().get());
+        ChangeListener<Boolean> toneListener = (observable, oldValue, dark) ->
+                updateCalendarTone(Boolean.TRUE.equals(dark));
+        Themes.darkModeProperty().addListener(toneListener);
+        onDispose(() -> Themes.darkModeProperty().removeListener(toneListener));
+
         return BuiltinWidgets.cardContent(body, footer);
     }
 
@@ -168,8 +181,6 @@ public final class ActivityCalendarWidget extends DashboardWidget {
     private void rebuild() {
         summary.setVisible(true);
         summary.setManaged(true);
-        hint.setVisible(true);
-        hint.setManaged(true);
         grid.getChildren().clear();
 
         LocalDate today = LocalDate.now();
@@ -219,7 +230,9 @@ public final class ActivityCalendarWidget extends DashboardWidget {
 
         updateSummary();
         updateTodayStats();
-        hint.setText(enabled ? i18n("community.calendar.hint") : i18n("community.calendar.disabled"));
+        disabledNote.setText(enabled ? "" : i18n("community.calendar.disabled"));
+        disabledNote.setVisible(!enabled);
+        disabledNote.setManaged(!enabled);
     }
 
     private void updateSummary() {
@@ -258,6 +271,12 @@ public final class ActivityCalendarWidget extends DashboardWidget {
             }
         }
         setMetric(weekValue, weekUnit, weekSeconds);
+    }
+
+    /// 根据当前主题表面明暗切换日历色阶：深色背景用浅色格，浅色背景用深色格。
+    private void updateCalendarTone(boolean dark) {
+        grid.getStyleClass().removeAll(CALENDAR_DARK_CLASS, CALENDAR_LIGHT_CLASS);
+        grid.getStyleClass().add(dark ? CALENDAR_DARK_CLASS : CALENDAR_LIGHT_CLASS);
     }
 
     /// 打开设置 → 统计 → 日历设置。
