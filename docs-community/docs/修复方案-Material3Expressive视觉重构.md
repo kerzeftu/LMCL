@@ -1,16 +1,16 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态：阶段 0 spike 已实现，待 Windows 实机验收；阶段 1–8 仍为规划稿**
+> **状态（2026-10-23 切片 A）：M3 基座已实现并生成 `m3expressive1` 测试包，默认关闭，待 Windows 实机验收；切片 B–G 尚未开工。**
 >
-> - 基线：LMCL v3.15（代码 `1ab3d6cf7`，文档 v3.15）
-> - 当前分支：`feature/24-m3`（基于 `7dfac239f`）
-> - 目标版本：v4.0（视觉大版本；功能版本号仍按 `3.16.1000+N` 递增）
-> - 方案作者：LMCL 开发
-> - 最后更新：2026-10-22
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17
+> - 当前代码：`/home/kerze/hmclce/lmcl`，HEAD `99f2e8fc2`（切片 A），工作区 clean
+> - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
+>   `-Dlmcl.visual.m3=on` 时只给壳层子树安装 m3fx，默认关闭时与 1.0.0 一致。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包已切换到 `m3expressive1`。
+> - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 >
 > 本文回答“怎么做、分几步、每步改哪些文件、怎么验收、失败了怎么退”。
-> 阶段 0 的 spike 已按用户 m14676 开工并落盘；阶段 1–8 仍是规划，需在
-> 阶段 0 Go/No-Go 通过后逐阶段批准。
+> 阶段 0 的 spike 已按用户 m14676 开工并落盘；切片 A 已实现；B–G 仍需逐切片批准。
 
 ---
 
@@ -2243,3 +2243,220 @@ D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保
 | 待定 | D8 排期 | 暂按 MVP 8–11 周估算，待实机后确认 |
 | 2026-10-22 | 阶段 0 spike | 代码/编译/构建完成；Windows 实机视觉验收待 `m3spike5` 测试包 |
 | 待定 | 本文整体 | 已批准范围/依赖/侧栏/进度侵入/玻璃/按钮；D8 待确认 |
+
+---
+
+## 17. 2026-10-23 复启：1.0.0 现状盘点与执行顺序
+
+> 本节是阶段 0 之后的重新基线。旧文 §5 的阶段划分保留作历史依据，但执行时以本节为准。
+> 本节只更新方案，不修改代码。
+
+### 17.1 现状盘点
+
+| 层 | 现状 | 与 M3 目标的差距 |
+|---|---|---|
+| 壳层 | `DecoratorController` 已是 `HBox(CommunitySideBar, Navigator)`；`Decorator`/标题栏仍为上游实现 | 没有 M3 主题宿主；侧栏仍是 JFoenix 按钮 + 社区 CSS |
+| 主题 | `CommunityM3.install(Parent)` 可安装 m3fx 主题；只有 `M3SpikePane` 调用 | 未覆盖真实页面；没有主题色/字体变化监听；没有持久化开关 |
+| 样式 | `community.css` 162 行，主要是社区组件；`m3-community.css` 仅 3 条规则 | 上游 `root.css`/JFoenix 仍是主导；没有 M3 token 映射 |
+| 主页 | `HomePane` 固定左信息栏 + 右实例栏，9 张卡；卡片来自上游 `.card` | 没有玻璃表面、M3 卡片/按钮/指标样式；卡片仍是 HMCL 视觉 |
+| 管理/其他/设置/下载 | 200px `AdvancedListBox` + 上游 `SpinnerPane`/列表/表单 | 没有 M3 导航列表、表单、按钮、对话框视觉 |
+| 进度/加载 | 生产仍用上游 `ProgressBar`/`SpinnerPane`；Wavy 只在 spike | 没有生产级 `LinearWavyProgressIndicator` 和加载指示器 |
+| 依赖 | JitPack `com.github.Glavo:m3fx:2481f88fd6`；jar 约 11.87 MB | 未 vendor；发布仍依赖 JitPack；许可证文件仅在 jar 内 |
+| 验证 | 编译/测试/构建通过；WSL2 无 GUI，Windows 实机截图未系统化 | 缺少逐切片的 Windows 视觉验收与回退包 |
+
+### 17.2 对“完整重做”的界定
+
+本轮按 D1 的既有批准执行：
+
+- **做**：所有用户可见页面统一 M3 表面、字体层级、圆角、状态层、按钮/列表/表单/对话框视觉；
+  侧栏、主页卡片、弹窗、任务/加载进度全部纳入；
+- **不做**：不重写 243 个上游 UI 类的业务行为、键盘交互、虚拟化列表、拖放和继承设置逻辑；
+- **不变**：9 卡主页布局、64px 侧栏宽度、现有导航结构、数据与 i18n 语义。
+
+如果要求“每个控件的行为也换成 m3fx”，那不是本轮范围，需要另立控件迁移项目。
+
+### 17.3 垂直切片（每个切片可打包验收）
+
+| 切片 | 内容 | 预计 | 测试包 |
+|---|---|---|---|
+| **A. 基座** | `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；主题宿主接入壳层；token CSS；`visual.m3` 开关；字体/主题色监听 | 3–5 人日 | `m3expressive1` |
+| **B. 壳层与玻璃** | 壁纸快照、`GlassBackdrop`/`GlassSurface`/`GlassCard`；侧栏玻璃与 M3 激活胶囊；标题栏/窗口背景兜底 | 4–6 人日 | `m3expressive2` |
+| **C. 主页** | 头部、9 卡、按钮、指标、日历、空态/错误态统一 M3；卡片玻璃 | 4–6 人日 | `m3expressive3` |
+| **D. 四个入口页** | 管理/其他/设置/下载：200px 导航、列表、表单、按钮、页头 | 5–7 人日 | `m3expressive4` |
+| **E. 进度与加载** | 生产级 Wavy 线性/环形、`TaskListPane`/`SpinnerPane`/`DialogPane` 三处侵入 | 2–3 人日 | `m3expressive5` |
+| **F. 对话框与独立窗口** | `DialogPane`、`MessageDialogPane`、`JFXPopup`、独立 Stage 的主题安装 | 3–5 人日 | `m3expressive6` |
+| **G. 收口** | 无障碍、对比度、RTL、性能、4K/HiDPI、回归与文档 | 4–6 人日 | 候选发布包 |
+
+每个切片结束必须：编译 + community 测试 + 全量测试 + `checkTranslations` + `makeExecutables` +
+Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。未通过不进入下一个切片。
+
+### 17.4 切片 A：M3 基座（先做这个）
+
+#### 目标
+
+让 M3 主题可以安全地覆盖整个 LMCL 壳层，但不改变任何页面布局和业务行为；默认关闭，
+通过 `-Dlmcl.visual.m3=on` 或设置项打开，便于 A/B 对比和回退。
+
+#### 文件
+
+新增：
+
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3Settings.java`
+  - 读写 `CommunitySettings` 的 `visual` 段；
+  - 字段：`enabled`（默认 `false`，开发期）、`glass`（`auto/on/off`）、`wavy`（默认 `true`）、`reducedMotion`；
+  - 系统属性优先级：`-Dlmcl.visual.m3=on/off` > 设置文件 > 默认值；
+  - 只做内存缓存 + 同步落盘，不引入新的配置文件。
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3Host.java`
+  - `extends StackPane`；构造时 `CommunityM3.install(this)`；
+  - 监听 `Themes.colorSchemeProperty()`、`FontManager.fontProperty()`、`M3Settings` 变化，重新安装主题；
+  - 提供 `setContent(Node)`；`dispose()` 移除监听；
+  - 不接管 `Scene`，只在自身子树安装主题。
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3MotionSupport.java`
+  - 把上游 `animationDisabled` 与社区 `visual.reducedMotion` 映射到 `M3MotionSettings.setAnimationsEnabled(boolean)`；
+  - 监听设置变化；只影响 m3fx 组件。
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/CommunityControls.java`
+  - 薄封装：M3 主/次/文字按钮、卡片、列表项、表单行；
+  - 业务代码不直接依赖 m3fx，后续切片统一通过这里创建。
+
+修改：
+
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/CommunityM3.java`
+  - 抽出 `refresh(Parent)`，支持主题色/字体变化后重新安装；
+  - `install` 保留幂等；允许重复 `refresh` 不重复追加 stylesheet；
+  - 不再把 `INSTALLED_PROPERTY` 当作永久锁。
+- `HMCL/src/main/java/org/jackhuang/hmcl/ui/decorator/DecoratorController.java`（已有第 7 处侵入）
+  - 把 `HBox shell` 包进 `M3Host`；`M3Settings.enabled()` 为 false 时直接放原 `shell`；
+  - `M3Host` 的 content 为 `shell`，`HBox.setHgrow` 保持在 `navigator`；
+  - 不改变 `decorator.getContent()` 的语义。
+- `HMCL/src/main/resources/assets/css/m3-community.css`
+  - 新增 `.lmcl-m3` 作用域下的 token 映射：`.title-label`、`.subtitle-label`、`.card`、`.jfx-button`、
+    `.jfx-text-field`、`.jfx-combo-box`、`.scroll-bar`、`.md-list-cell`；
+  - 颜色一律用 m3fx 的 `-m3-color-*` 变量，不写死 hex；
+  - 不改上游 `root.css`。
+- `HMCL/src/main/resources/assets/lang/I18N*.properties`
+  - 新增 `community.settings.visual.m3`、`community.settings.visual.glass`、
+    `community.settings.visual.wavy`、`community.settings.visual.reduced_motion` 及说明；
+  - 仅在三份基准语言文件中写，其余语言回退英文。
+
+#### 不做什么
+
+- 不在 A 切片做玻璃、Wavy 进度、主页卡片重绘；
+- 不删除 `M3SpikePane`（保留为组件样张）；
+- 不改 `PersonalizationPage` 的上游布局；设置入口可临时放 `OtherPage` 的内存/视觉区，D 切片再收口；
+- 不默认开启 M3，避免影响当前测试包。
+
+#### 验收
+
+> 状态（2026-10-23）：代码、测试、构建、打包已完成；所有需要 GUI 的验收项待 Windows 实机截图。
+
+- [x] `visual.m3=off` 时 `DecoratorController` 直接放原 `shell`，不构造 `M3Host`（代码路径保证；实机截图待补）；
+- [x] `visual.m3=on` 时 `M3Host` 安装主题，壳层子树可加载 `m3-community.css`（页面可打开待实机）；
+- [x] 监听 `Themes.colorSchemeProperty()` 与 `FontManager.fontProperty()`，变化时 `refresh()`；
+- [x] `M3MotionSupport` 监听 `SettingsManager.settings().animationDisabledProperty()` 与 `visual.reducedMotion`；
+- [x] `CommunityM3.install` 幂等；`refresh` 先卸载再安装；`uninstall` 清理属性/样式类/stylesheet；
+- [x] `M3SettingsTest` 4 个测试；community 165/0，全量 275/0/2 skipped，`checkTranslations` 通过；
+- [x] `makeExecutables` 通过，生成 `m3expressive1` 包与 `run-m3-expressive.bat`/`run-classic.bat`；
+- [ ] Windows 实机：off 与 1.0.0 截图一致、on 所有页面可打开、主题/字体/动画跟随、无布局回归。
+
+#### 风险
+
+- 上游 `root.css` 优先级高：所有覆盖必须带 `.lmcl-m3` 作用域，不用宽泛 `.card`；
+- 主题重装导致样式表重复：`refresh` 前先移除旧 URL；
+- `FontManager.getFont()` 可能为 null：沿用 `CommunityM3.fontStyle` 的空值保护；
+- 全局主题可能影响 JFoenix 默认色：A 切片只改字体/表面/按钮圆角，不改控件结构；
+- 无 Windows GUI：A 切片先由用户截图验收，不承诺“视觉完成”。
+
+### 17.5 依赖与命名
+
+- 切片 A–C 继续用 JitPack `com.github.Glavo:m3fx:2481f88fd6`，缩短迭代；
+- 切片 D 前 vendor m3fx 源码到 `lmcl/m3fx/`（Apache-2.0，保留 LICENSE/NOTICE），
+  移除 JitPack 依赖；vendor 提交单独一个 commit，不与视觉改动混在一起；
+- 包名从 `m3spike*` 切换为 `m3expressive1..6`，稳定包 `home3`/`settings4` 保留不动；
+- 所有新包必须带 `README-测试说明.txt`、`SHA256SUMS`、回退说明。
+
+### 17.6 需要用户确认
+
+| # | 问题 | 推荐 |
+|---|---|---|
+| Q1 | 是否按 A→G 垂直切片推进，每切片出包？ | 是；比一次性全量更容易定位回归 |
+| Q2 | A 切片默认关闭、用启动参数预览，还是直接默认开启？ | 默认关闭；截图确认后再默认开启 |
+| Q3 | D 切片前 vendor m3fx，还是继续 JitPack 到发布前？ | D 前 vendor；发布不依赖 JitPack |
+| Q4 | 主页 9 卡布局是否保持不变？ | 保持；只换表面与组件视觉 |
+
+> 结论：切片 A 已完成并出 `m3expressive1` 测试包；下一步由用户实机验收，
+> 通过后再开始 B 的壳层毛玻璃；未经确认不开始 B。
+
+---
+
+## 18. 切片 A 实施记录（2026-10-23）
+
+### 18.1 触发与范围
+
+- User said (m18878): “这个先搁置，你要记下来，然后继续看重构UI这件事”。
+- 品牌/Microsoft OAuth 项转入暂停，当前只推进 M3 视觉；切片 A 的目标是“主题可以安全覆盖壳层，
+  但默认不改变 1.0.0 的布局和业务行为”。
+- 没有做玻璃、Wavy 进度、主页卡片重绘、四页逐页收口；`M3SpikePane` 保留为组件样张。
+
+### 18.2 新增与修改
+
+| 文件 | 类型 | 内容 |
+|---|---|---|
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3Settings.java` | 新增 | `visual` 段读写；`enabled`（默认 false，兼容旧 `m3`）、`glass`、`wavy`（默认 true）、`reducedMotion`；系统属性优先；`parseBoolean` 供测试 |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3Host.java` | 新增 | `StackPane` 宿主；`lmcl-m3-host`/`lmcl-m3`；安装主题、监听主题色/字体、`refresh`/`dispose` |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3MotionSupport.java` | 新增 | 把 `animationDisabled` 与 `visual.reducedMotion` 桥接到 `M3MotionSettings.setAnimationsEnabled(boolean)` |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/CommunityControls.java` | 新增 | `filledButton/tonalButton/outlinedButton/textButton`、`filledCard/outlinedCard`、`listItem`、`textField` |
+| `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/CommunityM3.java` | 修改 | `install` 幂等；新增 `refresh`/`uninstall`/`isInstalled`；`stylesheetUrl` 空资源保护；保留字体 null 保护 |
+| `HMCL/src/main/java/org/jackhuang/hmcl/ui/decorator/DecoratorController.java` | 修改（第 7 处侵入内） | `M3Settings.isM3Enabled()` 为 true 时把 `HBox(sidebar,navigator)` 包进 `M3Host`，否则原样 |
+| `HMCL/src/main/resources/assets/css/m3-community.css` | 修改 | `.lmcl-m3-host`/`.lmcl-m3` 作用域；标题/副标题、卡片、JFX 按钮、输入框、滚动条使用 `-m3-color-*`，无 hex |
+| `HMCL/src/main/resources/assets/lang/I18N.properties` 等三份 | 修改 | 各新增 10 个 `community.settings.visual.*` key |
+| `HMCL/src/test/java/org/jackhuang/hmcl/community/ui/m3/M3SettingsTest.java` | 新增 | 4 个测试：常见/未知布尔、系统属性覆盖、glass 规范化 |
+
+### 18.3 行为说明
+
+- 默认 `visual.enabled=false`，`DecoratorController` 不创建 `M3Host`；关闭路径与 1.0.0 相同。
+- `-Dlmcl.visual.m3=on` 或设置 `visual.enabled=true` 时，只对 `M3Host` 子树安装 m3fx，不接管 `Scene`。
+- `M3Host` 监听主题色与字体变化，调用 `CommunityM3.refresh`；`dispose` 时移除监听并卸载主题。
+- `M3MotionSupport` 只在首次安装成功后注册监听，避免失败后永久锁死。
+- `CommunityControls` 是后续切片的统一入口，业务代码不直接依赖 m3fx。
+- 主题色/字体变化后 M3 子树跟随，不需要重启；上游“关闭动画”和社区 `reducedMotion` 任一为真即停用 m3fx 动画。
+
+### 18.4 与方案的偏差
+
+1. **未做设置 UI 入口**：方案允许 A 临时放 `OtherPage`，但本切片只落地系统属性/设置文件读写，
+   没有新增设置页控件；`community.settings.visual.*` 已准备，D 切片或 B 收口时接入。
+2. **CSS 作用域同时使用 `.lmcl-m3-host` 与 `.lmcl-m3`**：前者用于宿主，后者用于后续独立预览节点；
+   两者都限定在社区子树，避免影响上游 `root.css`。
+3. **新增 `CommunityControls`**：方案只要求“薄封装”，本切片把它作为 B–G 的统一构造入口，先落最小 API。
+4. **`M3SpikePane` 保留**：只保留 `-Dlmcl.m3.spike=true` 的调试入口，不进入正式导航。
+
+### 18.5 验证
+
+- `:HMCL:compileJava`：BUILD SUCCESSFUL（仅 3 条既有 JavaFX `--add-exports` 警告）。
+- `:HMCL:checkTranslations`：BUILD SUCCESSFUL。
+- community 测试：**165 / 0 / 0 / 0**；全量测试：**275 / 0 / 0 / 2 skipped**。
+- `:HMCL:makeExecutables`：成功；jar **11,881,236 B**，SHA-256
+  `90505cd010605fa61425ddba09d5b57a8e610b0a88f0b8e35f7348ba2aef0e6d`；
+  exe **13,082,388 B**，SHA-256
+  `b1e1be17d8a09e56b3a86a05eaefd1e83fa3c9d295eed5b289a08ff5b9d2ca1e`；
+  stub **1,201,152 B**，SHA-256
+  `ded29e28971755afc83041f91dec9fce7ff4f4a130c0bb07983b4a42f8f3370b`。
+- `exe[:len(stub)] == stub`、`exe[len(stub):] == jar`、jar 头 `PK\x03\x04` 均通过；jar 含 376 个
+  `org/glavo/m3fx/` class。
+- 测试包：`dist/LMCL-1.0.0-win-x64-m3expressive1.zip`，**74,915,628 B**，SHA-256
+  `fa089d80972e91f0069661405f6d7280705a71c25acdf76fbd3a36cb20c588e8`；328 entries、
+  `testzip=None`；包内 `SHA256SUMS` 327 个文件全过。
+- 旧 `m3spike14` 包已删除；稳定包 `home3`/`settings4` 保留。
+
+### 18.6 未验证与风险
+
+- 开发环境 WSL2 无 Windows GUI，未在 Windows 实机点击；`run-m3-expressive.bat`/`run-classic.bat`
+  的对照、主题色/字体跟随、动画停用、布局回归都待用户截图验收。
+- m3fx 主题可能改变 JFoenix 控件的内边距/字体度量，尤其侧栏 64px 宽度和主页卡片高度；
+  如果出现裁切，优先在 `.lmcl-m3` 作用域补最小覆盖，不改上游布局。
+- A 切片默认关闭；在用户确认前不把默认值改为 true，也不开始 B 的毛玻璃。
+
+### 18.7 下一步
+
+1. 用户用 `m3expressive1` 包做 off/on 对照截图，确认默认关闭无回归、开启后页面可打开。
+2. 根据截图修 A 的布局/CSS 问题，必要时补 `visual` 设置入口。
+3. A 验收通过后再规划 B：64px 侧栏毛玻璃、主页头部/卡片玻璃、壁纸快照与降级。
