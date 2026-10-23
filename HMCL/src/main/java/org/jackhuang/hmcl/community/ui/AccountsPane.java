@@ -28,15 +28,11 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
+import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.setting.SettingsManager;
-import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.account.AccountListPage;
-import org.jackhuang.hmcl.ui.account.AddAuthlibInjectorServerPane;
-import org.jackhuang.hmcl.ui.account.CreateAccountPane;
-import org.jackhuang.hmcl.ui.account.MicrosoftAccountLoginPane;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 
@@ -70,8 +66,8 @@ public final class AccountsPane extends VBox {
         VBox.setVgrow(page, Priority.ALWAYS);
 
         HBox toolbar = new HBox(8,
-                borderButton("account.methods.microsoft", AccountsPane::openMicrosoft),
-                borderButton("account.methods.offline", AccountsPane::openOffline),
+                borderButton("account.methods.microsoft", AccountActions::openMicrosoft),
+                borderButton("account.methods.offline", AccountActions::openOffline),
                 createAuthServerMenu());
         toolbar.setAlignment(Pos.CENTER_LEFT);
 
@@ -109,7 +105,7 @@ public final class AccountsPane extends VBox {
 
         for (AuthlibInjectorServer server : SettingsManager.getAuthlibInjectorServers()) {
             MenuItem item = new MenuItem(server.getName());
-            item.setOnAction(event -> openAuthServerAccount(server));
+            item.setOnAction(event -> AccountActions.openAuthServerAccount(server));
             menu.getItems().add(item);
         }
 
@@ -118,50 +114,8 @@ public final class AccountsPane extends VBox {
         }
 
         MenuItem addServer = new MenuItem(i18n("account.injector.add"));
-        addServer.setOnAction(event -> openAddAuthServer());
+        addServer.setOnAction(event -> AccountActions.openAddAuthServer());
         menu.getItems().add(addServer);
     }
 
-    /// 打开 Microsoft 登录。
-    private static void openMicrosoft() {
-        withAccountWriteAccess(() -> Controllers.dialog(new MicrosoftAccountLoginPane()));
-    }
-
-    /// 打开离线账户创建。
-    private static void openOffline() {
-        withAccountWriteAccess(() -> Controllers.dialog(new CreateAccountPane(Accounts.FACTORY_OFFLINE)));
-    }
-
-    /// 打开指定认证服务器的账户创建。
-    ///
-    /// @param server 服务器
-    private static void openAuthServerAccount(@NotNull AuthlibInjectorServer server) {
-        withAccountWriteAccess(() -> Controllers.dialog(new CreateAccountPane(server)));
-    }
-
-    /// 打开“新增认证服务器”。
-    private static void openAddAuthServer() {
-        if (SettingsManager.isAuthlibInjectorServersReadOnly()) {
-            Controllers.confirmBackupAndOverwrite(i18n("account.injector.server.storage.read_only"), () -> {
-                SettingsManager.forceOverwriteAuthlibInjectorServers();
-                Controllers.dialog(new AddAuthlibInjectorServerPane());
-            });
-        } else {
-            Controllers.dialog(new AddAuthlibInjectorServerPane());
-        }
-    }
-
-    /// 账户文件只读时先确认覆盖再执行。
-    ///
-    /// @param action 账户写入动作
-    private static void withAccountWriteAccess(@NotNull Runnable action) {
-        if (SettingsManager.isUserGameAccountsReadOnly()) {
-            Controllers.confirmBackupAndOverwrite(i18n("account.storage.read_only"), () -> {
-                SettingsManager.forceOverwriteUserGameAccounts();
-                action.run();
-            });
-        } else {
-            action.run();
-        }
-    }
 }

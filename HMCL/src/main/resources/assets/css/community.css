@@ -87,6 +87,59 @@
     -fx-border-radius: 3;
 }
 
+.community-calendar-weekday {
+    -fx-text-fill: -monet-on-surface-variant;
+    -fx-font-size: 9px;
+    -fx-alignment: center;
+}
+
+.community-calendar-cell-future {
+    -fx-opacity: 0.45;
+}
+
+.community-calendar-cell-today {
+    -fx-border-color: -monet-primary;
+    -fx-border-width: 2;
+    -fx-border-radius: 5;
+}
+
+.community-account-current {
+    -fx-padding: 0 0 0 2;
+}
+
+.community-account-toggle {
+    -fx-background-color: transparent;
+    -fx-background-radius: 999;
+    -fx-padding: 6;
+    -fx-cursor: hand;
+}
+
+.community-account-toggle:hover {
+    -fx-background-color: -monet-surface-container-high;
+}
+
+.community-account-toggle .svg {
+    -fx-fill: -monet-on-surface-variant;
+}
+
+.community-account-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.community-account-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.community-account-entry > .rippler-container > .container {
+    -fx-background-radius: 8;
+}
+
+.community-account-empty {
+    -fx-padding: 0 8 0 8;
+}
+
 /* Global 64px icon sidebar (Axolotl-inspired). */
 .community-sidebar {
     -fx-background-color: -monet-surface-container-low;

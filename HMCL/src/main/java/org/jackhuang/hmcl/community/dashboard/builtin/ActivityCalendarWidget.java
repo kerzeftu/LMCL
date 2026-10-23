@@ -45,7 +45,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
+import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -54,15 +54,15 @@ import static org.jackhuang.hmcl.ui.FXUtils.openFolder;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 游玩日历卡：按卡片宽度展示最近 4/12/26 周的每日游玩时长热力图。
+/// 游玩日历卡：固定展示最近 5 个自然周的每日游玩时长热力图。
 ///
 /// 数据来自 [PlayRecordStore]，卡片只读；打点由 [org.jackhuang.hmcl.community.play.PlayRecordTracker] 完成。
 /// 格子只加 CSS 类，颜色由步骤 19 的 `community.css` 定义，不在 Java 里写颜色值以外的主题假设。
 @NotNullByDefault
 public final class ActivityCalendarWidget extends DashboardWidget {
 
-    private static final double CELL_SIZE = 10;
-    private static final double CELL_GAP = 2;
+    private static final double CELL_SIZE = 22;
+    private static final double CELL_GAP = 4;
 
     private final Label summary = BuiltinWidgets.body("");
     private final Label hint = BuiltinWidgets.caption(i18n("community.calendar.hint"));
@@ -72,7 +72,6 @@ public final class ActivityCalendarWidget extends DashboardWidget {
 
     private Map<LocalDate, DayRecord> data = Map.of();
     private boolean enabled = true;
-    private int renderedWeeks = -1;
 
     /// 构造游玩日历卡。
     ///
@@ -98,7 +97,6 @@ public final class ActivityCalendarWidget extends DashboardWidget {
         body.setFillWidth(true);
         VBox.setVgrow(grid, Priority.ALWAYS);
 
-        widthProperty().addListener((observable, oldValue, newValue) -> rebuild());
         refreshDelay.setOnFinished(event -> requestRefresh());
         onDispose(installLaunchListener());
         return BuiltinWidgets.cardContent(body, footer);
@@ -138,18 +136,10 @@ public final class ActivityCalendarWidget extends DashboardWidget {
     private void apply(@NotNull LoadResult result) {
         this.data = result.data();
         this.enabled = result.enabled();
-        this.renderedWeeks = -1;
         rebuild();
     }
 
     private void rebuild() {
-        int weeks = weeks();
-        if (weeks == renderedWeeks) {
-            updateSummary();
-            return;
-        }
-        renderedWeeks = weeks;
-        double cellSize = CELL_SIZE;
         summary.setVisible(true);
         summary.setManaged(true);
         hint.setVisible(true);
@@ -157,19 +147,31 @@ public final class ActivityCalendarWidget extends DashboardWidget {
         grid.getChildren().clear();
 
         LocalDate today = LocalDate.now();
-        LocalDate thisMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate start = thisMonday.minusWeeks(weeks - 1L);
+        CalendarWindow window = CalendarWindow.containing(today);
 
-        for (int week = 0; week < weeks; week++) {
-            for (int day = 0; day < 7; day++) {
-                LocalDate date = start.plusDays((long) week * 7 + day);
+        for (int day = 0; day < CalendarWindow.DAYS; day++) {
+            Label header = new Label(DayOfWeek.of(day + 1)
+                    .getDisplayName(TextStyle.NARROW, Locale.getDefault()));
+            header.getStyleClass().add("community-calendar-weekday");
+            header.setMinSize(CELL_SIZE, 12);
+            header.setPrefSize(CELL_SIZE, 12);
+            header.setMaxSize(CELL_SIZE, 12);
+            header.setAlignment(Pos.CENTER);
+            grid.add(header, day, 0);
+        }
+
+        for (int week = 0; week < CalendarWindow.WEEKS; week++) {
+            for (int day = 0; day < CalendarWindow.DAYS; day++) {
+                LocalDate date = window.dateAt(week, day);
                 Region cell = new Region();
-                cell.setMinSize(cellSize, cellSize);
-                cell.setPrefSize(cellSize, cellSize);
-                cell.setMaxSize(cellSize, cellSize);
+                cell.setMinSize(CELL_SIZE, CELL_SIZE);
+                cell.setPrefSize(CELL_SIZE, CELL_SIZE);
+                cell.setMaxSize(CELL_SIZE, CELL_SIZE);
                 cell.getStyleClass().add("community-calendar-cell");
-                if (date.isAfter(today)) {
-                    cell.setVisible(false);
+
+                boolean future = date.isAfter(today);
+                if (future) {
+                    cell.getStyleClass().addAll("community-activity-level-0", "community-calendar-cell-future");
                 } else {
                     DayRecord record = data.get(date);
                     int level = levelOf(record);
@@ -179,9 +181,16 @@ public final class ActivityCalendarWidget extends DashboardWidget {
                     }
                     Tooltip.install(cell, new Tooltip(tooltip(date, record)));
                 }
-                grid.add(cell, week, day);
+
+                if (date.equals(today)) {
+                    cell.getStyleClass().add("community-calendar-cell-today");
+                    cell.setAccessibleText(i18n("community.calendar.today"));
+                }
+
+                grid.add(cell, day, week + 1);
             }
         }
+
         updateSummary();
         hint.setText(enabled ? i18n("community.calendar.hint") : i18n("community.calendar.disabled"));
     }
@@ -241,13 +250,6 @@ public final class ActivityCalendarWidget extends DashboardWidget {
             }, Schedulers.javafx());
         });
         Controllers.dialog(BuiltinWidgets.dialogRoot(i18n("community.calendar.settings"), content, 420));
-    }
-
-    private int weeks() {
-        if (getWidth() >= 720) {
-            return 26;
-        }
-        return getWidth() >= 320 ? 12 : 4;
     }
 
     private static int levelOf(@Nullable DayRecord record) {

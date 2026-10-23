@@ -53,8 +53,6 @@ import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.ui.Controllers;
-import org.jackhuang.hmcl.community.ui.ManagementPage;
-import org.jackhuang.hmcl.ui.account.AccountAdvancedListItem;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
 import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import org.jackhuang.hmcl.ui.main.MainPage;
@@ -135,7 +133,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     private final VBox instanceColumn = new VBox(12);
 
     /// 固定账号卡；重建左右栏时复用，避免重复绑定全局账号属性。
-    private @Nullable VBox accountCard;
+    private @Nullable HomeAccountCard accountCard;
 
     /// 运行状态文案。
     private final Label runStatus = new Label();
@@ -239,6 +237,9 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         }
         Accounts.selectedAccountProperty().removeListener(accountListener);
         CommunityLaunchHooks.removeListener(launchListener);
+        if (accountCard != null) {
+            accountCard.dispose();
+        }
         for (DashboardWidget widget : widgets.values()) {
             try {
                 widget.dispose();
@@ -461,26 +462,10 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         widget.requestRefresh();
     }
 
-    /// 构建“当前账号”卡片；账户列表入口也从这里进入。
+    /// 构建“当前账号”卡片；账户列表与新建入口也在这里。
     @NotNull
-    private VBox buildAccountCard() {
-        Label title = new Label(i18n("community.home.account.title"));
-        title.getStyleClass().addAll("title-label", "community-title");
-
-        AccountAdvancedListItem item = new AccountAdvancedListItem();
-        item.accountProperty().bind(Accounts.selectedAccountProperty());
-        item.setOnAction(event -> {
-            ManagementPage page = ManagementPage.getInstance();
-            page.showAccounts();
-            Controllers.navigate(page);
-        });
-        item.setPrefHeight(48);
-
-        VBox card = new VBox(6, title, item);
-        card.getStyleClass().add("card");
-        card.setMaxWidth(Double.MAX_VALUE);
-        card.setMinHeight(Region.USE_PREF_SIZE);
-        return card;
+    private HomeAccountCard buildAccountCard() {
+        return new HomeAccountCard();
     }
 
     /// 读取实例仓库；失败返回 `null`。
