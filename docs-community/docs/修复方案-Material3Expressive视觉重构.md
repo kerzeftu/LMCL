@@ -1,14 +1,14 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-24 规划优化）：切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.10 已按用户反馈把 B1 的侧栏选中框从 999 胶囊还原为 16px 圆角；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 每日一言设置层级调整、v3.17.8 MC 语料改用游戏加载提示已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
+> **状态（2026-10-24 规划优化）：切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.10 已按用户反馈把 B1 的侧栏选中框从 999 胶囊还原为 16px 圆角；v3.17.11 已修复主页圆角按钮“视觉形状与可点击边界不一致”；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 每日一言设置层级调整、v3.17.8 MC 语料改用游戏加载提示已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.10
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.10 交付后 `main`；切片 A 的 `m3expressive1` 已由 `m3expressive12` 取代
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.11
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.11 交付后 `main`；切片 A 的 `m3expressive1` 已由 `m3expressive13` 取代
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   `-Dlmcl.visual.m3=on` 时只给壳层子树安装 m3fx，默认关闭时与 1.0.0 一致。
 > - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + 16px 圆角选中框（v3.17.10 从 999 胶囊还原）；
 >   `-Dlmcl.visual.glass=auto/on/off` 控制，默认 auto，失败自动回退 CSS 表面色。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive12`（v3.17.10 M3 B1 侧栏玻璃 + 选中框还原；基于 v3.17.8 的 MC 语料加载提示 + 每日一言 + 账户卡/5×7 日历 + 右栏统计 + 明暗自适应色阶）。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive13`（v3.17.11 圆角按钮命中区域修复 + v3.17.10 M3 B1 侧栏玻璃与选中框还原；基于 v3.17.8 的 MC 语料加载提示 + 每日一言 + 账户卡/5×7 日历 + 右栏统计 + 明暗自适应色阶）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 > - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
@@ -2572,14 +2572,14 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 |---|---|---|
 | 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
 | 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
-| 当前测试包 | `m3expressive1` | `m3expressive12`（jar 11,978,858 B / zip 74,835,161 B） |
+| 当前测试包 | `m3expressive1` | `m3expressive13`（jar 11,982,029 B / zip 75,107,890 B） |
 | 切片 A/B1 状态 | 待 Windows 验收 | A/B1 均已实现、默认关闭，仍待 Windows 实机验收；未改发布默认值 |
 | 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转；v3.17.5 问候语下改为每日一言；v3.17.6 本地源可分别启用；v3.17.7 每日一言设置收为单卡片 |
 
 ### 19.8 下一步建议
 
-1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive12` 继承，不并入 M3 B2–G；
-2. 用户先对 `m3expressive12` 做 Windows 实机验收（侧栏玻璃/16px 选中框/`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
+1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive13` 继承，不并入 M3 B2–G；
+2. 用户先对 `m3expressive13` 做 Windows 实机验收（主页卡片按钮圆角外不可点、侧栏玻璃/16px 选中框/`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
 3. 玻璃通过后继续切片 B2（主页头部/卡片玻璃）；标题栏玻璃留到 B2/C；
 4. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
 
@@ -2706,6 +2706,58 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 
 ### 21.5 下一步
 
-1. 用户用 m3expressive12 验收 16px 选中框与玻璃侧栏；
+1. 用户用 m3expressive13 验收 16px 选中框、玻璃侧栏与圆角按钮命中区域（m3expressive12 已被取代）；
 2. 通过后进入 B2：主页头部/卡片玻璃，再评估标题栏玻璃；
 3. B2 仍优先不新增上游侵入点。
+
+## 22. 主页圆角按钮命中区域修复（v3.17.11）
+
+### 22.1 触发
+
+用户反馈：
+
+> 主页组件上的按钮，实际可点击边界和按钮形状并不一样，什么原因？这种情况以后不要再出现
+
+### 22.2 根因
+
+- 主页卡片按钮由 `BuiltinWidgets.borderButton` / `raisedButton` 调上游 `FXUtils.newBorderButton` / `newRaisedButton`，实际类型是 JFoenix `JFXButton`。
+- `JFXButtonSkin` 把背景/边框画在内部 `StackPane buttonContainer` 上，控件本身与容器都 `setPickOnBounds(false)`；但 `Node.contains` 仍按**矩形布局边界**判断，CSS 的 `-fx-background-radius` 只影响绘制，不参与命中测试。
+- `JFXButtonSkin.layoutChildren` 把 `buttonContainer` 放在 `layoutBounds.minX - 1, minY - 1`、宽高各 `+2`，视觉背景比控件大 1 px；圆角外的透明区域因此同时存在“超出控件的 1 px”和“矩形四角”两类可点区域。
+- M3 样式只把 `.jfx-button-border` / `.jfx-button-raised` 的 `-fx-background-radius` 改为 20，没有同步 `-fx-border-radius`（上游默认 5 px），填充圆角与描边圆角也不一致。
+
+### 22.3 修复
+
+- 新增 `org.jackhuang.hmcl.community.ui.RoundedHitArea`：
+  - `public static void install(@NotNull Region button)`：用 `INSTALLED_KEY` 去重，注册 `MOUSE_PRESSED` / `MOUSE_RELEASED` 事件过滤器。
+  - `consumeOutside` 用 `sceneToLocal(getSceneX(), getSceneY())` 得到本地坐标；不在 `contains` 内则 `consume()`，让按钮不进入 armed/fire 流程。
+  - `contains` 取 `region.getWidth()/getHeight()`，再调 `containsRounded`；`containsRounded` 是纯几何实现，圆心取 `(clamp(x,r,w-r), clamp(y,r,h-r))`，比较 `dx²+dy² <= r²`。
+  - `radius` 取所有 `BackgroundFill.getRadii()` 与 `BorderStroke.getRadii()` 四角水平/垂直半径的最大值，支持百分比，最终 cap 到 `min(width,height)/2`。
+- `BuiltinWidgets.borderButton` / `raisedButton` 创建按钮后自动 `RoundedHitArea.install(button)`。
+- `HomeAccountCard` 的展开/收起 `toggleButton` 显式安装；它由 `FXUtils.newBorderButton` 创建，但不在 `BuiltinWidgets` 路径上。
+- `m3-community.css` 的 `.lmcl-m3 .jfx-button-border, .lmcl-m3 .jfx-button-raised` 增加 `-fx-border-color: transparent; -fx-border-radius: 20; -fx-border-width: 0;`，使填充与描边圆角一致。
+
+### 22.4 约束（以后不再出现）
+
+1. 社区新增圆角按钮优先通过 `BuiltinWidgets.borderButton` / `raisedButton` 创建，自动获得命中区域修复。
+2. 直接 `new JFXButton` 的卡片按钮，必须在加入界面后显式 `RoundedHitArea.install(button)`；仅设 CSS `-fx-background-radius` 不够。
+3. CSS 中同时设置 `-fx-background-radius` 与 `-fx-border-radius`，避免描边与填充形状不一致。
+4. 该修复是 UI 层过滤器，不替换 JFoenix 皮肤、不侵入上游 `ui/**`；后续 M3 切片 B2–G 若引入自有按钮皮肤，可移除对应安装点并保留测试。
+
+### 22.5 验证与产物
+
+| 项 | 结果 |
+|---|---|
+| `:HMCL:compileJava` | BUILD SUCCESSFUL（仅 3 条既有 JavaFX `--add-exports` 警告） |
+| `:HMCL:checkTranslations` | BUILD SUCCESSFUL |
+| community 测试 | 186 / 0 / 0 / 0；新增 `RoundedHitAreaTest` 4 项（透明角拒绝、中心/边接受、半径 cap、越界拒绝） |
+| 全量 `:HMCL:test` | 296 / 0 / 0 / 2 skipped |
+| `:HMCL:makeExecutables` | BUILD SUCCESSFUL |
+| jar | 11,982,029 B，SHA-256 `460f8a3886ac03e041e494b780f04da6b128d22a8f02e06b49fae4ee107c8b00` |
+| exe | 13,183,181 B，SHA-256 `43d7f4153b43b816af5cf1b32ae30e0302d2f9ef0705ec30c80d2aec1852abdd` |
+| 测试包 | `LMCL-1.0.0-win-x64-m3expressive13.zip` 75,107,890 B，SHA-256 `f2ad7e4593426732d1814c1321fec1511778d390f7000024ff1be75b45fa08cb` |
+
+### 22.6 已知限制与回退
+
+- WSL2 无 DISPLAY，未在 Windows 实机点击验收；键盘触发与触摸事件仍由 JavaFX 默认逻辑处理。
+- 只覆盖通过 `BuiltinWidgets` 创建的社区按钮、账户卡按钮；上游页面直接创建的 `JFXButton` 不在本次范围。
+- 若需回退：移除 `BuiltinWidgets` / `HomeAccountCard` 的安装调用并删除 `RoundedHitArea`，恢复到 `m3expressive12`；CSS 边框圆角可保留。
