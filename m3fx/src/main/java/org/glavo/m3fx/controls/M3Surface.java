@@ -1,0 +1,524 @@
+// Copyright (c) 2026 Glavo
+// SPDX-License-Identifier: Apache-2.0
+
+package org.glavo.m3fx.controls;
+
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.PaintConverter;
+import javafx.geometry.Insets;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import org.glavo.m3fx.internal.M3FocusTraversal;
+import org.glavo.m3fx.internal.M3AccessibleFocusNotifier;
+import org.glavo.m3fx.internal.M3Accessible;
+import org.glavo.m3fx.internal.M3ControlStyles;
+import org.glavo.m3fx.internal.M3Css;
+import org.glavo.m3fx.internal.M3Stylesheets;
+import org.glavo.m3fx.internal.M3ObservableLists;
+import org.glavo.m3fx.skins.M3SurfaceSkin;
+import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+/// A Material Design 3 surface container for arbitrary content.
+///
+/// `M3Surface` is a general-purpose themed container that applies Material surface color roles, elevation, shape,
+/// and padding to a list of child nodes. It is useful for composing application content that should remain aligned
+/// with the active M3FX token set. Content children are laid out within a shared padded container and participate in
+/// directional keyboard traversal in list order.
+///
+/// A new surface uses the container color role, elevation level zero, a 12-pixel shape radius, and 16-pixel content
+/// padding. Color role and elevation are semantic properties; shape and padding are styleable logical-pixel
+/// properties. The styleable container-paint property can override that role for this surface alone; descendant
+/// content colors continue to resolve from the active theme and application CSS.
+///
+/// See [Material Design](https://m3.material.io/) and
+/// [Material color roles](https://m3.material.io/styles/color/roles).
+@NotNullByDefault
+public final class M3Surface extends Control {
+    /// The default style class.
+    private static final String DEFAULT_STYLE_CLASS = "m3-surface";
+
+    /// The default surface container shape.
+    private static final double DEFAULT_CONTAINER_SHAPE = 12.0;
+
+    /// The default surface content padding.
+    private static final double DEFAULT_CONTENT_PADDING = 16.0;
+
+    /// The fallback container paint used before CSS resolves a surface variant.
+    private static final Paint DEFAULT_CONTAINER_COLOR = Color.TRANSPARENT;
+
+    /// The mutable content nodes displayed inside the surface.
+    private final ObservableList<Node> content = M3ObservableLists.identityDistinctElementList("content");
+
+    /// Notifies accessibility clients when focus moves between content children.
+    private final M3AccessibleFocusNotifier focusNotifier =
+            new M3AccessibleFocusNotifier(this, () -> M3Accessible.currentOrFirstFocusTarget(this, getContent()));
+
+    /// Creates an empty surface with the container color role and elevation level zero.
+    public M3Surface() {
+        initialize();
+    }
+
+    /// The semantic surface color variant.
+    ///
+    /// Assigning `null` through the property restores [M3SurfaceVariant#CONTAINER].
+    ///
+    /// @defaultValue `CONTAINER`
+    private final ObjectProperty<M3SurfaceVariant> variant =
+            new SimpleObjectProperty<>(this, "variant", M3SurfaceVariant.CONTAINER) {
+                /// Updates variant style classes when the property changes.
+                @Override
+                protected void invalidated() {
+                    if (get() == null) {
+                        set(M3SurfaceVariant.CONTAINER);
+                        return;
+                    }
+                    updateVariantStyle();
+                }
+            };
+
+    /// Returns the surface color variant.
+    ///
+    /// @return the surface color variant
+    public final M3SurfaceVariant getVariant() {
+        return variant.get();
+    }
+
+    /// Sets the surface color variant.
+    ///
+    /// @param variant the surface color variant
+    /// @throws NullPointerException if `variant` is `null`
+    public final void setVariant(M3SurfaceVariant variant) {
+        this.variant.set(Objects.requireNonNull(variant, "variant"));
+    }
+
+    /// Returns the `variant` property.
+    ///
+    /// The returned property is observable and bindable. Its default value is `CONTAINER`.
+    ///
+    /// @return the `variant` property
+    public final ObjectProperty<M3SurfaceVariant> variantProperty() {
+        return variant;
+    }
+
+    /// The styleable paint used for the surface container.
+    ///
+    /// CSS exposes this property as `-m3-container-color`. Before CSS is applied, its effective value is
+    /// transparent.
+    private @Nullable StyleableObjectProperty<@Nullable Paint> containerColor;
+
+    /// Returns the paint used for the surface container.
+    ///
+    /// @return the effective non-null container paint
+    public final Paint getContainerColor() {
+        return containerColor == null
+                ? DEFAULT_CONTAINER_COLOR
+                : Objects.requireNonNullElse(containerColor.get(), DEFAULT_CONTAINER_COLOR);
+    }
+
+    /// Sets the paint used for the surface container.
+    ///
+    /// @param color the non-null container paint
+    /// @throws NullPointerException if `color` is `null`
+    public final void setContainerColor(Paint color) {
+        containerColorProperty().set(Objects.requireNonNull(color, "color"));
+    }
+
+    /// Returns the styleable property containing the surface container paint.
+    ///
+    /// If a binding supplies `null`, rendering falls back to transparent until a non-null value is supplied. CSS
+    /// cannot set the property while it is bound.
+    ///
+    /// @return the container-color property
+    public final StyleableObjectProperty<@Nullable Paint> containerColorProperty() {
+        if (containerColor == null) {
+            containerColor = M3Css.styleableObjectProperty(
+                    DEFAULT_CONTAINER_COLOR,
+                    this,
+                    "containerColor",
+                    StyleableProperties.CONTAINER_COLOR,
+                    this::requestLayout
+            );
+        }
+        return containerColor;
+    }
+
+    /// The surface elevation level.
+    ///
+    /// Assigning `null` through the property restores [M3SurfaceElevation#LEVEL0].
+    ///
+    /// @defaultValue `LEVEL0`
+    private final ObjectProperty<M3SurfaceElevation> elevation =
+            new SimpleObjectProperty<>(this, "elevation", M3SurfaceElevation.LEVEL0) {
+                /// Updates elevation style classes when the property changes.
+                @Override
+                protected void invalidated() {
+                    if (get() == null) {
+                        set(M3SurfaceElevation.LEVEL0);
+                        return;
+                    }
+                    updateElevationStyle();
+                }
+            };
+
+    /// Returns the surface elevation level.
+    ///
+    /// @return the surface elevation level
+    public final M3SurfaceElevation getElevation() {
+        return elevation.get();
+    }
+
+    /// Sets the surface elevation level.
+    ///
+    /// @param elevation the surface elevation level
+    /// @throws NullPointerException if `elevation` is `null`
+    public final void setElevation(M3SurfaceElevation elevation) {
+        this.elevation.set(Objects.requireNonNull(elevation, "elevation"));
+    }
+
+    /// Returns the `elevation` property.
+    ///
+    /// The returned property is observable and bindable. Its default value is `LEVEL0`.
+    ///
+    /// @return the `elevation` property
+    public final ObjectProperty<M3SurfaceElevation> elevationProperty() {
+        return elevation;
+    }
+
+    /// The surface container corner radius in logical pixels.
+    ///
+    /// @defaultValue `12.0`
+    private @Nullable StyleableDoubleProperty containerShape;
+
+    /// Returns the surface container shape token.
+    ///
+    /// @return the surface container shape token in pixels
+    public final double getContainerShape() {
+        return containerShape == null ? DEFAULT_CONTAINER_SHAPE : containerShape.get();
+    }
+
+    /// Sets the surface container shape token.
+    ///
+    /// @param containerShape the surface container shape token in pixels
+    /// @throws IllegalArgumentException if the supplied value is negative or not finite
+    public final void setContainerShape(double containerShape) {
+        containerShapeProperty().set(M3Css.nonNegative(containerShape, "containerShape"));
+    }
+
+    /// Returns the `containerShape` property.
+    ///
+    /// The returned property is observable, bindable, and styleable. It accepts finite, non-negative values and has a
+    /// default value of `12.0` logical pixels.
+    ///
+    /// @return the `containerShape` property
+    public final StyleableDoubleProperty containerShapeProperty() {
+        if (containerShape == null) {
+            containerShape = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_CONTAINER_SHAPE,
+                    this,
+                    "containerShape",
+                    StyleableProperties.CONTAINER_SHAPE,
+                    this::requestLayout
+            );
+        }
+        return containerShape;
+    }
+
+    /// The uniform surface content padding in logical pixels.
+    ///
+    /// @defaultValue `16.0`
+    private @Nullable StyleableDoubleProperty contentPadding;
+
+    /// Returns the surface content padding token.
+    ///
+    /// @return the surface content padding token in pixels
+    public final double getContentPadding() {
+        return contentPadding == null ? DEFAULT_CONTENT_PADDING : contentPadding.get();
+    }
+
+    /// Sets the surface content padding token.
+    ///
+    /// @param contentPadding the surface content padding token in pixels
+    /// @throws IllegalArgumentException if the supplied value is negative or not finite
+    public final void setContentPadding(double contentPadding) {
+        contentPaddingProperty().set(M3Css.nonNegative(contentPadding, "contentPadding"));
+    }
+
+    /// Returns the `contentPadding` property.
+    ///
+    /// The returned property is observable, bindable, and styleable. It accepts finite, non-negative values and has a
+    /// default value of `16.0` logical pixels.
+    ///
+    /// @return the `contentPadding` property
+    public final StyleableDoubleProperty contentPaddingProperty() {
+        if (contentPadding == null) {
+            contentPadding = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_CONTENT_PADDING,
+                    this,
+                    "contentPadding",
+                    StyleableProperties.CONTENT_PADDING,
+                    this::updatePadding
+            );
+        }
+        return contentPadding;
+    }
+
+    /// Returns the mutable content nodes displayed inside the surface.
+    ///
+    /// The returned list is live, mutable, ordered, and rejects `null` elements. Mutations update layout, keyboard
+    /// traversal, and accessibility immediately. The list rejects repeated occurrences of the same node instance
+    /// and validates bulk mutations before changing. Nodes become children of this surface and must satisfy the
+    /// JavaFX single-parent rule.
+    ///
+    /// @return the live mutable ordered content list
+    public final ObservableList<Node> getContent() {
+        return content;
+    }
+
+    /// Returns the user-agent stylesheet for M3FX surfaces.
+    ///
+    /// @return the surface user-agent stylesheet URL
+    @Override
+    public String getUserAgentStylesheet() {
+        return M3Stylesheets.controlStylesheet("surface.css");
+    }
+
+    /// Requests focus on the current or first accessibility item.
+    ///
+    /// @return `true` when the target accepted focus
+    final boolean focusAccessibleItem() {
+        if (M3Accessible.showCurrentOrItem(this, getContent())) {
+            notifyAccessibleFocusChanged();
+            return true;
+        }
+        return false;
+    }
+
+    /// Shows an item requested by an accessibility client.
+    ///
+    /// @param parameters optional accessibility target parameters
+    /// @return `true` when focus moved to the default or requested item
+    final boolean showAccessibleItem(Object... parameters) {
+        if (M3Accessible.showCurrentOrItem(this, getContent(), parameters)) {
+            notifyAccessibleFocusChanged();
+            return true;
+        }
+        return false;
+    }
+
+    /// Notifies accessibility clients that the container focus target changed.
+    private void notifyAccessibleFocusChanged() {
+        M3Accessible.notifyFocusNodeChanged(this);
+        focusNotifier.refresh();
+    }
+
+    /// Creates the default Material Design 3 surface skin.
+    ///
+    /// @return the default Material Design 3 surface skin
+    @Override
+    protected Skin<?> createDefaultSkin() {
+        return new M3SurfaceSkin(this);
+    }
+
+    /// Returns accessibility attributes for the surface content collection.
+    ///
+    /// @param attribute  the requested accessibility attribute
+    /// @param parameters the optional attribute parameters
+    /// @return the attribute value, or `null` when unavailable
+    /// @throws NullPointerException if `attribute` is `null`
+    @Override
+    public @Nullable Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        return switch (attribute) {
+            case CONTENTS -> getContent().size() == 1 ? getContent().get(0) : null;
+            case ITEM_COUNT -> getContent().size();
+            case ITEM_AT_INDEX -> M3Accessible.itemAt(getContent(), parameters);
+            case FOCUS_NODE -> M3Accessible.currentOrFirstFocusTarget(this, getContent());
+            default -> super.queryAccessibleAttribute(attribute, parameters);
+        };
+    }
+
+    /// Executes accessibility actions for indexed surface content children.
+    ///
+    /// @param action     the requested accessibility action
+    /// @param parameters the optional action parameters
+    /// @throws NullPointerException if `action` is `null`
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        Objects.requireNonNull(action, "action");
+        if (isDisabled()) {
+            super.executeAccessibleAction(action, parameters);
+            return;
+        }
+
+        switch (action) {
+            case REQUEST_FOCUS -> focusAccessibleItem();
+            case SHOW_ITEM -> showAccessibleItem(parameters);
+            default -> super.executeAccessibleAction(action, parameters);
+        }
+    }
+
+    /// Returns the CSS metadata for this node class.
+    ///
+    /// @return the CSS metadata for this node class
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /// Returns the CSS metadata for this node.
+    ///
+    /// @return the CSS metadata for this node
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
+
+    /// Initializes style classes and default metrics.
+    private void initialize() {
+        M3ControlStyles.initialize(this, DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.PARENT);
+        setFocusTraversable(false);
+        M3Accessible.installAccessibleActionRoute(this, this::focusAccessibleItem, this::showAccessibleItem);
+        getContent().addListener((ListChangeListener<Node>) change -> handleContentChanged());
+        addEventFilter(KeyEvent.KEY_PRESSED, this::handleNavigationKeyPressed);
+        focusNotifier.start();
+        updateVariantStyle();
+        updateElevationStyle();
+        updatePadding();
+    }
+
+    /// Handles linear keyboard traversal between surface content targets.
+    private void handleNavigationKeyPressed(KeyEvent event) {
+        M3FocusTraversal.handleDirectionalKeyFocus(
+                this,
+                event,
+                M3FocusTraversal.focusTargetsInReachableTrees(getContent()),
+                true,
+                true,
+                -1,
+                false
+        );
+    }
+
+    /// Notifies accessibility clients that the surface content collection changed.
+    private void notifyAccessibleItemsChanged() {
+        notifyAccessibleAttributeChanged(AccessibleAttribute.CONTENTS);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.CHILDREN);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.ITEM_COUNT);
+        M3Accessible.notifyFocusNodeChanged(this);
+        focusNotifier.refresh();
+    }
+
+    /// Requests layout and notifies accessibility clients after content changes.
+    private void handleContentChanged() {
+        requestLayout();
+        notifyAccessibleItemsChanged();
+    }
+
+    /// Applies the current color variant style class.
+    private void updateVariantStyle() {
+        M3ControlStyles.replaceVariant(
+                this,
+                getVariant().styleClass(),
+                M3SurfaceVariant.SURFACE.styleClass(),
+                M3SurfaceVariant.CONTAINER_LOWEST.styleClass(),
+                M3SurfaceVariant.CONTAINER_LOW.styleClass(),
+                M3SurfaceVariant.CONTAINER.styleClass(),
+                M3SurfaceVariant.CONTAINER_HIGH.styleClass(),
+                M3SurfaceVariant.CONTAINER_HIGHEST.styleClass(),
+                M3SurfaceVariant.PRIMARY_CONTAINER.styleClass(),
+                M3SurfaceVariant.SECONDARY_CONTAINER.styleClass(),
+                M3SurfaceVariant.TERTIARY_CONTAINER.styleClass()
+        );
+    }
+
+    /// Applies the current elevation style class.
+    private void updateElevationStyle() {
+        M3ControlStyles.replaceVariant(
+                this,
+                getElevation().styleClass(),
+                M3SurfaceElevation.LEVEL0.styleClass(),
+                M3SurfaceElevation.LEVEL1.styleClass(),
+                M3SurfaceElevation.LEVEL2.styleClass(),
+                M3SurfaceElevation.LEVEL3.styleClass(),
+                M3SurfaceElevation.LEVEL4.styleClass(),
+                M3SurfaceElevation.LEVEL5.styleClass()
+        );
+    }
+
+    /// Applies content padding from tokens.
+    private void updatePadding() {
+        double padding = getContentPadding();
+        M3Css.setPaddingIfUnbound(this, new Insets(padding));
+    }
+
+    /// CSS metadata for M3FX surface tokens.
+    @NotNullByDefault
+    private static final class StyleableProperties {
+        /// CSS metadata for the surface container paint.
+        private static final CssMetaData<M3Surface, @Nullable Paint> CONTAINER_COLOR =
+                new CssMetaData<>(
+                        "-m3-container-color",
+                        PaintConverter.getInstance(),
+                        DEFAULT_CONTAINER_COLOR
+                ) {
+                    /// Returns whether CSS may assign the container paint.
+                    @Override
+                    public boolean isSettable(M3Surface control) {
+                        return M3Css.isSettable(control.containerColorProperty());
+                    }
+
+                    /// Returns the styleable container paint property.
+                    @Override
+                    public StyleableProperty<@Nullable Paint> getStyleableProperty(M3Surface control) {
+                        return control.containerColorProperty();
+                    }
+                };
+
+        /// CSS metadata for the container shape token.
+        private static final CssMetaData<M3Surface, Number> CONTAINER_SHAPE =
+                M3Css.sizeMetaData(
+                        "-m3-container-shape",
+                        DEFAULT_CONTAINER_SHAPE,
+                        M3Surface::containerShapeProperty
+                );
+
+        /// CSS metadata for the content padding token.
+        private static final CssMetaData<M3Surface, Number> CONTENT_PADDING =
+                M3Css.sizeMetaData(
+                        "-m3-content-padding",
+                        DEFAULT_CONTENT_PADDING,
+                        M3Surface::contentPaddingProperty
+                );
+
+        /// The complete immutable CSS metadata list.
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+
+        static {
+            List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Control.getClassCssMetaData());
+            styleables.add(CONTAINER_COLOR);
+            styleables.add(CONTAINER_SHAPE);
+            styleables.add(CONTENT_PADDING);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+}

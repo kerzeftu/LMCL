@@ -1,0 +1,125 @@
+.m3-split-button {
+    -m3-split-button-outer-corner: 20px;
+    -m3-split-button-container-height: 40px;
+    -m3-split-button-spacing: 2px;
+    -m3-split-button-action-leading-space: 16px;
+    -m3-split-button-action-trailing-space: 12px;
+    -m3-split-button-menu-width: 48px;
+    -m3-split-button-menu-icon-size: 22px;
+    -m3-split-button-menu-icon-offset: 1px;
+    -m3-split-button-menu-icon-right-offset: -1px;
+    -m3-split-button-inner-corner: 4px;
+    -m3-split-button-hovered-inner-corner: 12px;
+    -m3-split-button-pressed-inner-corner: 12px;
+    -m3-split-button-selected-inner-corner: 20px;
+}
+
+.m3-split-button.m3-split-button-extra-small {
+    -m3-split-button-outer-corner: 16px;
+    -m3-split-button-inner-corner: 4px;
+    -m3-split-button-hovered-inner-corner: 8px;
+    -m3-split-button-pressed-inner-corner: 8px;
+    -m3-split-button-selected-inner-corner: 16px;
+    -m3-split-button-container-height: 32px;
+    -m3-split-button-action-leading-space: 12px;
+    -m3-split-button-action-trailing-space: 10px;
+    -m3-split-button-menu-width: 48px;
+    -m3-split-button-menu-icon-size: 22px;
+    -m3-split-button-menu-icon-offset: 1px;
+    -m3-split-button-menu-icon-right-offset: -1px;
+}
+
+.m3-split-button.m3-split-button-small {
+    -m3-split-button-outer-corner: 20px;
+    -m3-split-button-container-height: 40px;
+    -m3-split-button-action-leading-space: 16px;
+    -m3-split-button-action-trailing-space: 12px;
+    -m3-split-button-menu-width: 48px;
+    -m3-split-button-menu-icon-size: 22px;
+    -m3-split-button-menu-icon-offset: 1px;
+    -m3-split-button-menu-icon-right-offset: -1px;
+    -m3-split-button-inner-corner: 4px;
+    -m3-split-button-hovered-inner-corner: 12px;
+    -m3-split-button-pressed-inner-corner: 12px;
+    -m3-split-button-selected-inner-corner: 20px;
+}
+
+.m3-split-button.m3-split-button-medium {
+    -m3-split-button-outer-corner: 28px;
+    -m3-split-button-inner-corner: 4px;
+    -m3-split-button-hovered-inner-corner: 12px;
+    -m3-split-button-pressed-inner-corner: 12px;
+    -m3-split-button-selected-inner-corner: 28px;
+    -m3-split-button-container-height: 56px;
+    -m3-split-button-action-leading-space: 24px;
+    -m3-split-button-action-trailing-space: 24px;
+    -m3-split-button-menu-width: 56px;
+    -m3-split-button-menu-icon-size: 26px;
+    -m3-split-button-menu-icon-offset: 2px;
+    -m3-split-button-menu-icon-right-offset: -2px;
+}
+
+.m3-split-button.m3-split-button-large {
+    -m3-split-button-outer-corner: 48px;
+    -m3-split-button-inner-corner: 8px;
+    -m3-split-button-hovered-inner-corner: 20px;
+    -m3-split-button-pressed-inner-corner: 20px;
+    -m3-split-button-selected-inner-corner: 48px;
+    -m3-split-button-container-height: 96px;
+    -m3-split-button-action-leading-space: 48px;
+    -m3-split-button-action-trailing-space: 48px;
+    -m3-split-button-menu-width: 96px;
+    -m3-split-button-menu-icon-size: 38px;
+    -m3-split-button-menu-icon-offset: 3px;
+    -m3-split-button-menu-icon-right-offset: -3px;
+}
+
+.m3-split-button.m3-split-button-extra-large {
+    -m3-split-button-outer-corner: 68px;
+    -m3-split-button-inner-corner: 12px;
+    -m3-split-button-hovered-inner-corner: 20px;
+    -m3-split-button-pressed-inner-corner: 20px;
+    -m3-split-button-selected-inner-corner: 68px;
+    -m3-split-button-container-height: 136px;
+    -m3-split-button-action-leading-space: 64px;
+    -m3-split-button-action-trailing-space: 64px;
+    -m3-split-button-menu-width: 136px;
+    -m3-split-button-menu-icon-size: 50px;
+    -m3-split-button-menu-icon-offset: 6px;
+    -m3-split-button-menu-icon-right-offset: -6px;
+}
+
+.m3-split-button .m3-button.m3-split-button-action {
+    -m3-container-height: -m3-split-button-container-height;
+}
+
+.m3-split-button .m3-button.m3-split-button-action:left-edge {
+    -fx-padding: 0 -m3-split-button-action-trailing-space 0 -m3-split-button-action-leading-space;
+}
+
+.m3-split-button .m3-button.m3-split-button-action:right-edge {
+    -fx-padding: 0 -m3-split-button-action-leading-space 0 -m3-split-button-action-trailing-space;
+}
+
+.m3-split-button .m3-menu-button.m3-split-button-menu {
+    -m3-container-height: -m3-split-button-container-height;
+    -m3-horizontal-padding: 0px;
+    -fx-min-width: -m3-split-button-menu-width;
+    -fx-pref-width: -m3-split-button-menu-width;
+}
+
+.m3-split-button .m3-menu-button.m3-split-button-menu .m3-disclosure-icon {
+    -m3-disclosure-icon-size: -m3-split-button-menu-icon-size;
+}
+
+.m3-split-button .m3-menu-button.m3-split-button-menu:left-edge .m3-disclosure-icon {
+    -fx-translate-x: -m3-split-button-menu-icon-offset;
+}
+
+.m3-split-button .m3-menu-button.m3-split-button-menu:right-edge .m3-disclosure-icon {
+    -fx-translate-x: -m3-split-button-menu-icon-right-offset;
+}
+
+.m3-split-button .m3-menu-button.m3-split-button-menu:showing .m3-disclosure-icon {
+    -fx-translate-x: 0;
+}

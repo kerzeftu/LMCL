@@ -1,0 +1,23 @@
+// Copyright (c) 2026 Glavo
+// SPDX-License-Identifier: Apache-2.0
+
+package org.glavo.m3fx.internal.tokens;
+
+import org.glavo.m3fx.tokens.M3ColorTokens;
+import org.glavo.monetfx.ColorScheme;
+import org.jetbrains.annotations.NotNullByDefault;
+
+import java.util.Objects;
+
+/// Default immutable implementation of [M3ColorTokens].
+///
+/// @param colorScheme the MonetFX color scheme used by this token set
+@NotNullByDefault
+public record M3ColorTokensImpl(ColorScheme colorScheme) implements M3ColorTokens {
+    /// Creates color tokens backed by the supplied immutable color scheme.
+    ///
+    /// @throws NullPointerException if `colorScheme` is `null`
+    public M3ColorTokensImpl {
+        Objects.requireNonNull(colorScheme, "colorScheme");
+    }
+}

@@ -1,0 +1,104 @@
+.m3-dialog-window-root {
+    -fx-alignment: center;
+    -fx-background-color: transparent;
+}
+
+.m3-dialog-pane {
+    -m3-container-shape: 28px;
+    -m3-content-padding: 24px;
+    -m3-container-min-width: 280px;
+    -m3-container-max-width: 560px;
+    -m3-action-spacing: 8px;
+    -m3-dialog-icon-size: 24px;
+    -fx-padding: 36px;
+}
+
+.m3-dialog-pane .m3-dialog-surface {
+    -fx-background-color: -m3-color-surface-container-high;
+    -fx-background-insets: 12px;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 6, 0.18, 0, 3);
+}
+
+.m3-dialog-pane .m3-dialog-layout {
+    -fx-spacing: 0;
+}
+
+.m3-dialog-pane .header-panel {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 16px 0;
+}
+
+.m3-dialog-pane .header-panel .label {
+    -fx-background-color: transparent;
+    -fx-font-size: 24px;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-dialog-pane .content {
+    -fx-background-color: transparent;
+    -fx-alignment: top-left;
+}
+
+.m3-dialog-pane .content-label {
+    -fx-background-color: transparent;
+    -fx-font-size: 14px;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-dialog-pane .graphic-container {
+    -fx-padding: 0 0 0 24px;
+}
+
+.m3-dialog-pane .m3-dialog-graphic-icon {
+    -m3-icon-size: -m3-dialog-icon-size;
+}
+
+.m3-dialog-pane .m3-dialog-actions {
+    -fx-padding: 24px 0 0 0;
+}
+
+.m3-dialog-pane .m3-dialog-actions .m3-button {
+    -m3-horizontal-padding: 12px;
+}
+
+.m3-date-picker-dialog-preset-content,
+.m3-date-range-picker-dialog-preset-content,
+.m3-time-picker-dialog-preset-content {
+    -fx-alignment: top-left;
+    -fx-spacing: 16px;
+}
+
+.m3-date-picker-dialog-preset-list,
+.m3-date-range-picker-dialog-preset-list {
+    -fx-alignment: top-left;
+    -fx-spacing: 6px;
+    -fx-padding: 4px 0 0 0;
+    -fx-min-width: 132px;
+    -fx-pref-width: 132px;
+    -fx-max-width: 132px;
+}
+
+.m3-time-picker-dialog-preset-list {
+    -fx-alignment: top-left;
+    -fx-hgap: 8px;
+    -fx-vgap: 6px;
+    -fx-padding: 4px 0 0 0;
+}
+
+.m3-date-picker-dialog-preset-button,
+.m3-date-range-picker-dialog-preset-button {
+    -m3-horizontal-padding: 12px;
+    -fx-alignment: center-left;
+    -fx-min-width: 132px;
+    -fx-pref-width: 132px;
+    -fx-max-width: 132px;
+}
+
+.m3-time-picker-dialog-preset-button {
+    -m3-horizontal-padding: 12px;
+    -fx-alignment: center-left;
+}
+
+.m3-dialog-pane:disabled {
+    -fx-opacity: -m3-state-disabled-content-opacity;
+}

@@ -58,7 +58,7 @@ public final class M3MotionSupport {
     private static void apply() {
         try {
             boolean disabled = SettingsManager.settings().animationDisabledProperty().get();
-            M3MotionSettings.setAnimationsEnabled(!disabled && !M3Settings.isReducedMotion());
+            M3MotionSettings.setGlobalReducedMotionRequested(disabled || M3Settings.isReducedMotion());
         } catch (Throwable e) {
             LOG.warning("Failed to apply M3 motion setting", e);
         }

@@ -63,7 +63,7 @@ dependencies {
     implementation(libs.fxsvgimage)
     implementation(libs.java.info)
     implementation(libs.monet.fx)
-    implementation(libs.m3fx)
+    implementation(project(":m3fx"))
     implementation(libs.nayuki.qrcodegen)
     implementation(libs.uuid.tools)
 

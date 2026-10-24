@@ -1,0 +1,245 @@
+.m3-chip.m3-chip,
+.m3-chip.m3-chip:hover,
+.m3-chip.m3-chip:focused,
+.m3-chip.m3-chip:armed,
+.m3-chip.m3-chip:pressed {
+    -m3-container-height: 32px;
+    -m3-container-shape: 8px;
+    -m3-horizontal-padding: 16px;
+    -m3-icon-horizontal-padding: 8px;
+    -m3-chip-element-spacing: 8px;
+    -m3-chip-icon-size: 18px;
+    -m3-chip-avatar-size: 24px;
+    -m3-chip-avatar-shape: 12px;
+    -m3-chip-outline-width: 1px;
+    -m3-chip-leading-icon-color: -m3-color-primary;
+    -m3-chip-trailing-icon-color: -m3-color-on-surface-variant;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8px;
+    -fx-border-insets: 0;
+    -fx-border-radius: 8px;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-content-display: left;
+    -fx-graphic-text-gap: 8px;
+    -fx-cursor: default;
+}
+
+.m3-chip .m3-icon-graphic {
+    -m3-icon-size: -m3-chip-icon-size;
+}
+
+.m3-chip-group {
+    -m3-chip-group-horizontal-gap: 8px;
+    -m3-chip-group-vertical-gap: 8px;
+}
+
+.m3-chip.m3-flat-chip,
+.m3-chip.m3-flat-chip:hover,
+.m3-chip.m3-flat-chip:focused,
+.m3-chip.m3-flat-chip:armed,
+.m3-chip.m3-flat-chip:pressed {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: -m3-color-outline-variant;
+    -fx-border-insets: 0;
+    -fx-border-width: 1px;
+    -fx-effect: null;
+}
+
+.m3-chip.m3-elevated-chip,
+.m3-chip.m3-elevated-chip:hover,
+.m3-chip.m3-elevated-chip:focused,
+.m3-chip.m3-elevated-chip:armed,
+.m3-chip.m3-elevated-chip:pressed {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-insets: 0;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 3, 0.18, 0, 1);
+}
+
+.m3-chip.m3-elevated-chip:hover {
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 6, 0.18, 0, 3);
+}
+
+.m3-chip.m3-elevated-chip:focus-visible,
+.m3-chip.m3-elevated-chip:armed,
+.m3-chip.m3-elevated-chip:pressed {
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 3, 0.18, 0, 1);
+}
+
+.m3-chip.m3-flat-chip.m3-assist-chip:focus-visible {
+    -fx-border-color: -m3-color-on-surface;
+}
+
+.m3-chip.m3-flat-chip.m3-suggestion-chip:focus-visible,
+.m3-chip.m3-flat-chip.m3-filter-chip:focus-visible,
+.m3-chip.m3-flat-chip.m3-input-chip:focus-visible {
+    -fx-border-color: -m3-color-on-surface-variant;
+}
+
+.m3-chip.m3-assist-chip,
+.m3-chip.m3-assist-chip:hover,
+.m3-chip.m3-assist-chip:focused,
+.m3-chip.m3-assist-chip:armed,
+.m3-chip.m3-assist-chip:pressed {
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-chip.m3-suggestion-chip,
+.m3-chip.m3-suggestion-chip:hover,
+.m3-chip.m3-suggestion-chip:focused,
+.m3-chip.m3-suggestion-chip:armed,
+.m3-chip.m3-suggestion-chip:pressed,
+.m3-chip.m3-filter-chip,
+.m3-chip.m3-filter-chip:hover,
+.m3-chip.m3-filter-chip:focused,
+.m3-chip.m3-filter-chip:armed,
+.m3-chip.m3-filter-chip:pressed,
+.m3-chip.m3-input-chip,
+.m3-chip.m3-input-chip:hover,
+.m3-chip.m3-input-chip:focused,
+.m3-chip.m3-input-chip:armed,
+.m3-chip.m3-input-chip:pressed {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-chip.m3-input-chip {
+    -m3-chip-leading-icon-color: -m3-color-on-surface-variant;
+}
+
+.m3-chip.m3-input-chip:hover,
+.m3-chip.m3-input-chip:focused,
+.m3-chip.m3-input-chip:armed,
+.m3-chip.m3-input-chip:pressed {
+    -m3-chip-leading-icon-color: -m3-color-primary;
+}
+
+.m3-chip.m3-assist-chip .m3-chip-leading-graphic,
+.m3-chip.m3-suggestion-chip .m3-chip-leading-graphic,
+.m3-chip.m3-filter-chip .m3-chip-leading-graphic {
+    -fx-text-fill: -m3-color-primary;
+}
+
+.m3-chip.m3-input-chip .m3-chip-leading-graphic,
+.m3-chip.m3-input-chip .m3-chip-leading-graphic .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-chip.m3-input-chip:hover .m3-chip-leading-graphic,
+.m3-chip.m3-input-chip:hover .m3-chip-leading-graphic .m3-icon-graphic,
+.m3-chip.m3-input-chip:focused .m3-chip-leading-graphic,
+.m3-chip.m3-input-chip:focused .m3-chip-leading-graphic .m3-icon-graphic,
+.m3-chip.m3-input-chip:armed .m3-chip-leading-graphic,
+.m3-chip.m3-input-chip:armed .m3-chip-leading-graphic .m3-icon-graphic,
+.m3-chip.m3-input-chip:pressed .m3-chip-leading-graphic,
+.m3-chip.m3-input-chip:pressed .m3-chip-leading-graphic .m3-icon-graphic {
+    -fx-text-fill: -m3-color-primary;
+}
+
+.m3-chip.m3-filter-chip .m3-chip-trailing-graphic,
+.m3-chip.m3-filter-chip .m3-chip-trailing-graphic .m3-icon-graphic,
+.m3-chip.m3-input-chip .m3-chip-trailing-graphic,
+.m3-chip.m3-input-chip .m3-chip-trailing-graphic .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-chip.m3-assist-chip .m3-state-layer,
+.m3-chip.m3-assist-chip .m3-ripple {
+    -fx-background-color: -m3-color-on-surface;
+}
+
+.m3-chip.m3-suggestion-chip .m3-state-layer,
+.m3-chip.m3-suggestion-chip .m3-ripple,
+.m3-chip.m3-filter-chip .m3-state-layer,
+.m3-chip.m3-filter-chip .m3-ripple,
+.m3-chip.m3-input-chip .m3-state-layer,
+.m3-chip.m3-input-chip .m3-ripple {
+    -fx-background-color: -m3-color-on-surface-variant;
+}
+
+.m3-chip.m3-filter-chip:selected,
+.m3-chip.m3-filter-chip:selected:hover,
+.m3-chip.m3-filter-chip:selected:focused,
+.m3-chip.m3-filter-chip:selected:armed,
+.m3-chip.m3-filter-chip:selected:pressed,
+.m3-chip.m3-input-chip:selected,
+.m3-chip.m3-input-chip:selected:hover,
+.m3-chip.m3-input-chip:selected:focused,
+.m3-chip.m3-input-chip:selected:armed,
+.m3-chip.m3-input-chip:selected:pressed {
+    -m3-chip-leading-icon-color: -m3-color-on-secondary-container;
+    -m3-chip-trailing-icon-color: -m3-color-on-secondary-container;
+    -fx-background-color: -m3-color-secondary-container;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-insets: 0;
+    -fx-border-width: 0;
+    -fx-text-fill: -m3-color-on-secondary-container;
+}
+
+.m3-chip.m3-filter-chip:selected .m3-chip-leading-graphic,
+.m3-chip.m3-filter-chip:selected .m3-chip-trailing-graphic,
+.m3-chip.m3-filter-chip:selected .m3-chip-trailing-graphic .m3-icon-graphic,
+.m3-chip.m3-input-chip:selected .m3-chip-trailing-graphic,
+.m3-chip.m3-input-chip:selected .m3-chip-trailing-graphic .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-secondary-container;
+}
+
+.m3-chip.m3-input-chip:selected .m3-chip-leading-graphic,
+.m3-chip.m3-input-chip:selected .m3-chip-leading-graphic .m3-icon-graphic {
+    -m3-chip-leading-icon-color: -m3-color-primary;
+    -fx-text-fill: -m3-color-primary;
+}
+
+.m3-chip.m3-input-chip:selected,
+.m3-chip.m3-input-chip:selected:hover,
+.m3-chip.m3-input-chip:selected:focused,
+.m3-chip.m3-input-chip:selected:armed,
+.m3-chip.m3-input-chip:selected:pressed {
+    -m3-chip-leading-icon-color: -m3-color-primary;
+}
+
+.m3-chip.m3-flat-chip.m3-filter-chip:selected:focus-visible,
+.m3-chip.m3-flat-chip.m3-input-chip:selected:focus-visible {
+    -fx-border-color: transparent;
+}
+
+.m3-chip.m3-filter-chip:selected .m3-state-layer,
+.m3-chip.m3-filter-chip:selected .m3-ripple,
+.m3-chip.m3-input-chip:selected .m3-state-layer,
+.m3-chip.m3-input-chip:selected .m3-ripple {
+    -fx-background-color: -m3-color-on-secondary-container;
+}
+
+.m3-chip:disabled {
+    -m3-chip-leading-icon-color: -m3-color-on-surface;
+    -m3-chip-trailing-icon-color: -m3-color-on-surface;
+    -fx-opacity: 1;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-chip:disabled > * {
+    -fx-opacity: -m3-state-disabled-content-opacity;
+}
+
+.m3-chip.m3-flat-chip:disabled {
+    -fx-background-color: transparent;
+    -fx-border-color: -m3-state-disabled-container-color;
+    -fx-effect: null;
+}
+
+.m3-chip.m3-elevated-chip:disabled,
+.m3-chip.m3-filter-chip:selected:disabled,
+.m3-chip.m3-input-chip:selected:disabled {
+    -fx-background-color: -m3-state-disabled-container-color;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-chip:disabled .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-surface;
+}

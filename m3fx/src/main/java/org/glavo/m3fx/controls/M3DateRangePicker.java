@@ -1,0 +1,1165 @@
+// Copyright (c) 2026 Glavo
+// SPDX-License-Identifier: Apache-2.0
+
+package org.glavo.m3fx.controls;
+
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
+import javafx.scene.input.KeyEvent;
+import org.glavo.m3fx.internal.M3Accessible;
+import org.glavo.m3fx.internal.M3ControlStyles;
+import org.glavo.m3fx.internal.M3KeyEvents;
+import org.glavo.m3fx.internal.M3NodeLayout;
+import org.glavo.m3fx.internal.M3PickerAccessibilityPresentation;
+import org.glavo.m3fx.internal.M3Stylesheets;
+import org.glavo.m3fx.skins.M3DateRangePickerSkin;
+import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.temporal.WeekFields;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+
+/// A Material Design 3 calendar for selecting an inclusive local-date range.
+///
+/// Selection consists of independently bindable start and end properties. A start without an end represents an
+/// in-progress range and [getRange][#getRange()] returns `null` until both endpoints are present.
+/// [#selectionProperty()] publishes one immutable snapshot after each complete control mutation, including
+/// [#setRange(LocalDate, LocalDate)], so observers do not need to reconstruct atomic range changes from two endpoint
+/// notifications. After a range is complete, selecting another date starts a new range. When completing an
+/// in-progress range, a date before the current start becomes the new start and the old start becomes the end.
+///
+/// Both endpoints must be within the inclusive minimum and maximum bounds and the start may not follow the end.
+/// Changing a bound so that either endpoint becomes invalid clears the entire range. The calendar's keyboard
+/// navigation follows the same date movement conventions as [M3DatePicker].
+///
+/// ```java
+/// private M3DateRangePicker createRangePicker() {
+///     LocalDate today = LocalDate.now();
+///     M3DateRangePicker picker = new M3DateRangePicker();
+///     picker.setMinDate(today);
+///     picker.setMaxDate(today.plusMonths(6));
+///     picker.setRange(today, today.plusDays(6));
+///     return picker;
+/// }
+/// ```
+///
+/// See [Material Design date pickers](https://m3.material.io/components/date-pickers/overview).
+@NotNullByDefault
+public final class M3DateRangePicker extends Control {
+    /// The default style class.
+    private static final String DEFAULT_STYLE_CLASS = "m3-date-range-picker";
+
+    /// Creates a picker showing the current month with no selected range and no date bounds.
+    public M3DateRangePicker() {
+        initialize();
+    }
+
+    /// Creates a date range picker initialized with the supplied selected range.
+    ///
+    /// @param startDate the first selected date
+    /// @param endDate   the last selected date
+    /// @throws IllegalArgumentException if `startDate` is after `endDate`
+    public M3DateRangePicker(LocalDate startDate, LocalDate endDate) {
+        initialize();
+        setRange(startDate, endDate);
+    }
+
+    /// The first selected date, or `null` when the range is empty.
+    ///
+    /// The default value is `null`. Assignments are validated against the current bounds and end date. Clearing
+    /// the start also clears a non-null end.
+    ///
+    /// @defaultValue `null`
+    private final ObjectProperty<@Nullable LocalDate> startDate =
+            new SimpleObjectProperty<>(this, "startDate") {
+                /// Validates the date range before applying direct property writes.
+                @Override
+                public void set(@Nullable LocalDate newValue) {
+                    beginRangeMutation();
+                    try {
+                        if (!applyingRange) {
+                            if (newValue == null && getEndDate() != null && endDate.isBound()) {
+                                throw new RuntimeException("A bound range end cannot be cleared");
+                            }
+                            validateDate(newValue);
+                            validateDateRange(newValue, getEndDate());
+                        }
+                        super.set(newValue);
+                    } finally {
+                        endRangeMutation();
+                    }
+                }
+
+                /// Keeps the displayed month and accessibility state synchronized.
+                @Override
+                protected void invalidated() {
+                    @Nullable LocalDate date = get();
+                    if (!applyingRange && date == null && getEndDate() != null) {
+                        endDate.set(null);
+                    }
+                    if (date != null) {
+                        showMonth(YearMonth.from(date));
+                    }
+                    markRangeChanged();
+                }
+            };
+
+    /// Returns the first selected date, or `null` when no range start is selected.
+    ///
+    /// @return the first selected date, or `null` when no range start is selected
+    public final @Nullable LocalDate getStartDate() {
+        return startDate.get();
+    }
+
+    /// Sets the first selected date, or clears the complete range when `null` is supplied.
+    ///
+    /// @param startDate the first selected date, or `null` to clear the range
+    /// @throws IllegalArgumentException if `startDate` is outside the current bounds or after the current end
+    /// @throws RuntimeException         if the start property is bound, or clearing the start would require clearing a bound
+    ///                          end property
+    public final void setStartDate(@Nullable LocalDate startDate) {
+        this.startDate.set(startDate);
+    }
+
+    /// Returns the observable property that stores the selected range start.
+    ///
+    /// The property can be observed and bound, and its default value is `null`. Direct assignments are validated
+    /// against the current bounds and range end; clearing it also clears a non-null end. A binding must preserve
+    /// these invariants and must not clear the start while a bound end remains non-null.
+    ///
+    /// @return the selected start-date property
+    public final ObjectProperty<@Nullable LocalDate> startDateProperty() {
+        return startDate;
+    }
+
+    /// The last selected date, or `null` while the range is empty or incomplete.
+    ///
+    /// The default value is `null`. A non-null end requires a non-null start, must not precede it, and must be
+    /// within the current bounds.
+    ///
+    /// @defaultValue `null`
+    private final ObjectProperty<@Nullable LocalDate> endDate =
+            new SimpleObjectProperty<>(this, "endDate") {
+                /// Validates the date range before applying direct property writes.
+                @Override
+                public void set(@Nullable LocalDate newValue) {
+                    beginRangeMutation();
+                    try {
+                        if (!applyingRange) {
+                            if (newValue != null && getStartDate() == null) {
+                                throw new IllegalArgumentException("startDate must be selected before endDate");
+                            }
+                            validateDate(newValue);
+                            validateDateRange(getStartDate(), newValue);
+                        }
+                        super.set(newValue);
+                    } finally {
+                        endRangeMutation();
+                    }
+                }
+
+                /// Keeps the displayed month and accessibility state synchronized.
+                @Override
+                protected void invalidated() {
+                    @Nullable LocalDate date = get();
+                    if (date != null) {
+                        showMonth(YearMonth.from(date));
+                    }
+                    markRangeChanged();
+                }
+            };
+
+    /// Returns the last selected date, or `null` while only a range start is selected.
+    ///
+    /// @return the last selected date, or `null` while only a range start is selected
+    public final @Nullable LocalDate getEndDate() {
+        return endDate.get();
+    }
+
+    /// Sets the last selected date, or clears the range end when `null` is supplied.
+    ///
+    /// @param endDate the last selected date, or `null` to clear the range end
+    /// @throws IllegalArgumentException if `endDate` is outside the current bounds, no start is selected, or it
+    ///                                  precedes the current start
+    /// @throws RuntimeException         if the end property is bound
+    public final void setEndDate(@Nullable LocalDate endDate) {
+        this.endDate.set(endDate);
+    }
+
+    /// Returns the observable property that stores the selected range end.
+    ///
+    /// The property can be observed and bound, and its default value is `null`. Direct non-null assignments require
+    /// a selected start, must not precede it, and must satisfy the current date bounds. A binding must preserve the
+    /// same invariants whenever either endpoint or a selectable bound changes.
+    ///
+    /// @return the selected end-date property
+    public final ObjectProperty<@Nullable LocalDate> endDateProperty() {
+        return endDate;
+    }
+
+    /// The month currently displayed by the calendar.
+    ///
+    /// The initial value is the month containing the construction date. Direct assignments reject `null`, and
+    /// bound values must be non-null.
+    private final ObjectProperty<YearMonth> displayedMonth =
+            new SimpleObjectProperty<>(this, "displayedMonth", YearMonth.now()) {
+                /// Keeps displayed month values non-null.
+                @Override
+                public void set(YearMonth newValue) {
+                    super.set(Objects.requireNonNull(newValue, "displayedMonth"));
+                }
+
+                /// Notifies accessibility clients when visible day cells change.
+                @Override
+                protected void invalidated() {
+                    notifyAccessibleItemsChanged();
+                }
+            };
+
+    /// Returns the month currently displayed by the calendar grid.
+    ///
+    /// @return the displayed calendar month
+    public final YearMonth getDisplayedMonth() {
+        return displayedMonth.get();
+    }
+
+    /// Sets the month displayed by the calendar grid.
+    ///
+    /// @param displayedMonth the month displayed by the calendar grid
+    /// @throws NullPointerException if `displayedMonth` is `null`
+    public final void setDisplayedMonth(YearMonth displayedMonth) {
+        this.displayedMonth.set(Objects.requireNonNull(displayedMonth, "displayedMonth"));
+    }
+
+    /// Returns the observable property that stores the displayed month.
+    ///
+    /// The property can be observed and bound. Its initial value is the month containing the construction date,
+    /// and direct assignments and bound values must be non-null.
+    ///
+    /// @return the displayed-month property
+    public final ObjectProperty<YearMonth> displayedMonthProperty() {
+        return displayedMonth;
+    }
+
+    /// The weekday shown in the first calendar column.
+    ///
+    /// The initial value is derived from the default locale at construction time. Direct assignments reject `null`,
+    /// bound values must be non-null, and later default-locale changes do not update an existing picker.
+    private final ObjectProperty<DayOfWeek> firstDayOfWeek =
+            new SimpleObjectProperty<>(this, "firstDayOfWeek", defaultFirstDayOfWeek()) {
+                /// Keeps first day of week values non-null.
+                @Override
+                public void set(DayOfWeek newValue) {
+                    super.set(Objects.requireNonNull(newValue, "firstDayOfWeek"));
+                }
+
+                /// Notifies accessibility clients when visible day cells change.
+                @Override
+                protected void invalidated() {
+                    notifyAccessibleItemsChanged();
+                }
+            };
+
+    /// Returns the weekday shown in the first calendar column.
+    ///
+    /// @return the weekday shown in the first calendar column
+    public final DayOfWeek getFirstDayOfWeek() {
+        return firstDayOfWeek.get();
+    }
+
+    /// Sets the weekday shown in the first calendar column.
+    ///
+    /// @param firstDayOfWeek the weekday shown in the first calendar column
+    /// @throws NullPointerException if `firstDayOfWeek` is `null`
+    public final void setFirstDayOfWeek(DayOfWeek firstDayOfWeek) {
+        this.firstDayOfWeek.set(Objects.requireNonNull(firstDayOfWeek, "firstDayOfWeek"));
+    }
+
+    /// Returns the observable property that stores the first day of the week.
+    ///
+    /// The property can be observed and bound. Its initial value is derived from the default locale at construction
+    /// time, and direct assignments and bound values must be non-null.
+    ///
+    /// @return the first-day-of-week property
+    public final ObjectProperty<DayOfWeek> firstDayOfWeekProperty() {
+        return firstDayOfWeek;
+    }
+
+    /// The inclusive lower selection bound, or `null` for no lower bound.
+    ///
+    /// The default value is `null`. Setter calls reject a lower bound after the current upper bound. Direct
+    /// property writes are not prevalidated and must preserve bound ordering. Invalidating either selected endpoint
+    /// clears the whole range.
+    ///
+    /// @defaultValue `null`
+    private final ObjectProperty<@Nullable LocalDate> minDate =
+            new SimpleObjectProperty<>(this, "minDate") {
+                /// Clears the current range when bounds exclude any selected date.
+                @Override
+                protected void invalidated() {
+                    clearRangeIfOutOfBounds();
+                    notifyAccessibleItemsChanged();
+                }
+            };
+
+    /// Returns the earliest selectable date, or `null` when there is no lower bound.
+    ///
+    /// @return the earliest selectable date, or `null` when there is no lower bound
+    public final @Nullable LocalDate getMinDate() {
+        return minDate.get();
+    }
+
+    /// Sets the earliest selectable date, or clears the lower bound when `null` is supplied.
+    ///
+    /// @param minDate the earliest selectable date, or `null` to clear the lower bound
+    /// @throws IllegalArgumentException if `minDate` is after the current [maxDate][#maxDateProperty()]
+    /// @throws RuntimeException         if an invalid range must be cleared while either endpoint property is bound
+    public final void setMinDate(@Nullable LocalDate minDate) {
+        validateSelectableBounds(minDate, getMaxDate());
+        this.minDate.set(minDate);
+    }
+
+    /// Returns the observable property that stores the inclusive lower date bound.
+    ///
+    /// The property can be observed and bound, and its default value is `null`. Direct property writes bypass the
+    /// ordering check performed by [setMinDate][#setMinDate(LocalDate)] and clear a range that becomes invalid. When
+    /// an endpoint property is bound, its binding must update the range before this property excludes it.
+    ///
+    /// @return the minimum-date property
+    public final ObjectProperty<@Nullable LocalDate> minDateProperty() {
+        return minDate;
+    }
+
+    /// The inclusive upper selection bound, or `null` for no upper bound.
+    ///
+    /// The default value is `null`. Setter calls reject an upper bound before the current lower bound. Direct
+    /// property writes are not prevalidated and must preserve bound ordering. Invalidating either selected endpoint
+    /// clears the whole range.
+    ///
+    /// @defaultValue `null`
+    private final ObjectProperty<@Nullable LocalDate> maxDate =
+            new SimpleObjectProperty<>(this, "maxDate") {
+                /// Clears the current range when bounds exclude any selected date.
+                @Override
+                protected void invalidated() {
+                    clearRangeIfOutOfBounds();
+                    notifyAccessibleItemsChanged();
+                }
+            };
+
+    /// Returns the latest selectable date, or `null` when there is no upper bound.
+    ///
+    /// @return the latest selectable date, or `null` when there is no upper bound
+    public final @Nullable LocalDate getMaxDate() {
+        return maxDate.get();
+    }
+
+    /// Sets the latest selectable date, or clears the upper bound when `null` is supplied.
+    ///
+    /// @param maxDate the latest selectable date, or `null` to clear the upper bound
+    /// @throws IllegalArgumentException if `maxDate` is before the current [minDate][#minDateProperty()]
+    /// @throws RuntimeException         if an invalid range must be cleared while either endpoint property is bound
+    public final void setMaxDate(@Nullable LocalDate maxDate) {
+        validateSelectableBounds(getMinDate(), maxDate);
+        this.maxDate.set(maxDate);
+    }
+
+    /// Returns the observable property that stores the inclusive upper date bound.
+    ///
+    /// The property can be observed and bound, and its default value is `null`. Direct property writes bypass the
+    /// ordering check performed by [setMaxDate][#setMaxDate(LocalDate)] and clear a range that becomes invalid. When
+    /// an endpoint property is bound, its binding must update the range before this property excludes it.
+    ///
+    /// @return the maximum-date property
+    public final ObjectProperty<@Nullable LocalDate> maxDateProperty() {
+        return maxDate;
+    }
+
+    /// Whether leading and trailing cells display dates from adjacent months.
+    ///
+    /// The default value is `true`.
+    ///
+    /// @defaultValue `true`
+    private final BooleanProperty showAdjacentMonthDays =
+            new SimpleBooleanProperty(this, "showAdjacentMonthDays", true) {
+                /// Notifies accessibility clients when visible day cells change.
+                @Override
+                protected void invalidated() {
+                    notifyAccessibleItemsChanged();
+                }
+            };
+
+    /// Returns whether adjacent-month days are visible in leading and trailing grid cells.
+    ///
+    /// @return `true` when adjacent-month days are visible
+    public final boolean isShowAdjacentMonthDays() {
+        return showAdjacentMonthDays.get();
+    }
+
+    /// Sets whether adjacent-month days are visible in leading and trailing grid cells.
+    ///
+    /// @param showAdjacentMonthDays whether adjacent-month days should be visible
+    public final void setShowAdjacentMonthDays(boolean showAdjacentMonthDays) {
+        this.showAdjacentMonthDays.set(showAdjacentMonthDays);
+    }
+
+    /// Returns the observable property that controls whether adjacent-month dates are visible.
+    ///
+    /// The property can be observed and bound. Its default value is `true`.
+    ///
+    /// @return the show-adjacent-month-days property
+    public final BooleanProperty showAdjacentMonthDaysProperty() {
+        return showAdjacentMonthDays;
+    }
+
+    /// The atomic empty, in-progress, or complete selection snapshot.
+    private final ReadOnlyObjectWrapper<M3DateRangeSelection> selection =
+            new ReadOnlyObjectWrapper<>(this, "selection", M3DateRangeSelection.EMPTY);
+
+    /// The nesting depth of endpoint mutations contributing to one atomic selection notification.
+    private int rangeMutationDepth;
+
+    /// Whether an endpoint changed during the current atomic mutation.
+    private boolean rangeMutationDirty;
+
+    /// Whether both endpoints are currently being assigned through [setRange][#setRange(LocalDate, LocalDate)].
+    private boolean applyingRange;
+
+    /// Sets both range endpoints after validating ordering and selectable bounds.
+    ///
+    /// The start property is assigned before the end property. Individual endpoint listeners may therefore observe
+    /// an intermediate pair, while [#selectionProperty()] publishes only the final pair.
+    ///
+    /// @param startDate the first selected date, or `null` to clear the range
+    /// @param endDate   the last selected date, or `null` for an incomplete range
+    /// @throws IllegalArgumentException if an endpoint is outside the current bounds or the start is after the end
+    /// @throws RuntimeException         if either endpoint property is bound
+    public final void setRange(@Nullable LocalDate startDate, @Nullable LocalDate endDate) {
+        validateDate(startDate);
+        validateDate(endDate);
+        validateDateRange(startDate, endDate);
+        if (this.startDate.isBound() || this.endDate.isBound()) {
+            throw new RuntimeException("A bound range endpoint cannot be set");
+        }
+        beginRangeMutation();
+        applyingRange = true;
+        try {
+            this.startDate.set(startDate);
+            this.endDate.set(endDate);
+        } finally {
+            applyingRange = false;
+            endRangeMutation();
+        }
+    }
+
+    /// Sets both range endpoints from the supplied inclusive range.
+    ///
+    /// @param range the inclusive date range to select
+    /// @throws NullPointerException     if `range` is `null`
+    /// @throws IllegalArgumentException if either endpoint is outside the current bounds
+    /// @throws RuntimeException         if either endpoint property is bound
+    public final void setRange(M3DateRange range) {
+        M3DateRange validatedRange = Objects.requireNonNull(range, "range");
+        setRange(validatedRange.startDate(), validatedRange.endDate());
+    }
+
+    /// Clears both range endpoints.
+    ///
+    /// Calling this method while the range is empty has no effect.
+    ///
+    /// @throws RuntimeException if either endpoint property is bound
+    public final void clearRange() {
+        setRange(null, null);
+    }
+
+    /// Returns whether both range endpoints are selected.
+    ///
+    /// @return `true` when both range endpoints are selected
+    public final boolean isRangeComplete() {
+        return getSelection().isComplete();
+    }
+
+    /// Returns the selected range, or `null` when the range is incomplete.
+    ///
+    /// @return the selected range, or `null` when the range is incomplete
+    public final @Nullable M3DateRange getRange() {
+        return getSelection().toRange();
+    }
+
+    /// Returns the atomic empty, in-progress, or complete selection snapshot.
+    ///
+    /// @return the current immutable selection snapshot
+    public final M3DateRangeSelection getSelection() {
+        return selection.get();
+    }
+
+    /// Returns the observable, read-only atomic selection property.
+    ///
+    /// The property initially contains [M3DateRangeSelection#EMPTY]. A direct endpoint change publishes after its
+    /// validation and any dependent endpoint clearing complete. [#setRange(LocalDate, LocalDate)] publishes once
+    /// after both endpoint properties have been assigned.
+    ///
+    /// @return the read-only atomic selection property
+    public final ReadOnlyObjectProperty<M3DateRangeSelection> selectionProperty() {
+        return selection.getReadOnlyProperty();
+    }
+
+    /// Applies a labeled date range preset and shows the preset start month.
+    ///
+    /// @param preset the date range preset to apply
+    /// @throws NullPointerException     if `preset` is `null`
+    /// @throws IllegalArgumentException if either preset endpoint is outside the current bounds
+    public final void applyPreset(M3DateRangePreset preset) {
+        M3DateRange range = Objects.requireNonNull(preset, "preset").range();
+        setRange(range);
+        showMonth(YearMonth.from(range.startDate()));
+    }
+
+    /// Returns whether the supplied date is inside the selected inclusive range.
+    ///
+    /// @param date the date to test
+    /// @return `true` when the supplied date is inside the selected inclusive range
+    /// @throws NullPointerException if `date` is `null`
+    public final boolean isDateInSelectedRange(LocalDate date) {
+        Objects.requireNonNull(date, "date");
+        @Nullable LocalDate start = getStartDate();
+        @Nullable LocalDate end = getEndDate();
+        return start != null && end != null && !date.isBefore(start) && !date.isAfter(end);
+    }
+
+    /// Selects a date as the next range endpoint.
+    ///
+    /// @param date the date to select as the next range endpoint
+    /// @throws NullPointerException     if `date` is `null`
+    /// @throws IllegalArgumentException if `date` is outside the current inclusive bounds
+    public final void selectDate(LocalDate date) {
+        Objects.requireNonNull(date, "date");
+        validateDate(date);
+
+        @Nullable LocalDate start = getStartDate();
+        @Nullable LocalDate end = getEndDate();
+        if (start == null || end != null) {
+            setRange(date, null);
+        } else if (date.isBefore(start)) {
+            setRange(date, start);
+        } else {
+            setRange(start, date);
+        }
+    }
+
+    /// Selects today's date as the next range endpoint when it is inside the configured range.
+    public final void selectToday() {
+        selectDate(LocalDate.now());
+    }
+
+    /// Shows the month before the current displayed month.
+    public final void showPreviousMonth() {
+        showMonth(getDisplayedMonth().minusMonths(1));
+    }
+
+    /// Shows the month after the current displayed month.
+    public final void showNextMonth() {
+        showMonth(getDisplayedMonth().plusMonths(1));
+    }
+
+    /// Shows the supplied month without changing the selected range.
+    ///
+    /// @param month the month to display
+    /// @throws NullPointerException if `month` is `null`
+    public final void showMonth(YearMonth month) {
+        setDisplayedMonth(month);
+    }
+
+    /// Shows the month containing today's date without changing the selected range.
+    public final void showToday() {
+        showMonth(YearMonth.from(LocalDate.now()));
+    }
+
+    /// Returns whether the supplied date is outside the configured selectable range.
+    ///
+    /// @param date the date to test
+    /// @return `true` when the date is outside the configured selectable range
+    /// @throws NullPointerException if `date` is `null`
+    public final boolean isDateDisabled(LocalDate date) {
+        Objects.requireNonNull(date, "date");
+        @Nullable LocalDate min = getMinDate();
+        @Nullable LocalDate max = getMaxDate();
+        return min != null && date.isBefore(min) || max != null && date.isAfter(max);
+    }
+
+    /// Returns the user-agent stylesheet for M3FX date range pickers.
+    @Override
+    public String getUserAgentStylesheet() {
+        return M3Stylesheets.controlStylesheet("date-picker.css");
+    }
+
+    /// Returns accessibility state for the selected range and the currently rendered day cells.
+    ///
+    /// `ITEM_COUNT` and `ITEM_AT_INDEX` describe currently available day-cell nodes. When no indexed day-cell
+    /// presentation is available, the item count is zero and indexed item queries return `null`. An indexed item
+    /// query never returns a [LocalDate] model value in place of a node.
+    ///
+    /// @throws NullPointerException if `attribute` is `null`
+    @Override
+    public @Nullable Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        Objects.requireNonNull(attribute, "attribute");
+        return switch (attribute) {
+            case FOCUS_NODE -> accessibleFocusNode();
+            case ITEM_COUNT -> accessibleDayCellCount();
+            case ITEM_AT_INDEX -> accessibleDayCellAt(parameters);
+            case SELECTED_ITEMS -> selectedItems();
+            case TEXT -> accessibleText();
+            default -> super.queryAccessibleAttribute(attribute, parameters);
+        };
+    }
+
+    /// Executes accessibility actions for date range selection and focus.
+    ///
+    /// @throws NullPointerException if `action` is `null`
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        Objects.requireNonNull(action, "action");
+        if (isDisabled()) {
+            super.executeAccessibleAction(action, parameters);
+            return;
+        }
+
+        switch (action) {
+            case REQUEST_FOCUS -> focusAccessibleNode(accessibleFocusNode());
+            case INCREMENT -> moveSelectionByDays(1);
+            case DECREMENT -> moveSelectionByDays(-1);
+            case BLOCK_INCREMENT -> moveSelectionByMonths(1);
+            case BLOCK_DECREMENT -> moveSelectionByMonths(-1);
+            case SHOW_ITEM -> showAccessibleDay(parameters);
+            case SET_SELECTED_ITEMS -> selectAccessibleDays(parameters);
+            default -> super.executeAccessibleAction(action, parameters);
+        }
+    }
+
+    /// Creates the default Material Design 3 date range picker skin.
+    @Override
+    protected Skin<?> createDefaultSkin() {
+        return new M3DateRangePickerSkin(this);
+    }
+
+    /// Adds base style classes, accessibility role, and keyboard navigation.
+    private void initialize() {
+        M3ControlStyles.initialize(this, DEFAULT_STYLE_CLASS);
+        pseudoClassStateChanged(M3DatePicker.MODAL_PSEUDO_CLASS, true);
+        setAccessibleRole(AccessibleRole.PARENT);
+        M3Accessible.installAccessibleActionRoute(this, this::focusAccessibleNode, this::showAccessibleDay,
+                this::handlesAccessibleShowTarget);
+        setFocusTraversable(true);
+        skinProperty().addListener(observable -> notifyAccessibleItemsChanged());
+        addEventHandler(KeyEvent.KEY_PRESSED, this::handleNavigationKeyPressed);
+    }
+
+    /// Handles keyboard date navigation.
+    private void handleNavigationKeyPressed(KeyEvent event) {
+        if (M3KeyEvents.hasNavigationModifier(event)) {
+            return;
+        }
+
+        boolean handled = switch (event.getCode()) {
+            case LEFT -> {
+                moveSelectionHorizontally(false);
+                yield true;
+            }
+            case RIGHT -> {
+                moveSelectionHorizontally(true);
+                yield true;
+            }
+            case UP -> {
+                moveSelectionByDays(-7);
+                yield true;
+            }
+            case DOWN -> {
+                moveSelectionByDays(7);
+                yield true;
+            }
+            case PAGE_UP -> {
+                moveSelectionByMonths(-1);
+                yield true;
+            }
+            case PAGE_DOWN -> {
+                moveSelectionByMonths(1);
+                yield true;
+            }
+            case HOME -> {
+                selectKeyboardDate(getDisplayedMonth().atDay(1));
+                yield true;
+            }
+            case END -> {
+                selectKeyboardDate(getDisplayedMonth().atEndOfMonth());
+                yield true;
+            }
+            default -> false;
+        };
+
+        if (handled) {
+            event.consume();
+        }
+    }
+
+    /// Moves keyboard selection horizontally in the visual direction of the pressed arrow key.
+    private void moveSelectionHorizontally(boolean rightKey) {
+        boolean forward = M3NodeLayout.isRightToLeft(this) != rightKey;
+        moveSelectionByDays(forward ? 1 : -1);
+    }
+
+    /// Moves keyboard selection by a number of days.
+    private void moveSelectionByDays(int days) {
+        selectKeyboardDate(navigationBaseDate().plusDays(days));
+    }
+
+    /// Moves keyboard selection by a number of months.
+    private void moveSelectionByMonths(int months) {
+        selectKeyboardDate(navigationBaseDate().plusMonths(months));
+    }
+
+    /// Selects a keyboard navigation target when it is enabled.
+    private void selectKeyboardDate(LocalDate date) {
+        showMonth(YearMonth.from(date));
+        if (!isDateDisabled(date)) {
+            selectDate(date);
+        }
+    }
+
+    /// Returns the base date used when keyboard navigation starts.
+    private LocalDate navigationBaseDate() {
+        @Nullable LocalDate end = getEndDate();
+        if (end != null) {
+            return end;
+        }
+
+        @Nullable LocalDate start = getStartDate();
+        if (start != null) {
+            return start;
+        }
+
+        YearMonth month = getDisplayedMonth();
+        LocalDate today = LocalDate.now();
+        return YearMonth.from(today).equals(month) ? today : month.atDay(1);
+    }
+
+    /// Validates that one date is selectable.
+    private void validateDate(@Nullable LocalDate date) {
+        if (date != null && isDateDisabled(date)) {
+            throw new IllegalArgumentException("date is outside the selectable range");
+        }
+    }
+
+    /// Clears the selected range when min or max bounds exclude one endpoint.
+    private void clearRangeIfOutOfBounds() {
+        @Nullable LocalDate start = getStartDate();
+        @Nullable LocalDate end = getEndDate();
+        if (start != null && isDateDisabled(start) || end != null && isDateDisabled(end)) {
+            clearRange();
+        }
+    }
+
+    /// Returns accessible text for the selected range or displayed month.
+    private String accessibleText() {
+        @Nullable LocalDate start = getStartDate();
+        @Nullable LocalDate end = getEndDate();
+        if (start == null) {
+            return getDisplayedMonth().toString();
+        }
+        return end == null ? start.toString() : start + "/" + end;
+    }
+
+    /// Returns the selected endpoints as an immutable accessibility selection list.
+    private List<LocalDate> selectedItems() {
+        @Nullable LocalDate start = getStartDate();
+        @Nullable LocalDate end = getEndDate();
+        if (start == null) {
+            return List.of();
+        }
+        if (end == null) {
+            return List.of(start);
+        }
+        return List.of(start, end);
+    }
+
+    /// Returns the number of visible day cells.
+    private int accessibleDayCellCount() {
+        @Nullable M3PickerAccessibilityPresentation presentation = accessibilityPresentation();
+        return presentation == null ? 0 : presentation.accessibleItemCount();
+    }
+
+    /// Returns the visible day cell at an accessibility index.
+    private @Nullable Node accessibleDayCellAt(Object... parameters) {
+        int index = M3Accessible.indexParameter(parameters);
+        @Nullable M3PickerAccessibilityPresentation presentation = accessibilityPresentation();
+        return presentation == null ? null : presentation.accessibleItemAt(index);
+    }
+
+    /// Returns the preferred focus node for the currently displayed dates.
+    private Node accessibleFocusNode() {
+        if (accessibilityPresentation() == null) {
+            return this;
+        }
+
+        @Nullable Node focusedCell = currentFocusedDayCell();
+        if (focusedCell != null) {
+            return focusedCell;
+        }
+
+        @Nullable LocalDate end = getEndDate();
+        if (end != null) {
+            @Nullable Node endCell = dayCellForDate(end);
+            if (endCell != null && !endCell.isDisabled()) {
+                return endCell;
+            }
+        }
+
+        @Nullable LocalDate start = getStartDate();
+        if (start != null) {
+            @Nullable Node startCell = dayCellForDate(start);
+            if (startCell != null && !startCell.isDisabled()) {
+                return startCell;
+            }
+        }
+
+        @Nullable Node firstEnabledCell = firstEnabledDayCell();
+        return firstEnabledCell == null ? this : firstEnabledCell;
+    }
+
+    /// Returns the currently focused visible day cell, or `null` when focus is outside this picker.
+    private @Nullable Node currentFocusedDayCell() {
+        @Nullable Node focusOwner = getScene() == null ? null : getScene().getFocusOwner();
+        if (focusOwner == null) {
+            return null;
+        }
+
+        @Nullable M3PickerAccessibilityPresentation presentation = accessibilityPresentation();
+        if (presentation == null) {
+            return null;
+        }
+        int itemCount = presentation.accessibleItemCount();
+        for (int index = 0; index < itemCount; index++) {
+            @Nullable Node cell = presentation.accessibleItemAt(index);
+            if (cell == null) {
+                continue;
+            }
+            if (!cell.isDisabled() && M3Accessible.containsNode(cell, focusOwner)) {
+                return M3Accessible.canReach(focusOwner) ? focusOwner : cell;
+            }
+        }
+        return null;
+    }
+
+    /// Focuses the current accessibility target or the picker itself.
+    final boolean focusAccessibleNode() {
+        return focusAccessibleNode(accessibleFocusNode());
+    }
+
+    /// Focuses an accessibility target or the picker itself.
+    private boolean focusAccessibleNode(@Nullable Node node) {
+        if (node != null && node != this && M3Accessible.showItem(this, node)) {
+            return true;
+        }
+        return M3Accessible.showDirectItem(this, this);
+    }
+
+    /// Returns whether this picker can reveal the supplied accessibility date target.
+    private boolean handlesAccessibleShowTarget(@Nullable Object parameter) {
+        return parameter instanceof LocalDate date && !isDateDisabled(date);
+    }
+
+    /// Shows and focuses the day requested by accessibility parameters.
+    final boolean showAccessibleDay(Object... parameters) {
+        @Nullable Object item = accessibleDayItem(parameters);
+        if (item instanceof Node node && M3Accessible.showItem(this, node)) {
+            return true;
+        }
+        if (item instanceof LocalDate date) {
+            if (isDateDisabled(date)) {
+                return false;
+            }
+            showMonth(YearMonth.from(date));
+            return showAccessibleDate(date);
+        }
+        return parameters.length == 0 && focusAccessibleNode();
+    }
+
+    /// Selects one or two dates requested by accessibility parameters.
+    private void selectAccessibleDays(Object... parameters) {
+        ArrayList<LocalDate> dates = new ArrayList<>(2);
+        collectAccessibleDates(dates, parameters);
+        if (dates.isEmpty()) {
+            return;
+        }
+
+        LocalDate firstDate = dates.get(0);
+        if (dates.size() == 1) {
+            if (!isDateDisabled(firstDate)) {
+                selectDate(firstDate);
+                focusAccessibleDateWhenShowing(firstDate);
+            }
+            return;
+        }
+
+        LocalDate secondDate = dates.get(1);
+        if (isDateDisabled(firstDate) || isDateDisabled(secondDate)) {
+            return;
+        }
+
+        if (secondDate.isBefore(firstDate)) {
+            setRange(secondDate, firstDate);
+        } else {
+            setRange(firstDate, secondDate);
+        }
+        focusAccessibleDateWhenShowing(secondDate);
+    }
+
+    /// Collects up to two dates from accessibility parameters.
+    private void collectAccessibleDates(List<LocalDate> dates, Object... parameters) {
+        Objects.requireNonNull(parameters, "parameters");
+        for (Object parameter : parameters) {
+            collectAccessibleDate(dates, parameter);
+            if (dates.size() >= 2) {
+                return;
+            }
+        }
+    }
+
+    /// Collects dates from one accessibility action parameter.
+    private void collectAccessibleDate(List<LocalDate> dates, @Nullable Object parameter) {
+        if (dates.size() >= 2) {
+            return;
+        }
+        if (parameter instanceof Number number) {
+            @Nullable LocalDate date = dateFromAccessibleItem(accessibleDayCellAt(number));
+            if (date != null) {
+                dates.add(date);
+            }
+            return;
+        }
+        @Nullable LocalDate date = dateFromAccessibleItem(parameter);
+        if (date != null) {
+            dates.add(date);
+            return;
+        }
+        if (parameter instanceof Iterable<?> values) {
+            for (Object value : values) {
+                collectAccessibleDate(dates, value);
+                if (dates.size() >= 2) {
+                    return;
+                }
+            }
+            return;
+        }
+        if (parameter instanceof Object[] values) {
+            for (Object value : values) {
+                collectAccessibleDate(dates, value);
+                if (dates.size() >= 2) {
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Returns the date represented by an accessibility item.
+    private static @Nullable LocalDate dateFromAccessibleItem(@Nullable Object item) {
+        if (item instanceof LocalDate date) {
+            return date;
+        }
+        if (item instanceof Node node && M3Accessible.isEffectivelyReachable(node)) {
+            return dateFromNode(node);
+        }
+        return null;
+    }
+
+    /// Shows the rendered day cell for a date when it is visible.
+    private boolean showAccessibleDate(LocalDate date) {
+        @Nullable Node cell = dayCellForDate(date);
+        return cell != null && !cell.isDisabled() && M3Accessible.showItem(this, cell);
+    }
+
+    /// Focuses the selected date when this picker is attached to a showing window.
+    ///
+    /// @param date the date whose cell should receive focus
+    private void focusAccessibleDateWhenShowing(LocalDate date) {
+        @Nullable Scene scene = getScene();
+        if (scene != null && scene.getWindow() != null && scene.getWindow().isShowing()) {
+            focusAccessibleDate(date);
+        }
+    }
+
+    /// Focuses the rendered day cell for a selectable date when it is visible.
+    private void focusAccessibleDate(LocalDate date) {
+        if (!isDateDisabled(date)) {
+            focusAccessibleNode(dayCellForDate(date));
+        }
+    }
+
+    /// Returns the day item requested by accessibility parameters.
+    private @Nullable Object accessibleDayItem(Object... parameters) {
+        Objects.requireNonNull(parameters, "parameters");
+        if (parameters.length == 0) {
+            return accessibleFocusNode();
+        }
+        if (parameters[0] instanceof Number) {
+            return accessibleDayCellAt(parameters);
+        }
+        for (Object parameter : parameters) {
+            @Nullable Object item = accessibleDayItem(parameter);
+            if (item != null) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    /// Returns the day item requested by one accessibility action parameter.
+    private @Nullable Object accessibleDayItem(@Nullable Object parameter) {
+        if (parameter instanceof Number number) {
+            return accessibleDayCellAt(number);
+        }
+        if (parameter instanceof LocalDate date) {
+            return date;
+        }
+        if (parameter instanceof Node node) {
+            return M3Accessible.isEffectivelyReachable(node) && dateFromNode(node) != null ? node : null;
+        }
+        if (parameter instanceof Iterable<?> values) {
+            for (Object value : values) {
+                @Nullable Object item = accessibleDayItem(value);
+                if (item != null) {
+                    return item;
+                }
+            }
+            return null;
+        }
+        if (parameter instanceof Object[] values) {
+            for (Object value : values) {
+                @Nullable Object item = accessibleDayItem(value);
+                if (item != null) {
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
+    /// Returns the date stored on a rendered day cell.
+    private static @Nullable LocalDate dateFromNode(@Nullable Object item) {
+        return item instanceof Node node && node.getUserData() instanceof LocalDate date ? date : null;
+    }
+
+    /// Returns the current indexed day-cell accessibility presentation.
+    private @Nullable M3PickerAccessibilityPresentation accessibilityPresentation() {
+        return getSkin() instanceof M3PickerAccessibilityPresentation presentation ? presentation : null;
+    }
+
+    /// Returns the rendered visible day cell for the supplied date.
+    private @Nullable Node dayCellForDate(LocalDate date) {
+        @Nullable M3PickerAccessibilityPresentation presentation = accessibilityPresentation();
+        if (presentation == null) {
+            return null;
+        }
+        int itemCount = presentation.accessibleItemCount();
+        for (int index = 0; index < itemCount; index++) {
+            @Nullable Node cell = presentation.accessibleItemAt(index);
+            if (date.equals(dateFromNode(cell))) {
+                return cell;
+            }
+        }
+        return null;
+    }
+
+    /// Returns the first rendered visible enabled day cell.
+    private @Nullable Node firstEnabledDayCell() {
+        @Nullable M3PickerAccessibilityPresentation presentation = accessibilityPresentation();
+        if (presentation == null) {
+            return null;
+        }
+        int itemCount = presentation.accessibleItemCount();
+        for (int index = 0; index < itemCount; index++) {
+            @Nullable Node cell = presentation.accessibleItemAt(index);
+            if (cell != null && !cell.isDisabled()) {
+                return cell;
+            }
+        }
+        return null;
+    }
+
+    /// Begins one possibly nested endpoint mutation.
+    private void beginRangeMutation() {
+        rangeMutationDepth++;
+    }
+
+    /// Completes one endpoint mutation and publishes the final snapshot at the outer boundary.
+    private void endRangeMutation() {
+        rangeMutationDepth--;
+        if (rangeMutationDepth == 0 && rangeMutationDirty) {
+            publishRangeSelection();
+        }
+    }
+
+    /// Records an endpoint change and publishes immediately when no compound mutation owns it.
+    private void markRangeChanged() {
+        rangeMutationDirty = true;
+        if (rangeMutationDepth == 0) {
+            publishRangeSelection();
+        }
+    }
+
+    /// Publishes one immutable selection snapshot and its accessibility notifications.
+    private void publishRangeSelection() {
+        rangeMutationDirty = false;
+        selection.set(M3DateRangeSelection.of(getStartDate(), getEndDate()));
+        notifyAccessibleRangeChanged();
+    }
+
+    /// Notifies accessibility clients that selected range values changed.
+    private void notifyAccessibleRangeChanged() {
+        notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_ITEMS);
+        M3Accessible.notifyFocusNodeChanged(this);
+    }
+
+    /// Notifies accessibility clients that visible day cells changed.
+    private void notifyAccessibleItemsChanged() {
+        notifyAccessibleAttributeChanged(AccessibleAttribute.CHILDREN);
+        M3Accessible.notifyFocusNodeChanged(this);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.ITEM_COUNT);
+    }
+
+    /// Validates an optional inclusive selected date range.
+    private static void validateDateRange(@Nullable LocalDate startDate, @Nullable LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate must not be after endDate");
+        }
+    }
+
+    /// Validates optional inclusive selectable bounds.
+    private static void validateSelectableBounds(@Nullable LocalDate minDate, @Nullable LocalDate maxDate) {
+        if (minDate != null && maxDate != null && minDate.isAfter(maxDate)) {
+            throw new IllegalArgumentException("minDate must not be after maxDate");
+        }
+    }
+
+    /// Returns the locale's default first day of week.
+    private static DayOfWeek defaultFirstDayOfWeek() {
+        return WeekFields.of(Locale.getDefault()).getFirstDayOfWeek();
+    }
+}

@@ -1,0 +1,69 @@
+.m3-picker-field {
+    -fx-background-color: transparent;
+}
+
+.m3-date-range-picker-field {
+    -fx-background-color: transparent;
+}
+
+.m3-date-range-picker-field-container {
+    -fx-alignment: center-left;
+    -fx-spacing: 12px;
+}
+
+.m3-picker-field-open-button {
+    -m3-container-height: 40px;
+    -m3-container-shape: 999px;
+    -fx-min-width: 40px;
+    -fx-pref-width: 40px;
+    -fx-min-height: 40px;
+    -fx-pref-height: 40px;
+}
+
+.m3-picker-field-popup {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-strong-shadow-color, 12, 0.16, 0, 4);
+}
+
+.m3-date-picker-field-preset-content,
+.m3-date-range-picker-field-preset-content,
+.m3-time-picker-field-preset-content {
+    -fx-alignment: top-left;
+    -fx-background-color: -m3-color-surface-container-high;
+    -m3-popup-shape: 28px;
+    -m3-popup-padding: 16px;
+    -m3-popup-spacing: 16px;
+    -m3-preset-list-width: 132px;
+    -m3-preset-list-spacing: 6px;
+    -m3-preset-button-horizontal-padding: 12px;
+    -fx-background-radius: 28px;
+    -fx-padding: 16px;
+    -fx-spacing: 16px;
+}
+
+.m3-date-picker-field-preset-content .m3-date-picker-container,
+.m3-date-range-picker-field-preset-content .m3-date-picker-container,
+.m3-time-picker-field-preset-content .m3-time-picker-container {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.m3-date-picker-field-preset-list,
+.m3-date-range-picker-field-preset-list,
+.m3-time-picker-field-preset-list {
+    -fx-alignment: top-left;
+    -fx-spacing: 6px;
+    -fx-padding: 4px 0 0 0;
+    -fx-pref-width: 132px;
+}
+
+.m3-date-picker-field-preset-button,
+.m3-date-range-picker-field-preset-button,
+.m3-time-picker-field-preset-button {
+    -m3-horizontal-padding: 12px;
+    -fx-alignment: center-left;
+    -fx-pref-width: 132px;
+    -fx-max-width: 132px;
+}

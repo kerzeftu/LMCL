@@ -1,0 +1,99 @@
+.m3-navigation-bar {
+    -fx-background-color: -m3-color-surface-container;
+    -fx-padding: 0px 8px 0px 8px;
+    -fx-min-height: 80px;
+    -fx-pref-height: 80px;
+    -m3-item-spacing: 0px;
+}
+
+.m3-navigation-item.m3-navigation-item,
+.m3-navigation-item.m3-navigation-item:hover,
+.m3-navigation-item.m3-navigation-item:focused,
+.m3-navigation-item.m3-navigation-item:armed,
+.m3-navigation-item.m3-navigation-item:pressed,
+.m3-navigation-item.m3-navigation-item:selected {
+    -m3-container-height: 80px;
+    -m3-item-width: 80px;
+    -m3-indicator-width: 64px;
+    -m3-indicator-height: 32px;
+    -m3-indicator-shape: 16px;
+    -m3-content-spacing: 4px;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0px;
+    -fx-padding: 0px;
+    -fx-cursor: default;
+}
+
+.m3-navigation-item-content {
+    -fx-alignment: center;
+}
+
+.m3-navigation-item-icon-container {
+    -fx-alignment: center;
+}
+
+.m3-navigation-item-indicator {
+    -fx-background-color: -m3-color-secondary-container;
+    -fx-background-insets: 0;
+    -fx-background-radius: 16px;
+}
+
+.m3-navigation-item-graphic {
+    -fx-alignment: center;
+}
+
+.m3-navigation-item .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-navigation-item:selected .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-secondary-container;
+}
+
+.m3-navigation-item-badge-container {
+    -fx-alignment: top-right;
+}
+
+.m3-navigation-item-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-navigation-item:selected .m3-navigation-item-label {
+    -fx-text-fill: -m3-navigation-bar-selected-label-color;
+}
+
+.m3-navigation-item .m3-state-layer,
+.m3-navigation-item .m3-ripple {
+    -fx-background-color: -m3-navigation-bar-state-layer-color;
+}
+
+.m3-navigation-item:selected .m3-state-layer,
+.m3-navigation-item:selected .m3-ripple {
+    -fx-background-color: -m3-navigation-bar-state-layer-color;
+}
+
+.m3-navigation-item:disabled {
+    -fx-opacity: 0.38;
+}
+
+.m3-navigation-bar .m3-navigation-item-horizontal.m3-navigation-item {
+    -m3-container-height: 64px;
+    -m3-item-width: 160px;
+    -m3-indicator-width: 64px;
+    -m3-indicator-height: 40px;
+    -m3-indicator-shape: 20px;
+    -m3-content-spacing: 4px;
+}
+
+.m3-navigation-bar.m3-navigation-bar-horizontal {
+    -m3-item-spacing: 0px;
+}
+
+.m3-navigation-item-horizontal .m3-navigation-item-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}

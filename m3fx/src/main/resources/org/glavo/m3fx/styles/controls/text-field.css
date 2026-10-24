@@ -1,0 +1,422 @@
+@import "scroll.css";
+
+.m3-text-field.m3-text-field,
+.m3-text-field.m3-text-field:focused,
+.m3-password-field.m3-password-field,
+.m3-password-field.m3-password-field:focused,
+.m3-text-area.m3-text-area,
+.m3-text-area.m3-text-area:focused {
+    -m3-container-height: 56px;
+    -m3-container-shape: 4px;
+    -m3-horizontal-padding: 16px;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-font-size: 16px;
+    -fx-text-fill: -m3-color-on-surface;
+    -fx-prompt-text-fill: -m3-color-on-surface-variant;
+    -fx-highlight-fill: -m3-color-primary;
+    -fx-highlight-text-fill: -m3-color-on-primary;
+}
+
+.m3-text-field:error,
+.m3-text-field:error:focused,
+.m3-password-field:error,
+.m3-password-field:error:focused,
+.m3-text-area:error,
+.m3-text-area:error:focused {
+    -fx-prompt-text-fill: -m3-color-error;
+}
+
+.m3-text-area.m3-text-area,
+.m3-text-area.m3-text-area:focused {
+    -m3-container-height: 112px;
+    -m3-vertical-padding: 16px;
+    -fx-control-inner-background: transparent;
+    -fx-background: transparent;
+}
+
+.m3-text-area.m3-text-area > .scroll-pane,
+.m3-text-area.m3-text-area:focused > .scroll-pane,
+.m3-text-area.m3-text-area > .scroll-pane > .viewport,
+.m3-text-area.m3-text-area:focused > .scroll-pane > .viewport,
+.m3-text-area.m3-text-area > .scroll-pane > .viewport > .content,
+.m3-text-area.m3-text-area:focused > .scroll-pane > .viewport > .content,
+.m3-text-area.m3-text-area .scroll-pane,
+.m3-text-area.m3-text-area:focused .scroll-pane,
+.m3-text-area.m3-text-area .content,
+.m3-text-area.m3-text-area:focused .content {
+    -fx-background-color: -fx-control-inner-background;
+    -fx-background: -fx-control-inner-background;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+.m3-text-area.m3-text-area > .scroll-pane,
+.m3-text-area.m3-text-area:focused > .scroll-pane {
+    -fx-padding: 0;
+}
+
+.m3-text-field.m3-filled-field,
+.m3-password-field.m3-filled-field,
+.m3-text-area.m3-filled-field {
+    -fx-control-inner-background: -m3-color-surface-container-highest;
+    -fx-background-color: -m3-color-surface-container-highest;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px 4px 0 0;
+    -fx-border-color: transparent transparent -m3-color-on-surface-variant transparent;
+    -fx-border-insets: 0;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.m3-text-field.m3-filled-field:hover,
+.m3-password-field.m3-filled-field:hover,
+.m3-text-area.m3-filled-field:hover {
+    -fx-control-inner-background: -m3-text-field-hover-container-color;
+    -fx-background-color: -m3-text-field-hover-container-color;
+    -fx-border-color: transparent transparent -m3-color-on-surface transparent;
+}
+
+.m3-text-field.m3-filled-field:focused,
+.m3-password-field.m3-filled-field:focused,
+.m3-text-area.m3-filled-field:focused {
+    -fx-control-inner-background: -m3-color-surface-container-highest;
+    -fx-background-color: -m3-color-surface-container-highest;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px 4px 0 0;
+    -fx-border-color: transparent transparent -m3-color-primary transparent;
+    -fx-border-insets: 0;
+    -fx-border-width: 0 0 2px 0;
+}
+
+.m3-text-field.m3-filled-field:error,
+.m3-password-field.m3-filled-field:error,
+.m3-text-area.m3-filled-field:error {
+    -fx-border-color: transparent transparent -m3-color-error transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.m3-text-field.m3-filled-field:error:hover,
+.m3-password-field.m3-filled-field:error:hover,
+.m3-text-area.m3-filled-field:error:hover {
+    -fx-border-color: transparent transparent -m3-color-on-error-container transparent;
+}
+
+.m3-text-field.m3-filled-field:error:focused,
+.m3-password-field.m3-filled-field:error:focused,
+.m3-text-area.m3-filled-field:error:focused {
+    -fx-border-color: transparent transparent -m3-color-error transparent;
+    -fx-border-width: 0 0 2px 0;
+}
+
+.m3-text-field.m3-outlined-field,
+.m3-password-field.m3-outlined-field,
+.m3-text-area.m3-outlined-field {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+    -fx-border-color: -m3-color-outline;
+    -fx-border-insets: 0;
+    -fx-border-radius: 4px;
+    -fx-border-width: 1px;
+}
+
+.m3-text-field.m3-outlined-field:hover,
+.m3-password-field.m3-outlined-field:hover,
+.m3-text-area.m3-outlined-field:hover {
+    -fx-border-color: -m3-color-on-surface;
+}
+
+.m3-text-field.m3-outlined-field:focused,
+.m3-password-field.m3-outlined-field:focused,
+.m3-text-area.m3-outlined-field:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+    -fx-border-color: -m3-color-primary;
+    -fx-border-insets: 0;
+    -fx-border-radius: 4px;
+    -fx-border-width: 3px;
+}
+
+.m3-text-field.m3-outlined-field:error,
+.m3-password-field.m3-outlined-field:error,
+.m3-text-area.m3-outlined-field:error {
+    -fx-border-color: -m3-color-error;
+    -fx-border-width: 1px;
+}
+
+.m3-text-field.m3-outlined-field:error:hover,
+.m3-password-field.m3-outlined-field:error:hover,
+.m3-text-area.m3-outlined-field:error:hover {
+    -fx-border-color: -m3-color-on-error-container;
+}
+
+.m3-text-field.m3-outlined-field:error:focused,
+.m3-password-field.m3-outlined-field:error:focused,
+.m3-text-area.m3-outlined-field:error:focused {
+    -fx-border-color: -m3-color-error;
+    -fx-border-width: 3px;
+}
+
+.m3-text-input-layout-input.m3-outlined-field,
+.m3-text-input-layout-input.m3-outlined-field:hover,
+.m3-text-input-layout-input.m3-outlined-field:focused,
+.m3-text-input-layout-input.m3-outlined-field:error,
+.m3-text-input-layout-input.m3-outlined-field:error:hover,
+.m3-text-input-layout-input.m3-outlined-field:error:focused {
+    -fx-control-inner-background: transparent;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+}
+
+.m3-text-input-layout-input.m3-text-area > .scroll-pane,
+.m3-text-input-layout-input.m3-text-area:focused > .scroll-pane,
+.m3-text-input-layout-input.m3-text-area > .scroll-pane > .viewport,
+.m3-text-input-layout-input.m3-text-area:focused > .scroll-pane > .viewport,
+.m3-text-input-layout-input.m3-text-area > .scroll-pane > .viewport > .content,
+.m3-text-input-layout-input.m3-text-area:focused > .scroll-pane > .viewport > .content,
+.m3-text-input-layout-input.m3-text-area .scroll-pane,
+.m3-text-input-layout-input.m3-text-area:focused .scroll-pane,
+.m3-text-input-layout-input.m3-text-area .viewport,
+.m3-text-input-layout-input.m3-text-area:focused .viewport,
+.m3-text-input-layout-input.m3-text-area .content,
+.m3-text-input-layout-input.m3-text-area:focused .content {
+    -fx-background-color: -fx-control-inner-background;
+    -fx-background: -fx-control-inner-background;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+.m3-text-field:disabled,
+.m3-password-field:disabled,
+.m3-text-area:disabled {
+    -fx-opacity: 1;
+    -fx-text-fill: -m3-state-disabled-content-color;
+    -fx-prompt-text-fill: -m3-state-disabled-content-color;
+}
+
+.m3-text-field.m3-filled-field:disabled,
+.m3-password-field.m3-filled-field:disabled,
+.m3-text-area.m3-filled-field:disabled {
+    -fx-control-inner-background: -m3-text-field-disabled-container-color;
+    -fx-background-color: -m3-text-field-disabled-container-color;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px 4px 0 0;
+    -fx-border-color: transparent transparent -m3-state-disabled-content-color transparent;
+    -fx-border-insets: 0;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.m3-text-field.m3-outlined-field:disabled,
+.m3-password-field.m3-outlined-field:disabled,
+.m3-text-area.m3-outlined-field:disabled {
+    -fx-control-inner-background: transparent;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+    -fx-border-color: -m3-state-disabled-container-color;
+    -fx-border-insets: 0;
+    -fx-border-radius: 4px;
+    -fx-border-width: 1px;
+}
+
+.m3-text-input-container {
+    -fx-alignment: center;
+}
+
+.m3-text-input-layout.m3-filled-field .m3-text-input-container {
+    -fx-background-color: -m3-color-surface-container-highest;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px 4px 0 0;
+}
+
+.m3-text-input-layout.m3-filled-field:hover .m3-text-input-container {
+    -fx-background-color: -m3-text-field-hover-container-color;
+}
+.m3-text-input-layout.m3-filled-field:input-disabled .m3-text-input-container,
+.m3-text-input-layout.m3-filled-field:disabled .m3-text-input-container {
+    -fx-background-color: transparent;
+}
+
+.m3-text-input-layout.m3-outlined-field .m3-text-input-container {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.m3-text-input-outline {
+    -fx-fill: transparent;
+    -fx-stroke: transparent;
+    -fx-stroke-line-cap: butt;
+    -fx-stroke-line-join: round;
+    -fx-stroke-width: 1px;
+}
+
+.m3-text-input-layout.m3-outlined-field .m3-text-input-outline {
+    -fx-stroke: -m3-color-outline;
+    -fx-stroke-width: 1px;
+}
+
+.m3-text-input-layout.m3-outlined-field:hover .m3-text-input-outline {
+    -fx-stroke: -m3-color-on-surface;
+}
+
+.m3-text-input-layout.m3-outlined-field .m3-text-input-outline:focused {
+    -fx-stroke: -m3-color-primary;
+    -fx-stroke-width: 3px;
+}
+
+.m3-text-input-layout.m3-outlined-field .m3-text-input-outline:error {
+    -fx-stroke: -m3-color-error;
+    -fx-stroke-width: 1px;
+}
+
+.m3-text-input-layout.m3-outlined-field:hover .m3-text-input-outline:error {
+    -fx-stroke: -m3-color-on-error-container;
+}
+
+.m3-text-input-layout.m3-outlined-field .m3-text-input-outline:error:focused {
+    -fx-stroke: -m3-color-error;
+    -fx-stroke-width: 3px;
+}
+
+.m3-text-input-layout.m3-outlined-field .m3-text-input-outline:disabled {
+    -fx-stroke: -m3-color-on-surface;
+    -fx-opacity: -m3-state-disabled-container-opacity;
+}
+
+.m3-text-input-label {
+    -fx-font-size: 12px;
+    -fx-fill: -m3-color-on-surface-variant;
+    -fx-font-smoothing-type: gray;
+}
+
+.m3-text-input-layout.m3-outlined-field:hover .m3-text-input-label {
+    -fx-fill: -m3-color-on-surface;
+}
+
+.m3-text-input-label:focused {
+    -fx-fill: -m3-color-primary;
+}
+
+.m3-text-input-label:error,
+.m3-text-input-label:error:focused {
+    -fx-fill: -m3-color-error;
+}
+
+.m3-text-input-layout.m3-filled-field:hover .m3-text-input-label:error,
+.m3-text-input-layout.m3-outlined-field:hover .m3-text-input-label:error {
+    -fx-fill: -m3-color-on-error-container;
+}
+
+.m3-text-input-layout.m3-filled-field:hover .m3-text-input-label:focused,
+.m3-text-input-layout.m3-outlined-field:hover .m3-text-input-label:focused {
+    -fx-fill: -m3-color-primary;
+}
+
+.m3-text-input-layout.m3-filled-field:hover .m3-text-input-label:error:focused,
+.m3-text-input-layout.m3-outlined-field:hover .m3-text-input-label:error:focused {
+    -fx-fill: -m3-color-error;
+}
+
+.m3-text-input-leading,
+.m3-text-input-trailing {
+    -fx-alignment: center;
+    -fx-min-width: 48px;
+    -fx-pref-width: 48px;
+    -fx-max-width: 48px;
+    -fx-min-height: 56px;
+    -fx-pref-height: 56px;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-text-input-trailing:error,
+.m3-text-input-trailing:error .m3-icon-graphic {
+    -m3-text-input-trailing-icon-color: -m3-color-error;
+    -fx-text-fill: -m3-color-error;
+}
+
+.m3-text-input-trailing:error .m3-internal-icon-path {
+    -fx-fill: -m3-color-error;
+}
+
+.m3-text-input-layout:hover .m3-text-input-trailing:error,
+.m3-text-input-layout:hover .m3-text-input-trailing:error .m3-icon-graphic {
+    -m3-text-input-trailing-icon-color: -m3-color-on-error-container;
+    -fx-text-fill: -m3-color-on-error-container;
+}
+
+.m3-text-input-layout:hover .m3-text-input-trailing:error .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-error-container;
+}
+
+.m3-text-input-layout:hover .m3-text-input-trailing:error:focused,
+.m3-text-input-layout:hover .m3-text-input-trailing:error:focused .m3-icon-graphic {
+    -m3-text-input-trailing-icon-color: -m3-color-error;
+    -fx-text-fill: -m3-color-error;
+}
+
+.m3-text-input-layout:hover .m3-text-input-trailing:error:focused .m3-internal-icon-path {
+    -fx-fill: -m3-color-error;
+}
+
+.m3-text-input-clear-button {
+    -m3-container-height: 40px;
+}
+
+.m3-text-input-supporting-row {
+    -fx-alignment: center-left;
+    -fx-padding: 0 16px 0 16px;
+    -fx-spacing: 16px;
+}
+
+.m3-text-input-supporting-text,
+.m3-text-input-counter {
+    -fx-font-size: 12px;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-text-input-supporting-text:error,
+.m3-text-input-counter:error {
+    -fx-text-fill: -m3-color-error;
+}
+
+.m3-text-input-label:disabled {
+    -fx-fill: -m3-state-disabled-content-color;
+    -fx-opacity: 1;
+}
+
+.m3-text-input-supporting-row:disabled {
+    -fx-text-fill: -m3-state-disabled-content-color;
+    -fx-opacity: 1;
+}
+
+.m3-text-input-supporting-row:disabled .m3-text-input-supporting-text,
+.m3-text-input-supporting-row:disabled .m3-text-input-counter {
+    -fx-text-fill: -m3-state-disabled-content-color;
+}
+
+.m3-text-input-leading:disabled,
+.m3-text-input-trailing:disabled {
+    -fx-text-fill: -m3-color-on-surface;
+    -fx-opacity: -m3-state-disabled-content-opacity;
+}
+
+.m3-text-input-layout .m3-text-input-leading:disabled > *,
+.m3-text-input-layout .m3-text-input-trailing:disabled > * {
+    -fx-opacity: 1;
+}
+
+.m3-text-input-leading:disabled .m3-icon-graphic,
+.m3-text-input-trailing:disabled .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-text-input-leading:disabled .m3-internal-icon-path,
+.m3-text-input-trailing:disabled .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-surface;
+}

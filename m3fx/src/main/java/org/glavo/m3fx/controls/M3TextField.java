@@ -1,0 +1,221 @@
+// Copyright (c) 2026 Glavo
+// SPDX-License-Identifier: Apache-2.0
+
+package org.glavo.m3fx.controls;
+
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.scene.AccessibleRole;
+import javafx.scene.control.TextField;
+import org.glavo.m3fx.internal.M3TextInputSupport;
+import org.glavo.m3fx.internal.M3Stylesheets;
+import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Unmodifiable;
+
+import java.util.List;
+
+/// A Material Design 3 single-line text field.
+///
+/// Caret movement, selection, clipboard operations, undo, redo, and input-method handling retain the inherited
+/// [TextField] contracts. Material state and token APIs are exposed through [M3TextInput].
+/// Use it directly when a plain single-line field is enough, or place it inside [M3TextInputLayout] when the
+/// field needs a floating label, supporting text, character counter, clear button, or adornment slots.
+///
+/// A new text field uses the filled variant and is not in error state. Text, selection, editing, action events,
+/// prompt text, and preferred column count retain the inherited [TextField] contracts.
+///
+/// Computed minimum and preferred total heights, including insets, equal the container-height token before and
+/// after skin installation. Explicit heights and bindings remain in effect through geometry changes; set a
+/// height to [#USE_COMPUTED_SIZE] to restore computed sizing.
+///
+/// See [Material Design text fields](https://m3.material.io/components/text-fields/overview).
+@NotNullByDefault
+public final class M3TextField extends TextField implements M3TextInput {
+    /// The default style class.
+    private static final String DEFAULT_STYLE_CLASS = "m3-text-field";
+
+    /// The immutable defaults and CSS metadata shared by instances of this class.
+    private static final M3TextInputSupport.Metadata<M3TextField> METADATA = new M3TextInputSupport.Metadata<>(
+            TextField.getClassCssMetaData(),
+            M3TextInputSupport.DEFAULT_FIELD_CONTAINER_HEIGHT,
+            M3TextInputSupport.DEFAULT_FIELD_VERTICAL_PADDING
+    );
+
+    /// Shared Material text input state and token plumbing.
+    private final M3TextInputSupport<M3TextField> support = new M3TextInputSupport<>(this, METADATA);
+
+    /// Creates an empty filled text field that is not in error state.
+    public M3TextField() {
+        initialize();
+    }
+
+    /// Creates a filled text field with initial text and no error state.
+    ///
+    /// As with [TextField], a `null` value is represented as empty content by the inherited text property.
+    ///
+    /// @param text the initial text content
+    public M3TextField(String text) {
+        super(text);
+        initialize();
+    }
+
+    /// Returns the text input variant.
+    @Override
+    public final M3TextInputVariant getVariant() {
+        return support.getVariant();
+    }
+
+    /// Sets the text input variant.
+    @Override
+    public final void setVariant(M3TextInputVariant variant) {
+        support.setVariant(variant);
+    }
+
+    /// Returns the observable, bindable text input variant property.
+    ///
+    /// The default value is [M3TextInputVariant#FILLED].
+    @Override
+    public final ObjectProperty<M3TextInputVariant> variantProperty() {
+        return support.variantProperty();
+    }
+
+    /// Returns whether this field renders its error state.
+    @Override
+    public final boolean isError() {
+        return support.isError();
+    }
+
+    /// Sets whether this field renders its error state.
+    @Override
+    public final void setError(boolean error) {
+        support.setError(error);
+    }
+
+    /// Returns the observable, bindable error-state property.
+    ///
+    /// The default value is `false`.
+    @Override
+    public final BooleanProperty errorProperty() {
+        return support.errorProperty();
+    }
+
+    /// Returns the preferred container height token.
+    @Override
+    public final double getContainerHeight() {
+        return support.getContainerHeight();
+    }
+
+    /// Sets the preferred container height token.
+    @Override
+    public final void setContainerHeight(double containerHeight) {
+        support.setContainerHeight(containerHeight);
+    }
+
+    /// Returns the observable, bindable, and styleable preferred-container-height property.
+    ///
+    /// The default value is `56.0` logical pixels. Values must be finite and non-negative.
+    @Override
+    public final StyleableDoubleProperty containerHeightProperty() {
+        return support.containerHeightProperty();
+    }
+
+    /// Returns the container shape radius token.
+    @Override
+    public final double getContainerShape() {
+        return support.getContainerShape();
+    }
+
+    /// Sets the container shape radius token.
+    @Override
+    public final void setContainerShape(double containerShape) {
+        support.setContainerShape(containerShape);
+    }
+
+    /// Returns the observable, bindable, and styleable container-shape-radius property.
+    ///
+    /// The default value is `4.0` logical pixels. Values must be finite and non-negative.
+    @Override
+    public final StyleableDoubleProperty containerShapeProperty() {
+        return support.containerShapeProperty();
+    }
+
+    /// Returns the horizontal content padding token.
+    @Override
+    public final double getHorizontalPadding() {
+        return support.getHorizontalPadding();
+    }
+
+    /// Sets the horizontal content padding token.
+    @Override
+    public final void setHorizontalPadding(double horizontalPadding) {
+        support.setHorizontalPadding(horizontalPadding);
+    }
+
+    /// Returns the observable, bindable, and styleable horizontal-content-padding property.
+    ///
+    /// The default value is `16.0` logical pixels. Values must be finite and non-negative.
+    @Override
+    public final StyleableDoubleProperty horizontalPaddingProperty() {
+        return support.horizontalPaddingProperty();
+    }
+
+    /// Returns the vertical content padding token.
+    @Override
+    public final double getVerticalPadding() {
+        return support.getVerticalPadding();
+    }
+
+    /// Sets the vertical content padding token.
+    @Override
+    public final void setVerticalPadding(double verticalPadding) {
+        support.setVerticalPadding(verticalPadding);
+    }
+
+    /// Returns the observable, bindable, and styleable vertical-content-padding property.
+    ///
+    /// The default value is `8.0` logical pixels. Values must be finite and non-negative.
+    @Override
+    public final StyleableDoubleProperty verticalPaddingProperty() {
+        return support.verticalPaddingProperty();
+    }
+
+    /// Returns the CSS metadata for this control class.
+    ///
+    /// @return the immutable CSS metadata list for this class and its superclasses
+    public static @Unmodifiable List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return METADATA.styleables();
+    }
+
+    /// Returns the CSS metadata for this control.
+    @Override
+    public @Unmodifiable List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
+
+    /// Returns the user-agent stylesheet for M3FX text input controls.
+    @Override
+    public String getUserAgentStylesheet() {
+        return M3Stylesheets.controlStylesheet("text-field.css");
+    }
+
+    /// Computes minimum total height from the container-height token.
+    @Override
+    protected double computeMinHeight(double width) {
+        return getContainerHeight();
+    }
+
+    /// Computes preferred total height from the container-height token.
+    @Override
+    protected double computePrefHeight(double width) {
+        return getContainerHeight();
+    }
+
+    /// Adds base style classes and applies the default variant.
+    private void initialize() {
+        support.initialize(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.TEXT_FIELD);
+    }
+}

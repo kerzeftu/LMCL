@@ -1,0 +1,652 @@
+@import "button-group.css";
+
+.m3-button-base.m3-text-button:top-app-bar-leading,
+.m3-button-base.m3-text-button:top-app-bar-leading:hover,
+.m3-button-base.m3-text-button:top-app-bar-leading:focused,
+.m3-button-base.m3-text-button:top-app-bar-leading:armed,
+.m3-button-base.m3-text-button:top-app-bar-leading:pressed {
+    -m3-disclosure-icon-color: -m3-color-on-surface;
+    -m3-button-icon-color: -m3-color-on-surface;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-on-surface;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-button-base.m3-text-button:top-app-bar-trailing,
+.m3-button-base.m3-text-button:top-app-bar-trailing:hover,
+.m3-button-base.m3-text-button:top-app-bar-trailing:focused,
+.m3-button-base.m3-text-button:top-app-bar-trailing:armed,
+.m3-button-base.m3-text-button:top-app-bar-trailing:pressed {
+    -m3-disclosure-icon-color: -m3-color-on-surface-variant;
+    -m3-button-icon-color: -m3-color-on-surface-variant;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-on-surface-variant;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-button-base.m3-text-button:top-app-bar-leading .m3-state-layer,
+.m3-button-base.m3-text-button:top-app-bar-leading .m3-ripple {
+    -fx-background-color: -m3-color-on-surface;
+}
+
+.m3-button-base.m3-text-button:top-app-bar-trailing .m3-state-layer,
+.m3-button-base.m3-text-button:top-app-bar-trailing .m3-ripple {
+    -fx-background-color: -m3-color-on-surface-variant;
+}
+
+.m3-button-base.m3-text-button:top-app-bar-leading:disabled,
+.m3-button-base.m3-text-button:top-app-bar-trailing:disabled {
+    -m3-disclosure-icon-color: -m3-color-on-surface;
+    -m3-button-icon-color: -m3-color-on-surface;
+    -m3-content-color: -m3-color-on-surface;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-button-base.m3-text-button:toolbar-action,
+.m3-button-base.m3-text-button:toolbar-action:hover,
+.m3-button-base.m3-text-button:toolbar-action:focused,
+.m3-button-base.m3-text-button:toolbar-action:armed,
+.m3-button-base.m3-text-button:toolbar-action:pressed {
+    -m3-disclosure-icon-color: -m3-color-on-surface-variant;
+    -m3-button-icon-color: -m3-color-on-surface-variant;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-on-surface-variant;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-button-base.m3-text-button:toolbar-action:vibrant,
+.m3-button-base.m3-text-button:toolbar-action:vibrant:hover,
+.m3-button-base.m3-text-button:toolbar-action:vibrant:focused,
+.m3-button-base.m3-text-button:toolbar-action:vibrant:armed,
+.m3-button-base.m3-text-button:toolbar-action:vibrant:pressed {
+    -m3-disclosure-icon-color: -m3-color-on-primary-container;
+    -m3-button-icon-color: -m3-color-on-primary-container;
+    -m3-content-color: -m3-color-on-primary-container;
+    -fx-text-fill: -m3-color-on-primary-container;
+}
+
+.m3-button-base.m3-text-button:toolbar-action .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-button-base.m3-text-button:toolbar-action .m3-state-layer,
+.m3-button-base.m3-text-button:toolbar-action .m3-ripple {
+    -fx-background-color: -m3-color-on-surface-variant;
+}
+
+.m3-button-base.m3-text-button:toolbar-action:vibrant .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-primary-container;
+}
+
+.m3-button-base.m3-text-button:toolbar-action:vibrant .m3-state-layer,
+.m3-button-base.m3-text-button:toolbar-action:vibrant .m3-ripple {
+    -fx-background-color: -m3-color-on-primary-container;
+}
+
+.m3-button-base.m3-text-button:toolbar-action:disabled,
+.m3-button-base.m3-text-button:toolbar-action:vibrant:disabled,
+.m3-button-base.m3-text-button:toolbar-action:disabled .m3-icon-graphic,
+.m3-button-base.m3-text-button:toolbar-action:vibrant:disabled .m3-icon-graphic {
+    -m3-button-icon-color: -m3-color-on-surface;
+    -m3-content-color: -m3-color-on-surface;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-button-base {
+    -m3-button-icon-color: -m3-color-primary;
+    -m3-disclosure-icon-color: -m3-color-primary;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-primary;
+    -m3-container-height: 40px;
+    -m3-container-shape: 999px;
+    -m3-horizontal-padding: 24px;
+    -m3-button-icon-size: 20px;
+    -m3-typography-font-family: "System";
+    -m3-typography-font-size: 14px;
+    -m3-typography-font-weight: 500;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-font-family: "System";
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-graphic-text-gap: 8px;
+    -fx-cursor: default;
+}
+
+.m3-button-base.m3-filled-button,
+.m3-button-base.m3-filled-button:hover,
+.m3-button-base.m3-filled-button:focused,
+.m3-button-base.m3-filled-button:armed,
+.m3-button-base.m3-filled-button:pressed {
+    -m3-disclosure-icon-color: -m3-color-on-primary;
+    -m3-button-icon-color: -m3-color-on-primary;
+    -m3-container-color: -m3-color-primary;
+    -m3-content-color: -m3-color-on-primary;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-on-primary;
+}
+
+.m3-button-base.m3-filled-button .m3-state-layer,
+.m3-button-base.m3-filled-button .m3-ripple {
+    -fx-background-color: -m3-color-on-primary;
+}
+
+.m3-button-base.m3-tonal-button,
+.m3-button-base.m3-tonal-button:hover,
+.m3-button-base.m3-tonal-button:focused,
+.m3-button-base.m3-tonal-button:armed,
+.m3-button-base.m3-tonal-button:pressed {
+    -m3-disclosure-icon-color: -m3-color-on-secondary-container;
+    -m3-button-icon-color: -m3-color-on-secondary-container;
+    -m3-container-color: -m3-color-secondary-container;
+    -m3-content-color: -m3-color-on-secondary-container;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-on-secondary-container;
+}
+
+.m3-button-base.m3-tonal-button .m3-state-layer,
+.m3-button-base.m3-tonal-button .m3-ripple {
+    -fx-background-color: -m3-color-on-secondary-container;
+}
+
+.m3-button-base.m3-outlined-button,
+.m3-button-base.m3-outlined-button:hover,
+.m3-button-base.m3-outlined-button:focused,
+.m3-button-base.m3-outlined-button:armed,
+.m3-button-base.m3-outlined-button:pressed {
+    -m3-disclosure-icon-color: -m3-color-primary;
+    -m3-button-icon-color: -m3-color-primary;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-primary;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: -m3-color-outline;
+    -fx-border-width: 1px;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-primary;
+}
+
+.m3-button-base.m3-outlined-button .m3-state-layer,
+.m3-button-base.m3-outlined-button .m3-ripple {
+    -fx-background-color: -m3-color-primary;
+}
+
+.m3-button-base.m3-text-button,
+.m3-button-base.m3-text-button:hover,
+.m3-button-base.m3-text-button:focused,
+.m3-button-base.m3-text-button:armed,
+.m3-button-base.m3-text-button:pressed {
+    -m3-disclosure-icon-color: -m3-color-primary;
+    -m3-button-icon-color: -m3-color-primary;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-primary;
+    -m3-horizontal-padding: 12px;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-primary;
+}
+
+.m3-button-base.m3-text-button .m3-state-layer,
+.m3-button-base.m3-text-button .m3-ripple {
+    -fx-background-color: -m3-color-primary;
+}
+
+.m3-button.m3-snackbar-action,
+.m3-button.m3-snackbar-action:hover,
+.m3-button.m3-snackbar-action:focused,
+.m3-button.m3-snackbar-action:armed,
+.m3-button.m3-snackbar-action:pressed {
+    -m3-button-icon-color: -m3-color-inverse-primary;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-inverse-primary;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-inverse-primary;
+}
+
+.m3-button.m3-snackbar-action .m3-state-layer,
+.m3-button.m3-snackbar-action .m3-ripple {
+    -fx-background-color: -m3-color-inverse-primary;
+}
+
+.m3-icon-button.m3-snackbar-close,
+.m3-icon-button.m3-snackbar-close:hover,
+.m3-icon-button.m3-snackbar-close:focused,
+.m3-icon-button.m3-snackbar-close:armed,
+.m3-icon-button.m3-snackbar-close:pressed {
+    -m3-content-color: -m3-color-inverse-on-surface;
+    -fx-text-fill: -m3-color-inverse-on-surface;
+}
+
+.m3-icon-button.m3-text-button.m3-snackbar-close .m3-icon-graphic,
+.m3-icon-button.m3-text-button.m3-snackbar-close .m3-state-layer,
+.m3-icon-button.m3-text-button.m3-snackbar-close .m3-ripple {
+    -fx-text-fill: -m3-color-inverse-on-surface;
+    -fx-background-color: -m3-color-inverse-on-surface;
+}
+
+.m3-button-base.m3-elevated-button,
+.m3-button-base.m3-elevated-button:hover,
+.m3-button-base.m3-elevated-button:focused,
+.m3-button-base.m3-elevated-button:armed,
+.m3-button-base.m3-elevated-button:pressed {
+    -m3-disclosure-icon-color: -m3-color-primary;
+    -m3-button-icon-color: -m3-color-primary;
+    -m3-container-color: -m3-color-surface-container-low;
+    -m3-content-color: -m3-color-primary;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-text-fill: -m3-color-primary;
+}
+
+.m3-button-base.m3-elevated-button .m3-state-layer,
+.m3-button-base.m3-elevated-button .m3-ripple {
+    -fx-background-color: -m3-color-primary;
+}
+
+.m3-button-base.m3-elevated-button,
+.m3-button-base.m3-elevated-button:hover,
+.m3-button-base.m3-elevated-button:focus-visible,
+.m3-button-base.m3-elevated-button:armed,
+.m3-button-base.m3-elevated-button:pressed {
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 6, 0.18, 0, 1);
+}
+
+.m3-button-base.m3-button-extra-small {
+    -m3-container-height: 32px;
+    -m3-horizontal-padding: 12px;
+    -m3-button-icon-size: 20px;
+    -m3-typography-font-size: 14px;
+    -m3-typography-font-weight: 500;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-graphic-text-gap: 8px;
+    -fx-background-insets: 8px 0;
+    -fx-border-insets: 8px 0;
+}
+
+.m3-button-base.m3-button-small {
+    -m3-container-height: 40px;
+    -m3-horizontal-padding: 24px;
+    -m3-button-icon-size: 20px;
+    -m3-typography-font-size: 14px;
+    -m3-typography-font-weight: 500;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-graphic-text-gap: 8px;
+    -fx-background-insets: 4px 0;
+    -fx-border-insets: 4px 0;
+}
+
+.m3-button-base.m3-button-medium {
+    -m3-container-height: 56px;
+    -m3-horizontal-padding: 24px;
+    -m3-button-icon-size: 24px;
+    -m3-typography-font-size: 16px;
+    -m3-typography-font-weight: 500;
+    -fx-font-size: 16px;
+    -fx-font-weight: 500;
+    -fx-graphic-text-gap: 8px;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+}
+
+.m3-button-base.m3-button-large {
+    -m3-container-height: 96px;
+    -m3-horizontal-padding: 48px;
+    -m3-button-icon-size: 32px;
+    -m3-typography-font-size: 24px;
+    -m3-typography-font-weight: 400;
+    -fx-font-size: 24px;
+    -fx-font-weight: 400;
+    -fx-graphic-text-gap: 12px;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+}
+
+.m3-button-base.m3-button-extra-large {
+    -m3-container-height: 136px;
+    -m3-horizontal-padding: 64px;
+    -m3-button-icon-size: 40px;
+    -m3-typography-font-size: 32px;
+    -m3-typography-font-weight: 400;
+    -fx-font-size: 32px;
+    -fx-font-weight: 400;
+    -fx-graphic-text-gap: 16px;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+}
+
+.m3-button-base.m3-text-button.m3-button-extra-small {
+    -m3-horizontal-padding: 12px;
+}
+
+.m3-button-base.m3-text-button.m3-button-small {
+    -m3-horizontal-padding: 12px;
+}
+
+.m3-button-base.m3-text-button.m3-button-medium {
+    -m3-horizontal-padding: 24px;
+}
+
+.m3-button-base.m3-text-button.m3-button-large {
+    -m3-horizontal-padding: 48px;
+}
+
+.m3-button-base.m3-text-button.m3-button-extra-large {
+    -m3-horizontal-padding: 64px;
+}
+
+.m3-button-base.m3-outlined-button.m3-button-large {
+    -fx-border-width: 2px;
+}
+
+.m3-button-base.m3-outlined-button.m3-button-extra-large {
+    -fx-border-width: 3px;
+}
+
+.m3-button-base.m3-button-round {
+    -m3-container-shape: 999px;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+}
+
+.m3-button-base.m3-button-square.m3-button-extra-small,
+.m3-button-base.m3-button-square.m3-button-small {
+    -m3-container-shape: 12px;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+}
+
+.m3-button-base.m3-button-square.m3-button-medium {
+    -m3-container-shape: 16px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+}
+
+.m3-button-base.m3-button-square.m3-button-large,
+.m3-button-base.m3-button-square.m3-button-extra-large {
+    -m3-container-shape: 28px;
+    -fx-background-radius: 28px;
+    -fx-border-radius: 28px;
+}
+
+.m3-icon-button {
+    -m3-content-color: -m3-color-on-surface-variant;
+    -m3-container-height: 40px;
+    -m3-container-width: 40px;
+    -m3-horizontal-padding: 0px;
+    -m3-button-icon-size: 24px;
+    -m3-icon-button-icon-size: 24px;
+    -m3-icon-button-outline-width: 1px;
+    -m3-container-shape: 999px;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-alignment: center;
+    -fx-padding: 0;
+    -fx-content-display: graphic-only;
+}
+
+.m3-icon-button .m3-icon-graphic {
+    -m3-icon-size: -m3-icon-button-icon-size;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-icon-button.m3-filled-button .m3-icon-graphic,
+.m3-icon-button.m3-filled-button .m3-state-layer,
+.m3-icon-button.m3-filled-button .m3-ripple {
+    -fx-text-fill: -m3-color-on-primary;
+    -fx-background-color: -m3-color-on-primary;
+}
+
+.m3-icon-button.m3-tonal-button .m3-icon-graphic,
+.m3-icon-button.m3-tonal-button .m3-state-layer,
+.m3-icon-button.m3-tonal-button .m3-ripple {
+    -fx-text-fill: -m3-color-on-secondary-container;
+    -fx-background-color: -m3-color-on-secondary-container;
+}
+
+.m3-icon-button.m3-outlined-button .m3-icon-graphic,
+.m3-icon-button.m3-outlined-button .m3-state-layer,
+.m3-icon-button.m3-outlined-button .m3-ripple,
+.m3-icon-button.m3-text-button .m3-icon-graphic,
+.m3-icon-button.m3-text-button .m3-state-layer,
+.m3-icon-button.m3-text-button .m3-ripple {
+    -fx-text-fill: -m3-color-on-surface-variant;
+    -fx-background-color: -m3-color-on-surface-variant;
+}
+
+.m3-icon-button.m3-text-button,
+.m3-icon-button.m3-text-button:hover,
+.m3-icon-button.m3-text-button:focused,
+.m3-icon-button.m3-text-button:armed,
+.m3-icon-button.m3-text-button:pressed {
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-on-surface-variant;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-icon-button.m3-outlined-button,
+.m3-icon-button.m3-outlined-button:hover,
+.m3-icon-button.m3-outlined-button:focused,
+.m3-icon-button.m3-outlined-button:armed,
+.m3-icon-button.m3-outlined-button:pressed {
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-on-surface-variant;
+    -fx-border-color: -m3-color-outline-variant;
+    -fx-border-width: 1px;
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-icon-button.m3-icon-button-extra-small {
+    -m3-container-width: 32px;
+    -m3-button-icon-size: 20px;
+    -m3-icon-button-icon-size: 20px;
+    -m3-icon-button-outline-width: 1px;
+    -fx-border-insets: 8px;
+}
+
+.m3-icon-button.m3-icon-button-small {
+    -m3-container-height: 40px;
+    -m3-container-width: 40px;
+    -m3-button-icon-size: 24px;
+    -m3-icon-button-icon-size: 24px;
+    -m3-icon-button-outline-width: 1px;
+    -fx-border-insets: 4px;
+}
+
+.m3-icon-button.m3-icon-button-medium {
+    -m3-container-height: 56px;
+    -m3-container-width: 56px;
+    -m3-button-icon-size: 24px;
+    -m3-icon-button-icon-size: 24px;
+    -m3-icon-button-outline-width: 1px;
+    -fx-border-insets: 0;
+}
+
+.m3-icon-button.m3-icon-button-large {
+    -m3-container-height: 96px;
+    -m3-container-width: 96px;
+    -m3-button-icon-size: 32px;
+    -m3-icon-button-icon-size: 32px;
+    -m3-icon-button-outline-width: 2px;
+    -fx-border-insets: 0;
+}
+
+.m3-icon-button.m3-icon-button-extra-large {
+    -m3-container-height: 136px;
+    -m3-container-width: 136px;
+    -m3-button-icon-size: 40px;
+    -m3-icon-button-icon-size: 40px;
+    -m3-icon-button-outline-width: 3px;
+    -fx-border-insets: 0;
+}
+
+.m3-icon-button-large.m3-outlined-button {
+    -fx-border-width: 2px;
+}
+
+.m3-icon-button-extra-large.m3-outlined-button {
+    -fx-border-width: 3px;
+}
+
+.m3-icon-button-extra-small.m3-icon-button-narrow-width {
+    -m3-container-width: 28px;
+    -fx-border-insets: 8px 10px;
+}
+
+.m3-icon-button-extra-small.m3-icon-button-wide-width {
+    -m3-container-width: 40px;
+    -fx-border-insets: 8px 4px;
+}
+
+.m3-icon-button-small.m3-icon-button-narrow-width {
+    -m3-container-width: 32px;
+    -fx-border-insets: 4px 8px;
+}
+
+.m3-icon-button-small.m3-icon-button-wide-width {
+    -m3-container-width: 52px;
+    -fx-border-insets: 4px 0;
+}
+
+.m3-icon-button-medium.m3-icon-button-narrow-width {
+    -m3-container-width: 48px;
+}
+
+.m3-icon-button-medium.m3-icon-button-wide-width {
+    -m3-container-width: 72px;
+}
+
+.m3-icon-button-large.m3-icon-button-narrow-width {
+    -m3-container-width: 64px;
+}
+
+.m3-icon-button-large.m3-icon-button-wide-width {
+    -m3-container-width: 128px;
+}
+
+.m3-icon-button-extra-large.m3-icon-button-narrow-width {
+    -m3-container-width: 104px;
+}
+
+.m3-icon-button-extra-large.m3-icon-button-wide-width {
+    -m3-container-width: 184px;
+}
+
+.m3-icon-button-round {
+    -m3-container-shape: 999px;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+}
+
+.m3-icon-button-square.m3-icon-button-extra-small,
+.m3-icon-button-square.m3-icon-button-small {
+    -m3-container-shape: 12px;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+}
+
+.m3-icon-button-square.m3-icon-button-medium {
+    -m3-container-shape: 16px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+}
+
+.m3-icon-button-square.m3-icon-button-large,
+.m3-icon-button-square.m3-icon-button-extra-large {
+    -m3-container-shape: 28px;
+    -fx-background-radius: 28px;
+    -fx-border-radius: 28px;
+}
+
+.m3-button-base:disabled {
+    -m3-disclosure-icon-color: -m3-color-on-surface;
+    -m3-button-icon-color: -m3-color-on-surface;
+    -m3-content-color: -m3-color-on-surface;
+    -fx-effect: null;
+    -fx-opacity: 1;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-button-base:disabled > * {
+    -fx-opacity: -m3-state-disabled-content-opacity;
+}
+
+.m3-button-base:disabled > .m3-state-layer-container {
+    -fx-opacity: 1;
+}
+
+.m3-button-base.m3-filled-button:disabled,
+.m3-button-base.m3-tonal-button:disabled,
+.m3-button-base.m3-text-button:disabled,
+.m3-button-base.m3-elevated-button:disabled {
+    -m3-disclosure-icon-color: -m3-color-on-surface;
+    -m3-container-color: -m3-button-disabled-container-color;
+    -m3-content-color: -m3-color-on-surface;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-button-base.m3-outlined-button:disabled {
+    -m3-disclosure-icon-color: -m3-color-on-surface;
+    -m3-container-color: transparent;
+    -m3-content-color: -m3-color-on-surface;
+    -fx-background-color: transparent;
+    -fx-border-color: -m3-color-outline-variant;
+    -fx-effect: null;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-icon-button.m3-text-button:disabled,
+.m3-button.m3-snackbar-action:disabled {
+    -m3-container-color: transparent;
+    -fx-background-color: transparent;
+}
+
+.m3-button-base:disabled .m3-icon-graphic {
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-text-input-leading:disabled > .m3-button-base:disabled,
+.m3-text-input-trailing:disabled > .m3-button-base:disabled {
+    -m3-container-color: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-opacity: 1;
+}
+
+.m3-text-input-leading:disabled > .m3-button-base:disabled > *,
+.m3-text-input-trailing:disabled > .m3-button-base:disabled > * {
+    -fx-opacity: 1;
+}
+
+.m3-button-base.m3-grouped-button:left-edge:left-edge {
+    -fx-background-radius: 999px 0 0 999px;
+    -fx-border-radius: 999px 0 0 999px;
+}
+
+.m3-button-base.m3-grouped-button:right-edge:right-edge {
+    -fx-background-radius: 0 999px 999px 0;
+    -fx-border-radius: 0 999px 999px 0;
+}

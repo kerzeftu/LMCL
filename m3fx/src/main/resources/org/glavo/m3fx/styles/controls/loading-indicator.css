@@ -1,0 +1,23 @@
+.m3-loading-indicator.m3-loading-indicator {
+    -m3-container-size: 48px;
+    -m3-indicator-size: 38px;
+}
+
+.m3-loading-indicator.m3-loading-indicator .m3-loading-indicator-indicator {
+    -fx-fill: -m3-color-primary;
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0px;
+}
+
+.m3-loading-indicator.m3-loading-indicator:contained .m3-loading-indicator-container {
+    -fx-background-color: -m3-color-primary-container;
+    -fx-background-radius: 999px;
+}
+
+.m3-loading-indicator.m3-loading-indicator:contained .m3-loading-indicator-indicator {
+    -fx-fill: -m3-color-on-primary-container;
+}
+
+.m3-loading-indicator:disabled {
+    -fx-opacity: 0.38;
+}

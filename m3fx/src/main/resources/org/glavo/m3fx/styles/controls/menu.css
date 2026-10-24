@@ -1,0 +1,28 @@
+.m3-menu {
+    -fx-background-color: -m3-menu-container-color;
+    -fx-background-insets: 0;
+    -fx-max-width: 280px;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 3, 0.18, 0, 2);
+}
+
+.m3-menu:vibrant {
+    -fx-background-color: -m3-menu-vibrant-container-color;
+}
+
+.m3-menu .m3-menu-container {
+    -fx-spacing: 0px;
+}
+
+.m3-menu-section-header {
+    -fx-alignment: center-left;
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-padding: 12px 12px 4px 12px;
+    -fx-text-fill: -m3-color-on-surface-variant;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+}
+
+.m3-menu-section-header:vibrant {
+    -fx-text-fill: -m3-menu-vibrant-item-content-color;
+}
