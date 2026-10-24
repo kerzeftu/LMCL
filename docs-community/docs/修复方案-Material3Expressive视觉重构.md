@@ -1,14 +1,14 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-24 规划优化）：v3.17.12 仅文档更新——`HMCLGameRepository` 补登记为第 14 处，M3 进度侵入顺延为 #15–#17；切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.10 已按用户反馈把 B1 的侧栏选中框从 999 胶囊还原为 16px 圆角；v3.17.11 已修复主页圆角按钮“视觉形状与可点击边界不一致”；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 每日一言设置层级调整、v3.17.8 MC 语料改用游戏加载提示已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
+> **状态（2026-10-25 H7 中期完成）：v3.17.13 已把 m3fx 改为仓库内 vendored 源码（`96ccd6d`），切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.10 侧栏选中框 16px、v3.17.11 主页圆角按钮命中区域、v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 色阶、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 设置层级、v3.17.8 MC 语料已交付；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.12
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.11 交付后 `main`（v3.17.12 仅文档：第 14 处登记与侵入政策）；切片 A 的 `m3expressive1` 已由 `m3expressive13` 取代
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.13
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.13 交付后 `main`（`621e3298f` 合并 H7 vendoring）；切片 A 的 `m3expressive1` 已由 `m3expressive14` 取代
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   `-Dlmcl.visual.m3=on` 时只给壳层子树安装 m3fx，默认关闭时与 1.0.0 一致。
 > - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + 16px 圆角选中框（v3.17.10 从 999 胶囊还原）；
 >   `-Dlmcl.visual.glass=auto/on/off` 控制，默认 auto，失败自动回退 CSS 表面色。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive13`（v3.17.11 圆角按钮命中区域修复 + v3.17.10 M3 B1 侧栏玻璃与选中框还原；基于 v3.17.8 的 MC 语料加载提示 + 每日一言 + 账户卡/5×7 日历 + 右栏统计 + 明暗自适应色阶）。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive14`（v3.17.13 H7：m3fx 96ccd6d 源码 vendoring + v3.17.11 圆角按钮命中区域 + v3.17.10 M3 B1 侧栏玻璃与选中框还原；基于 v3.17.8 的 MC 语料加载提示 + 每日一言 + 账户卡/5×7 日历 + 右栏统计 + 明暗自适应色阶）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 > - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
@@ -2574,14 +2574,14 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 |---|---|---|
 | 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
 | 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
-| 当前测试包 | `m3expressive1` | `m3expressive13`（jar 11,982,029 B / zip 75,107,890 B） |
+| 当前测试包 | `m3expressive1` | `m3expressive14`（jar 12,443,999 B / zip 76,001,698 B） |
 | 切片 A/B1 状态 | 待 Windows 验收 | A/B1 均已实现、默认关闭，仍待 Windows 实机验收；未改发布默认值 |
 | 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转；v3.17.5 问候语下改为每日一言；v3.17.6 本地源可分别启用；v3.17.7 每日一言设置收为单卡片 |
 
 ### 19.8 下一步建议
 
-1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive13` 继承，不并入 M3 B2–G；
-2. 用户先对 `m3expressive13` 做 Windows 实机验收（主页卡片按钮圆角外不可点、侧栏玻璃/16px 选中框/`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
+1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive14` 继承，不并入 M3 B2–G；
+2. 用户先对 `m3expressive14` 做 Windows 实机验收（主页卡片按钮圆角外不可点、侧栏玻璃/16px 选中框/`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
 3. 玻璃通过后继续切片 B2（主页头部/卡片玻璃）；标题栏玻璃留到 B2/C；
 4. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
 
@@ -2708,7 +2708,7 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 
 ### 21.5 下一步
 
-1. 用户用 m3expressive13 验收 16px 选中框、玻璃侧栏与圆角按钮命中区域（m3expressive12 已被取代）；
+1. 用户用 m3expressive14 验收 16px 选中框、玻璃侧栏与圆角按钮命中区域（m3expressive12 已被取代）；
 2. 通过后进入 B2：主页头部/卡片玻璃，再评估标题栏玻璃；
 3. B2 仍优先不新增上游侵入点。
 
@@ -2763,3 +2763,59 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 - WSL2 无 DISPLAY，未在 Windows 实机点击验收；键盘触发与触摸事件仍由 JavaFX 默认逻辑处理。
 - 只覆盖通过 `BuiltinWidgets` 创建的社区按钮、账户卡按钮；上游页面直接创建的 `JFXButton` 不在本次范围。
 - 若需回退：移除 `BuiltinWidgets` / `HomeAccountCard` 的安装调用并删除 `RoundedHitArea`，恢复到 `m3expressive12`；CSS 边框圆角可保留。
+
+
+## 23. H7 中期处理：m3fx 96ccd6d 源码 vendoring（v3.17.13 / m3expressive14）
+
+> 触发：v3.17.12 自查确认 H7 —— `META-INF/LICENSE-m3fx.txt` 与包内 `THIRD-PARTY-NOTICES.txt` 把参考 commit `96ccd6d` 记成二进制来源，而实际 jar 由 JitPack `2481f88fd6` 构建。用户 m24233 批准“H7 中期处理”，选择把 `96ccd6d` 源码 vendor 进仓库，而不是继续使用旧 JitPack 二进制。
+
+### 23.1 范围与不做什么
+
+- 只替换 m3fx 依赖来源：从 JitPack 远程坐标改为仓库内 `:m3fx` 子工程；不改变 M3 主题、玻璃、进度条等视觉设计。
+- 只收录上游 `src/main/java` 与 `src/main/resources`，不收录测试、demo、文档与上游构建脚本。
+- 不新增上游 `ui/**` 代码侵入点；`HMCL/build.gradle.kts`、`settings.gradle.kts`、`gradle/libs.versions.toml` 属构建配置，不计入 14 处。
+- 不把 m3fx 改为“无模块编译”：上游 `module-info.java` 必须保留，见 23.2 的编译错误。
+
+### 23.2 实现
+
+- `lmcl/m3fx/`：416 个 Java 文件 + 63 个资源，保留 `module-info.java`；与参考克隆 `/home/kerze/hmclce/.reference/m3fx-96ccd6d` 的 `src/main` 做 `diff -qr` 无差异。
+- `lmcl/m3fx/build.gradle.kts`：`plugins { java-library }`、`group = "org.glavo"`、`version = "96ccd6d"`、`api(libs.monet.fx)`、`compileOnlyApi(libs.jetbrains.annotations)`、`options.release = 17`、`processResources` 把 `LICENSE`/`NOTICE` 放进 `META-INF`。
+- `lmcl/m3fx/LICENSE`（Apache-2.0 全文，11,358 B）、`lmcl/m3fx/NOTICE`、`lmcl/m3fx/UPSTREAM.md`（来源 commit、日期、vendored 路径、仅新增构建/许可文件的说明）。
+- `settings.gradle.kts` include `"m3fx"`；`HMCL/build.gradle.kts` 的 `libs.m3fx` 改为 `implementation(project(":m3fx"))`；`gradle/libs.versions.toml` 删除 `m3fx` 版本与 library 项；根 `.gitignore` 增加 `/m3fx/build/`。
+- API 适配：`96ccd6d` 的 `M3MotionSettings` 已无 `setAnimationsEnabled(boolean)`。`HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3MotionSupport.java` 改为：
+  `M3MotionSettings.setGlobalReducedMotionRequested(disabled || M3Settings.isReducedMotion());`
+  语义仍是“HMCL 禁用动画或社区减弱动效任一为真时，向 m3fx 请求减少动效”。
+- `HMCL/src/main/resources/META-INF/LICENSE-m3fx.txt` 改为实际 vendored 来源：source commit `96ccd6d26fa8b38b7621c47332cfcc0caff034bf`、source date、vendored paths、modifications；不再出现 JitPack `2481f88`。
+- `M3SpikePane` 的调试文案由 `m3fx 2481f88fd6` 改为 `m3fx 96ccd6d`。
+- 包内 `THIRD-PARTY-NOTICES.txt` 改为 m3expressive14 的 96ccd6d vendored 记录，删除 `This file is provided for the m3spike11 test package`。
+
+### 23.3 验证与产物
+
+| 项 | 结果 |
+|---|---|
+| `:m3fx:compileJava` | BUILD SUCCESSFUL |
+| `:HMCL:compileJava` | BUILD SUCCESSFUL（仅 3 条既有 JavaFX `--add-exports` 警告） |
+| `:HMCL:checkTranslations` | BUILD SUCCESSFUL |
+| community 测试 | 186 / 0 / 0 / 0 |
+| 全量 `:HMCL:test` | 296 / 0 / 0 / 2 skipped |
+| `:HMCL:makeExecutables` | BUILD SUCCESSFUL |
+| jar | 12,443,999 B，SHA-256 `240d4af5b4b1f99ec4e1a341b48b90ae6028a9dcea3c1193a7d9ca479f0ed781` |
+| exe | 13,645,151 B，SHA-256 `54b910b889061d963a5c8850933592aafa9ca39231b18b92f6b0494b890cc57f` |
+| stub | 1,201,152 B，SHA-256 `ded29e28971755afc83041f91dec9fce7ff4f4a130c0bb07983b4a42f8f3370b` |
+| 测试包 | `LMCL-1.0.0-win-x64-m3expressive14.zip` 76,001,698 B，SHA-256 `01de149660e402b43360779217d9e7a63768908ddf96c03cf57b94d764c9cf53` |
+
+- jar 内含 510 个 `org/glavo/m3fx/` class、`META-INF/LICENSE-m3fx.txt`、`META-INF/LICENSE`、`META-INF/NOTICE`；不包含 `module-info.class`（HMCL 侧为无名模块，m3fx 以 JPMS 模块编译后参与 classpath）。
+- `exe[:stub] == stub`、`exe[stub:] == jar`、jar 头 `PK\x03\x04` 均通过。
+- 包内 `SHA256SUMS` 328 个文件校验通过；zip 329 entries、`testzip=None`。
+
+### 23.4 已知限制与回退
+
+- WSL2 无 DISPLAY，未在 Windows 实机验证主题/字体/玻璃布局；本切片只改依赖来源，未改 M3 默认关闭策略。
+- 若需回退：还原 `settings.gradle.kts`、`HMCL/build.gradle.kts`、`gradle/libs.versions.toml`，删除 `m3fx/`，恢复 JitPack `2481f88fd6`，并还原 `M3MotionSupport` 的 `setAnimationsEnabled` 调用；随后重新构建与打包。
+- JitPack 的 `com.github.Glavo:m3fx:96ccd6d26f` 返回 404，因此没有“远程 96ccd6d”可选；本次是源码 vendor，不是切换 JitPack 版本。
+
+### 23.5 文档同步
+
+- `README.md` v3.17.13、`docs/00-整体要求.md` v3.17.13；
+- 本方案 §23、[审查记录 §69](审查记录-v3.16.4源码核对.md)；
+- `lmcl/docs-community/` 同步；代码提交 `212db8136`，合并 `621e3298f`。
