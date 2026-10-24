@@ -23,6 +23,7 @@ import com.jfoenix.controls.JFXToggleButton;
 import com.jfoenix.controls.JFXTextField;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -58,9 +59,14 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 @NotNullByDefault
 public final class DailyQuoteSettingsPane extends VBox {
 
-    private final ComponentList sourceList = new ComponentList();
-    private final ComponentList localList = new ComponentList();
+    private final ComponentList settingsList = new ComponentList();
+    private final List<LinePane> onlineRows = new ArrayList<>();
     private final Label sourceHint = new Label();
+    private final Label localGroupLabel = new Label();
+    private final Label onlineGroupLabel = new Label();
+    private final Label previewGroupLabel = new Label();
+    private final HBox addSourceBar = new HBox(8);
+    private final VBox previewBox = new VBox(6);
     private final Label previewText = new Label();
     private final Label previewMeta = new Label();
     private final JFXButton refreshButton;
@@ -82,7 +88,6 @@ public final class DailyQuoteSettingsPane extends VBox {
         // 设置页在 FX 线程构造；先用内存默认值渲染，再从 io 线程加载真实配置。
         config = DailyQuoteSettings.defaults();
 
-        ComponentList mainList = new ComponentList();
         displayToggle.setTitle(i18n("community.dailyQuote.display"));
         displayToggle.setSubtitle(i18n("community.dailyQuote.display.subtitle"));
         displayToggle.setSelected(config.enabled());
@@ -106,8 +111,6 @@ public final class DailyQuoteSettingsPane extends VBox {
             rebuildSources();
             updateControls();
         });
-        mainList.getContent().addAll(displayToggle, onlineToggle);
-
         localMcToggle.setTitle(i18n("community.dailyQuote.local.mc"));
         localMcToggle.setSubtitle(i18n("community.dailyQuote.local.mc.subtitle"));
         localMcToggle.setSelected(config.localMc());
@@ -141,37 +144,38 @@ public final class DailyQuoteSettingsPane extends VBox {
             save();
             updateControls();
         });
-        localList.getContent().addAll(localMcToggle, localPoetryToggle);
-
         addSourceButton = FXUtils.newBorderButton(i18n("community.dailyQuote.source.add"));
         addSourceButton.setOnAction(event -> openAddSourceDialog());
+        addSourceBar.setAlignment(Pos.CENTER_LEFT);
+        addSourceBar.setMaxWidth(Double.MAX_VALUE);
+        addSourceBar.getChildren().add(addSourceButton);
 
         refreshButton = FXUtils.newBorderButton(i18n("community.dailyQuote.refresh"));
         refreshButton.setOnAction(event -> refreshPreview());
 
         sourceHint.setText(i18n("community.dailyQuote.sources.hint"));
         sourceHint.setWrapText(true);
+        sourceHint.setMaxWidth(Double.MAX_VALUE);
         sourceHint.getStyleClass().add("subtitle-label");
 
-        VBox previewBox = new VBox(6);
+        configureGroupLabel(localGroupLabel, "community.dailyQuote.local");
+        configureGroupLabel(onlineGroupLabel, "community.dailyQuote.sources");
+        configureGroupLabel(previewGroupLabel, "community.dailyQuote.preview");
+
         previewText.setWrapText(true);
+        previewText.setMaxWidth(Double.MAX_VALUE);
         previewText.getStyleClass().add("community-daily-quote-preview");
         previewMeta.setWrapText(true);
+        previewMeta.setMaxWidth(Double.MAX_VALUE);
         previewMeta.getStyleClass().add("subtitle-label");
         HBox previewActions = new HBox(8, refreshButton);
         previewActions.setAlignment(Pos.CENTER_RIGHT);
+        previewActions.setMaxWidth(Double.MAX_VALUE);
+        previewBox.setMaxWidth(Double.MAX_VALUE);
         previewBox.getChildren().addAll(previewText, previewMeta, previewActions);
 
-        getChildren().addAll(
-                mainList,
-                ComponentList.createComponentListTitle(i18n("community.dailyQuote.local")),
-                localList,
-                ComponentList.createComponentListTitle(i18n("community.dailyQuote.sources")),
-                sourceList,
-                sourceHint,
-                addSourceButton,
-                ComponentList.createComponentListTitle(i18n("community.dailyQuote.preview")),
-                previewBox);
+        settingsList.setMaxWidth(Double.MAX_VALUE);
+        getChildren().add(settingsList);
 
         CommunityStyles.apply(this);
         rebuildSources();
@@ -213,13 +217,14 @@ public final class DailyQuoteSettingsPane extends VBox {
                 }, Schedulers.javafx());
     }
 
-    /// 重新构建源行。
+    /// 重新构建在线源行并刷新整张设置卡片。
     private void rebuildSources() {
-        sourceList.getContent().clear();
+        onlineRows.clear();
         for (QuoteSource source : config.sources()) {
             LinePane row = new LinePane();
             row.setTitle(sourceTitle(source));
             row.setSubtitle(sourceSubtitle(source));
+            row.setMaxWidth(Double.MAX_VALUE);
 
             HBox right = new HBox(8);
             right.setAlignment(Pos.CENTER_RIGHT);
@@ -228,7 +233,6 @@ public final class DailyQuoteSettingsPane extends VBox {
             toggle.setSelected(source.enabled());
             toggle.setSize(8);
             FXUtils.setLimitHeight(toggle, 30);
-            toggle.setDisable(!config.online());
             toggle.selectedProperty().addListener((observable, oldValue, newValue) -> {
                 if (updating) {
                     return;
@@ -247,8 +251,26 @@ public final class DailyQuoteSettingsPane extends VBox {
             }
 
             row.setRight(right);
-            sourceList.getContent().add(row);
+            onlineRows.add(row);
         }
+        rebuildSettingsList();
+    }
+
+    /// 把静态设置、在线源行、提示、添加按钮和预览拼成一张卡片。
+    private void rebuildSettingsList() {
+        List<Node> rows = new ArrayList<>();
+        rows.add(displayToggle);
+        rows.add(onlineToggle);
+        rows.add(localGroupLabel);
+        rows.add(localMcToggle);
+        rows.add(localPoetryToggle);
+        rows.add(onlineGroupLabel);
+        rows.addAll(onlineRows);
+        rows.add(addSourceBar);
+        rows.add(sourceHint);
+        rows.add(previewGroupLabel);
+        rows.add(previewBox);
+        settingsList.getContent().setAll(rows);
     }
 
     /// 修改某个源的启用状态。
@@ -377,7 +399,11 @@ public final class DailyQuoteSettingsPane extends VBox {
                 localMcToggle.setDisable(true);
                 localPoetryToggle.setDisable(true);
                 addSourceButton.setDisable(true);
-                sourceList.setDisable(true);
+                for (LinePane row : onlineRows) {
+                    row.setDisable(true);
+                }
+                onlineGroupLabel.setOpacity(0.5);
+                sourceHint.setOpacity(0.5);
                 refreshButton.setDisable(true);
                 return;
             }
@@ -387,7 +413,11 @@ public final class DailyQuoteSettingsPane extends VBox {
             localPoetryToggle.setDisable(false);
             boolean online = config.online();
             addSourceButton.setDisable(!online);
-            sourceList.setDisable(!online);
+            for (LinePane row : onlineRows) {
+                row.setDisable(!online);
+            }
+            onlineGroupLabel.setOpacity(online ? 1 : 0.5);
+            sourceHint.setOpacity(online ? 1 : 0.5);
             boolean hasLocal = config.hasLocalSource();
             boolean hasOnline = online && !config.enabledSources().isEmpty();
             refreshButton.setDisable(!config.enabled() || (!hasLocal && !hasOnline));
@@ -397,6 +427,13 @@ public final class DailyQuoteSettingsPane extends VBox {
         } finally {
             updating = false;
         }
+    }
+
+    private static void configureGroupLabel(@NotNull Label label, @NotNull String key) {
+        label.setText(i18n(key));
+        label.setMaxWidth(Double.MAX_VALUE);
+        label.setAlignment(Pos.CENTER_LEFT);
+        label.getStyleClass().addAll("subtitle-label", "community-daily-quote-group");
     }
 
     private @NotNull String sourceTitle(@NotNull QuoteSource source) {

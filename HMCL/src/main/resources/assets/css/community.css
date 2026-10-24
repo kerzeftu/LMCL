@@ -330,3 +330,9 @@
     -fx-text-fill: -monet-on-surface;
     -fx-font-size: 14px;
 }
+
+.community-daily-quote-group {
+    -fx-padding: 12 0 2 0;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
