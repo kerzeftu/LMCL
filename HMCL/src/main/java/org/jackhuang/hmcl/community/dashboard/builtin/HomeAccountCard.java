@@ -43,6 +43,7 @@ import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.community.ui.AccountActions;
 import org.jackhuang.hmcl.community.ui.ManagementPage;
+import org.jackhuang.hmcl.community.ui.RoundedHitArea;
 import org.jackhuang.hmcl.community.ui.m3.M3Settings;
 import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.setting.SettingsManager;
@@ -112,6 +113,7 @@ public final class HomeAccountCard extends VBox {
         toggleButton.setAccessibleText(i18n("community.home.account.expand"));
         Tooltip.install(toggleButton, toggleTooltip);
         toggleButton.setOnAction(event -> setExpanded(!expanded));
+        RoundedHitArea.install(toggleButton);
 
         HBox currentRow = new HBox(4, currentItem, toggleButton);
         currentRow.setAlignment(Pos.CENTER_LEFT);

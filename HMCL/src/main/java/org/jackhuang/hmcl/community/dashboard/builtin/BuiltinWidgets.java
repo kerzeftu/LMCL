@@ -26,6 +26,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import org.jackhuang.hmcl.community.ui.RoundedHitArea;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.game.Version;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
@@ -108,6 +109,7 @@ final class BuiltinWidgets {
     static JFXButton borderButton(@NotNull String text, @NotNull Runnable action) {
         JFXButton button = newBorderButton(text);
         button.setOnAction(event -> action.run());
+        RoundedHitArea.install(button);
         return button;
     }
 
@@ -120,6 +122,7 @@ final class BuiltinWidgets {
     static JFXButton raisedButton(@NotNull String text, @NotNull Runnable action) {
         JFXButton button = newRaisedButton(text);
         button.setOnAction(event -> action.run());
+        RoundedHitArea.install(button);
         return button;
     }
 

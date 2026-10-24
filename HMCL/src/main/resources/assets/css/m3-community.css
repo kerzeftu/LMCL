@@ -93,6 +93,9 @@
     -fx-background-color: -m3-color-primary-container;
     -fx-text-fill: -m3-color-on-primary-container;
     -fx-background-radius: 20;
+    -fx-border-color: transparent;
+    -fx-border-radius: 20;
+    -fx-border-width: 0;
     -fx-padding: 8 18 8 18;
 }
 
