@@ -56,6 +56,7 @@ public final class M3Host extends StackPane {
         setContent(content);
         CommunityM3.install(this);
         M3MotionSupport.install();
+        GlassBackdrop.get().attach(this);
         Themes.colorSchemeProperty().addListener(themeListener);
         FontManager.fontProperty().addListener(fontListener);
     }
@@ -78,6 +79,7 @@ public final class M3Host extends StackPane {
 
     /// 移除监听并卸载主题；重复调用无副作用。
     public void dispose() {
+        GlassBackdrop.get().detach();
         Themes.colorSchemeProperty().removeListener(themeListener);
         FontManager.fontProperty().removeListener(fontListener);
         CommunityM3.uninstall(this);

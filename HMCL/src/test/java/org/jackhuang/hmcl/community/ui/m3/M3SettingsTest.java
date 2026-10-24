@@ -72,4 +72,18 @@ public final class M3SettingsTest {
         System.setProperty(M3Settings.GLASS_PROPERTY, "invalid");
         assertEquals("auto", M3Settings.glassMode());
     }
+
+    @Test
+    public void glassRequiresM3AndHonorsOffMode() {
+        System.setProperty(M3Settings.M3_PROPERTY, "on");
+        System.setProperty(M3Settings.GLASS_PROPERTY, "auto");
+        assertTrue(M3Settings.isGlassEnabled());
+
+        System.setProperty(M3Settings.GLASS_PROPERTY, "off");
+        assertFalse(M3Settings.isGlassEnabled());
+
+        System.setProperty(M3Settings.GLASS_PROPERTY, "on");
+        System.setProperty(M3Settings.M3_PROPERTY, "off");
+        assertFalse(M3Settings.isGlassEnabled());
+    }
 }

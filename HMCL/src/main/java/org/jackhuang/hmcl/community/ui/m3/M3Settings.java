@@ -130,6 +130,17 @@ public final class M3Settings {
         CommunitySettings.get().putSection(SECTION, section);
     }
 
+    /// 返回是否启用玻璃表面。
+    ///
+    /// M3 总开关关闭时始终返回 `false`；玻璃模式为 `off` 时也返回 `false`。
+    /// `auto` 与 `on` 都允许尝试快照，实际无壁纸时由 [GlassSurface] 回退到
+    /// CSS 半透明表面色。
+    ///
+    /// @return 是否启用玻璃
+    public static boolean isGlassEnabled() {
+        return isM3Enabled() && !"off".equals(glassMode());
+    }
+
     /// 返回是否启用 Wavy 进度条。
     ///
     /// 默认 `true`；阶段 E 才消费该值。

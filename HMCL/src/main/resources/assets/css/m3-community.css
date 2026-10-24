@@ -48,8 +48,22 @@
     -fx-border-width: 0 1 0 0;
 }
 
+.lmcl-m3 .community-sidebar-content {
+    -fx-background-color: transparent;
+}
+
+/* 玻璃侧栏：快照层由 GlassSurface 自绘，这里只给半透明表面色与边界。 */
+.lmcl-m3-glass-surface {
+    -fx-background-color: transparent;
+}
+
+.lmcl-m3-glass-tint {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-opacity: 0.42;
+}
+
 .lmcl-m3 .community-sidebar-button {
-    -fx-background-radius: 16;
+    -fx-background-radius: 999;
 }
 
 .lmcl-m3 .community-sidebar-button:hover {

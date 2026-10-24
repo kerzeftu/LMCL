@@ -26,9 +26,11 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.download.CommunityDownloadGuard;
 import org.jackhuang.hmcl.community.download.CommunityDownloadInstaller;
+import org.jackhuang.hmcl.community.ui.m3.GlassSurface;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.setting.GameDirectoryManager;
 import org.jackhuang.hmcl.ui.Controllers;
@@ -52,7 +54,7 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 ///
 /// 线程：构造、样式与点击回调都在 FX 线程。
 @NotNullByDefault
-public final class CommunitySideBar extends VBox {
+public final class CommunitySideBar extends StackPane {
 
     /// 侧栏宽度（像素）。
     public static final double WIDTH = 64;
@@ -83,9 +85,18 @@ public final class CommunitySideBar extends VBox {
         setMinWidth(WIDTH);
         setMaxWidth(WIDTH);
         setMaxHeight(Double.MAX_VALUE);
-        setPadding(new Insets(12, 8, 12, 8));
-        setSpacing(6);
-        setAlignment(Pos.TOP_CENTER);
+
+        GlassSurface glass = new GlassSurface();
+        glass.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        VBox content = new VBox();
+        content.getStyleClass().add("community-sidebar-content");
+        content.setPadding(new Insets(12, 8, 12, 8));
+        content.setSpacing(6);
+        content.setAlignment(Pos.TOP_CENTER);
+        content.setFillWidth(true);
+        content.setMaxHeight(Double.MAX_VALUE);
+        StackPane.setAlignment(content, Pos.TOP_CENTER);
 
         // 侧栏早于 MainPage 创建；在这里安装下载源，保证打开设置/下载页前缓存已就绪。
         try {
@@ -103,7 +114,8 @@ public final class CommunitySideBar extends VBox {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        getChildren().addAll(homeButton, downloadButton, managementButton, settingsButton, spacer, otherButton);
+        content.getChildren().addAll(homeButton, downloadButton, managementButton, settingsButton, spacer, otherButton);
+        getChildren().addAll(glass, content);
     }
 
     /// 根据当前页面更新选中态；由 `DecoratorController#onNavigated` 调用。
