@@ -2486,10 +2486,10 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 | H2 | 不改 `HMCLCore` 的下载、认证、游戏版本、任务框架逻辑 | M3 切片只改 `HMCL/src/main/java/org/jackhuang/hmcl/community/**`、CSS、资源；上游侵入只走已登记的 14 处 |
 | H3 | 不修改既有 i18n key 的含义/拼写 | M3 重构阶段不重命名上游 key；只新增 `community.*` key，并跑 `:HMCL:checkTranslations` |
 | H4 | 每个切片必须能过构建 | `:HMCL:compileJava`、`:HMCL:checkTranslations`、community 测试；切片合并前再跑全量测试 |
-| H5 | 尊重 reduced motion；触控目标 ≥ 48dp（桌面按钮至少 36–40px 视觉 + 足够点击区） | 复用 `animationDisabled` 与 `M3Settings.reducedMotion`；图标按钮不缩小到不可点 |
+| H5 | 尊重 reduced motion；触控目标 ≥ 48dp（桌面按钮至少 36–40px 视觉 + 足够点击区） | 复用 `animationDisabled` 与 `M3Settings.reducedMotion`；图标按钮不缩小到不可点。**例外（2026-10-24 用户接受）**：主页紧凑卡片按钮 30px、账户卡展开按钮 32×32 暂维持，因启动器窗口本身不大；若触控/DPI 反馈再调，见审查记录 §68.4 |
 | H6 | 颜色角色必须配对使用 | `primary/onPrimary`、`surface/onSurface`、`surfaceContainer/onSurface` 成对；玻璃表面文字对比度 ≥ 4.5:1 |
 | H7 | GPLv3 + Apache-2.0 合规 | 保留 m3fx `LICENSE`/`NOTICE`/来源 commit；vendor 源码修改处标注修改人与日期；包内 `THIRD-PARTY-NOTICES.txt` 同步 |
-| H8 | 一次只改一个切片/一个页面 | 每个 PR 的 diff 要能单独回退；不把“换主题”和“重写交互”混在一起 |
+| H8 | 一次只改一个切片/一个页面 | 每个 PR 的 diff 要能单独回退；不把“换主题”和“重写交互”混在一起。历史 M3 提交已直接落在 `main`（见审查记录 §68.4），不追改；C/D/E 起从 `feature/2x-*` 分支提交 |
 
 **与参考稿的差异**：参考稿写“i18n key 一个字符都不能动”；LMCL 的社区功能本来就有自己的
 `community.*` key，因此本方案解释为“**不改上游既有 key**，社区新增 key 必须三份语言同步”。
@@ -2544,7 +2544,7 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 
 补充纪律：
 
-- 每个切片单独分支/提交，diff 小、可回滚；
+- 每个切片单独分支/提交，diff 小、可回滚；M3 切片 C/D/E 起严格执行 `feature/2x-*`，历史 A/B1/v3.17.11 已记录在 `main`，不追改；
 - 不把“视觉替换”和“交互重写”放在同一个 PR；
 - 先跑 demo/spike 看方向，再改正式页面；
 - 遇到 API 不确定时，先写最小验证，不凭记忆编 API 名；
