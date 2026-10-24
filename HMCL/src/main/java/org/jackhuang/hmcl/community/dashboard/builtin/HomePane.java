@@ -55,6 +55,7 @@ import org.jackhuang.hmcl.community.quote.DailyQuote;
 import org.jackhuang.hmcl.community.quote.DailyQuoteEvents;
 import org.jackhuang.hmcl.community.quote.DailyQuoteService;
 import org.jackhuang.hmcl.community.quote.DailyQuoteSettings;
+import org.jackhuang.hmcl.community.quote.QuoteOrigin;
 import org.jackhuang.hmcl.community.ui.CommunitySettingsPanel;
 import org.jackhuang.hmcl.community.ui.m3.M3Settings;
 import org.jackhuang.hmcl.community.ui.m3.M3SpikePane;
@@ -161,6 +162,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
     /// 每日一言服务。
     private final DailyQuoteService quoteService = new DailyQuoteService();
+    private @Nullable DailyQuote currentQuote;
 
     /// 每日一言自动刷新计时器。
     private final Timeline quoteTimer = new Timeline();
@@ -376,6 +378,10 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         quoteService.reloadConfigAsync(config -> {
             if (!disposed) {
                 applyQuoteConfiguration();
+                // 配置加载完成后按用户选中的本地源重选；否则会一直显示默认语料的句子。
+                if (currentQuote == null || currentQuote.origin() == QuoteOrigin.BUILTIN) {
+                    applyQuote(quoteService.initialQuote());
+                }
             }
         });
 
@@ -401,6 +407,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
     /// 应用一条每日一言。
     private void applyQuote(@NotNull DailyQuote quote) {
+        currentQuote = quote;
         String line = quote.displayLine();
         quoteLabel.setText(line);
         quoteTooltip.setText(line);
@@ -425,7 +432,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
                 return;
             }
             applyQuoteConfiguration();
-            if (!config.enabled()) {
+            if (!config.enabled() || currentQuote == null || currentQuote.origin() == QuoteOrigin.BUILTIN) {
                 applyQuote(quoteService.initialQuote());
             }
         });

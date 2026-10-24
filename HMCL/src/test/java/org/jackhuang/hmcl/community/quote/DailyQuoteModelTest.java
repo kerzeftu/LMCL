@@ -78,6 +78,14 @@ public final class DailyQuoteModelTest {
         DailyQuoteSettings.Config config = new DailyQuoteSettings.Config(true, true, List.of(hitokoto, custom));
         assertEquals(List.of(hitokoto), config.enabledSources());
         assertFalse(config.withOnline(false).online());
+        assertTrue(config.localMc());
+        assertTrue(config.localPoetry());
+        assertTrue(config.hasLocalSource());
+
+        DailyQuoteSettings.Config localMcOnly = config.withLocalMc(false);
+        assertFalse(localMcOnly.localMc());
+        assertTrue(localMcOnly.localPoetry());
+        assertTrue(localMcOnly.hasLocalSource());
     }
 
     @Test
@@ -97,5 +105,18 @@ public final class DailyQuoteModelTest {
         DailyQuote quote = BuiltinQuotes.forDate(java.time.LocalDate.of(2026, 10, 24));
         assertEquals(quote, BuiltinQuotes.forDate(java.time.LocalDate.of(2026, 10, 24)));
         assertFalse(quote.text().isBlank());
+    }
+
+    @Test
+    public void selectsOnlyEnabledLocalCorpus() {
+        java.time.LocalDate date = java.time.LocalDate.of(2026, 10, 24);
+        assertEquals(QuoteKind.MC, BuiltinQuotes.forDate(date, true, false).kind());
+        assertEquals(QuoteKind.POETRY, BuiltinQuotes.forDate(date, false, true).kind());
+        assertEquals(QuoteKind.MC, BuiltinQuotes.random(true, false).kind());
+        assertEquals(QuoteKind.POETRY, BuiltinQuotes.random(false, true).kind());
+
+        // 两份都关闭时安全回退为启用两份，而不是抛异常。
+        assertTrue(BuiltinQuotes.forDate(date, false, false).kind() == QuoteKind.MC
+                || BuiltinQuotes.forDate(date, false, false).kind() == QuoteKind.POETRY);
     }
 }

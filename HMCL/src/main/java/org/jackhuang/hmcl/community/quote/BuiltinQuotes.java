@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
@@ -51,23 +52,79 @@ public final class BuiltinQuotes {
     private BuiltinQuotes() {
     }
 
-    /// 返回指定日期对应的内置短句。
+    /// 返回指定日期对应的内置短句，两份语料交替使用。
     ///
     /// @param date 日期
     /// @return 短句
     @NotNull
     public static DailyQuote forDate(@NotNull LocalDate date) {
+        return forDate(date, true, true);
+    }
+
+    /// 返回指定日期对应的内置短句。
+    ///
+    /// 两份语料都启用时按 [LocalDate#toEpochDay()] 奇偶交替；
+    /// 只启用一份时该份语料按日期轮换；两份都未启用时回退为都启用。
+    ///
+    /// @param date 日期
+    /// @param localMc 是否使用 MC 风味语料
+    /// @param localPoetry 是否使用诗词语料
+    /// @return 短句
+    @NotNull
+    public static DailyQuote forDate(@NotNull LocalDate date, boolean localMc, boolean localPoetry) {
+        if (!localMc && !localPoetry) {
+            localMc = true;
+            localPoetry = true;
+        }
+
         long day = date.toEpochDay();
-        boolean poetry = Math.floorMod(day, 2) == 0;
-        List<DailyQuote> list = poetry ? POETRY : MC;
+        if (localMc && localPoetry) {
+            boolean poetry = Math.floorMod(day, 2) == 0;
+            List<DailyQuote> list = poetry ? POETRY : MC;
+            if (list.isEmpty()) {
+                list = poetry ? MC : POETRY;
+            }
+            if (list.isEmpty()) {
+                return fallback();
+            }
+            int index = (int) Math.floorMod(Math.floorDiv(day, 2), list.size());
+            return list.get(index);
+        }
+
+        List<DailyQuote> list = localMc ? MC : POETRY;
         if (list.isEmpty()) {
-            list = poetry ? MC : POETRY;
+            list = localMc ? POETRY : MC;
         }
         if (list.isEmpty()) {
             return fallback();
         }
-        int index = (int) Math.floorMod(Math.floorDiv(day, 2), list.size());
-        return list.get(index);
+        return list.get((int) Math.floorMod(day, list.size()));
+    }
+
+    /// 从启用的内置语料中随机取一条。
+    ///
+    /// 两份都启用时先随机选择语料，再随机选择条目；
+    /// 两份都未启用时回退为都启用。
+    ///
+    /// @param localMc 是否使用 MC 风味语料
+    /// @param localPoetry 是否使用诗词语料
+    /// @return 随机短句
+    @NotNull
+    public static DailyQuote random(boolean localMc, boolean localPoetry) {
+        if (!localMc && !localPoetry) {
+            localMc = true;
+            localPoetry = true;
+        }
+
+        boolean useMc = localMc && (!localPoetry || ThreadLocalRandom.current().nextBoolean());
+        List<DailyQuote> list = useMc ? MC : POETRY;
+        if (list.isEmpty()) {
+            list = useMc ? POETRY : MC;
+        }
+        if (list.isEmpty()) {
+            return fallback();
+        }
+        return list.get(ThreadLocalRandom.current().nextInt(list.size()));
     }
 
     /// 返回全部内置短句（先 MC 后诗词）。

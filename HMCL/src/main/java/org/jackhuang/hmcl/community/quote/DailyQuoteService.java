@@ -126,7 +126,8 @@ public final class DailyQuoteService {
     /// @return 内置短句
     @NotNull
     public DailyQuote initialQuote() {
-        return BuiltinQuotes.forDate(LocalDate.now(clock));
+        DailyQuoteSettings.Config snapshot = config;
+        return BuiltinQuotes.forDate(LocalDate.now(clock), snapshot.localMc(), snapshot.localPoetry());
     }
 
     /// 在 io 线程重新读取设置，然后回到 FX 线程回调。
@@ -204,7 +205,8 @@ public final class DailyQuoteService {
     /// @return 短句
     @NotNull
     private DailyQuote fallback() {
-        return initialQuote();
+        DailyQuoteSettings.Config snapshot = config;
+        return BuiltinQuotes.random(snapshot.localMc(), snapshot.localPoetry());
     }
 
     private @NotNull Result fetch(@NotNull DailyQuoteSettings.Config snapshot, boolean manual) {
@@ -216,11 +218,13 @@ public final class DailyQuoteService {
         }
 
         if (!snapshot.enabled()) {
-            return new Result(cached != null ? cached.quote() : initialQuote(), false, cached != null, null);
+            return new Result(fallback(), false, false, null);
         }
 
         if (!snapshot.online() || snapshot.enabledSources().isEmpty()) {
-            return new Result(cached != null ? cached.quote() : initialQuote(), false, cached != null, null);
+            // 关闭联网或没有可用在线源时使用用户选中的内置语料；
+            // 缓存只用于在线 TTL 内的正常复用，不作为离线兜底。
+            return new Result(fallback(), false, false, null);
         }
 
         Instant now = Instant.now(clock);
@@ -243,7 +247,7 @@ public final class DailyQuoteService {
         } catch (Throwable e) {
             LOG.warning("Daily quote source failed: " + source.id(), e);
             // 用户要求失败时静默降级为自有静态 JSON（MC/诗词），不展示可能过期的在线缓存。
-            return new Result(initialQuote(), false, false, e);
+            return new Result(fallback(), false, false, e);
         }
     }
 

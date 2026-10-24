@@ -59,6 +59,7 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 public final class DailyQuoteSettingsPane extends VBox {
 
     private final ComponentList sourceList = new ComponentList();
+    private final ComponentList localList = new ComponentList();
     private final Label sourceHint = new Label();
     private final Label previewText = new Label();
     private final Label previewMeta = new Label();
@@ -67,6 +68,8 @@ public final class DailyQuoteSettingsPane extends VBox {
     private final DailyQuoteService previewService = new DailyQuoteService();
     private final LineToggleButton displayToggle = new LineToggleButton();
     private final LineToggleButton onlineToggle = new LineToggleButton();
+    private final LineToggleButton localMcToggle = new LineToggleButton();
+    private final LineToggleButton localPoetryToggle = new LineToggleButton();
 
     private DailyQuoteSettings.Config config;
     private CompletableFuture<Void> saveChain = CompletableFuture.completedFuture(null);
@@ -105,6 +108,41 @@ public final class DailyQuoteSettingsPane extends VBox {
         });
         mainList.getContent().addAll(displayToggle, onlineToggle);
 
+        localMcToggle.setTitle(i18n("community.dailyQuote.local.mc"));
+        localMcToggle.setSubtitle(i18n("community.dailyQuote.local.mc.subtitle"));
+        localMcToggle.setSelected(config.localMc());
+        localMcToggle.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (updating) {
+                return;
+            }
+            if (!newValue && !config.localPoetry()) {
+                revertToggle(localMcToggle, true);
+                previewMeta.setText(i18n("community.dailyQuote.local.none"));
+                return;
+            }
+            config = config.withLocalMc(newValue);
+            save();
+            updateControls();
+        });
+
+        localPoetryToggle.setTitle(i18n("community.dailyQuote.local.poetry"));
+        localPoetryToggle.setSubtitle(i18n("community.dailyQuote.local.poetry.subtitle"));
+        localPoetryToggle.setSelected(config.localPoetry());
+        localPoetryToggle.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (updating) {
+                return;
+            }
+            if (!newValue && !config.localMc()) {
+                revertToggle(localPoetryToggle, true);
+                previewMeta.setText(i18n("community.dailyQuote.local.none"));
+                return;
+            }
+            config = config.withLocalPoetry(newValue);
+            save();
+            updateControls();
+        });
+        localList.getContent().addAll(localMcToggle, localPoetryToggle);
+
         addSourceButton = FXUtils.newBorderButton(i18n("community.dailyQuote.source.add"));
         addSourceButton.setOnAction(event -> openAddSourceDialog());
 
@@ -126,6 +164,8 @@ public final class DailyQuoteSettingsPane extends VBox {
 
         getChildren().addAll(
                 mainList,
+                ComponentList.createComponentListTitle(i18n("community.dailyQuote.local")),
+                localList,
                 ComponentList.createComponentListTitle(i18n("community.dailyQuote.sources")),
                 sourceList,
                 sourceHint,
@@ -163,6 +203,8 @@ public final class DailyQuoteSettingsPane extends VBox {
                     try {
                         displayToggle.setSelected(config.enabled());
                         onlineToggle.setSelected(config.online());
+                        localMcToggle.setSelected(config.localMc());
+                        localPoetryToggle.setSelected(config.localPoetry());
                     } finally {
                         updating = false;
                     }
@@ -315,6 +357,16 @@ public final class DailyQuoteSettingsPane extends VBox {
                 }, Schedulers.javafx());
     }
 
+    /// 恢复开关到实际配置值，避免监听器再次触发保存。
+    private void revertToggle(@NotNull LineToggleButton toggle, boolean value) {
+        updating = true;
+        try {
+            toggle.setSelected(value);
+        } finally {
+            updating = false;
+        }
+    }
+
     /// 根据开关状态刷新可用性。
     private void updateControls() {
         updating = true;
@@ -322,6 +374,8 @@ public final class DailyQuoteSettingsPane extends VBox {
             if (loading) {
                 displayToggle.setDisable(true);
                 onlineToggle.setDisable(true);
+                localMcToggle.setDisable(true);
+                localPoetryToggle.setDisable(true);
                 addSourceButton.setDisable(true);
                 sourceList.setDisable(true);
                 refreshButton.setDisable(true);
@@ -329,12 +383,15 @@ public final class DailyQuoteSettingsPane extends VBox {
             }
             displayToggle.setDisable(false);
             onlineToggle.setDisable(false);
+            localMcToggle.setDisable(false);
+            localPoetryToggle.setDisable(false);
             boolean online = config.online();
             addSourceButton.setDisable(!online);
             sourceList.setDisable(!online);
-            boolean hasEnabled = config.online() && !config.enabledSources().isEmpty();
-            refreshButton.setDisable(!config.enabled() || !hasEnabled);
-            if (!hasEnabled) {
+            boolean hasLocal = config.hasLocalSource();
+            boolean hasOnline = online && !config.enabledSources().isEmpty();
+            refreshButton.setDisable(!config.enabled() || (!hasLocal && !hasOnline));
+            if (!hasLocal && !hasOnline) {
                 previewMeta.setText(i18n("community.dailyQuote.source.none"));
             }
         } finally {

@@ -40,6 +40,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 ///   "dailyQuote": {
 ///     "enabled": true,
 ///     "online": true,
+///     "localMc": true,
+///     "localPoetry": true,
 ///     "sources": [
 ///       { "id": "hitokoto", "type": "hitokoto", "name": "Hitokoto", "enabled": true },
 ///       { "id": "jinrishici", "type": "jinrishici", "name": "Jinrishici", "enabled": false },
@@ -70,8 +72,20 @@ public final class DailyQuoteSettings {
     ///
     /// @param enabled 主页是否显示每日一言
     /// @param online 是否允许联网获取
-    /// @param sources 全部源，包含未启用项
-    public record Config(boolean enabled, boolean online, @NotNull List<QuoteSource> sources) {
+    /// @param sources 全部在线源，包含未启用项
+    /// @param localMc 是否启用内置 MC 风味语料
+    /// @param localPoetry 是否启用内置诗词语料
+    public record Config(
+            boolean enabled,
+            boolean online,
+            @NotNull List<QuoteSource> sources,
+            boolean localMc,
+            boolean localPoetry) {
+
+        /// 兼容旧调用：默认同时启用两份本地语料。
+        public Config(boolean enabled, boolean online, @NotNull List<QuoteSource> sources) {
+            this(enabled, online, sources, true, true);
+        }
 
         /// 复制源列表，避免调用方修改。
         public Config {
@@ -92,7 +106,7 @@ public final class DailyQuoteSettings {
         /// @return 新配置
         @NotNull
         public Config withEnabled(boolean enabled) {
-            return new Config(enabled, online, sources);
+            return new Config(enabled, online, sources, localMc, localPoetry);
         }
 
         /// 修改联网开关。
@@ -101,7 +115,7 @@ public final class DailyQuoteSettings {
         /// @return 新配置
         @NotNull
         public Config withOnline(boolean online) {
-            return new Config(enabled, online, sources);
+            return new Config(enabled, online, sources, localMc, localPoetry);
         }
 
         /// 替换源列表。
@@ -110,7 +124,32 @@ public final class DailyQuoteSettings {
         /// @return 新配置
         @NotNull
         public Config withSources(@NotNull List<QuoteSource> sources) {
-            return new Config(enabled, online, sources);
+            return new Config(enabled, online, sources, localMc, localPoetry);
+        }
+
+        /// 修改内置 MC 语料开关。
+        ///
+        /// @param localMc 是否启用
+        /// @return 新配置
+        @NotNull
+        public Config withLocalMc(boolean localMc) {
+            return new Config(enabled, online, sources, localMc, localPoetry);
+        }
+
+        /// 修改内置诗词语料开关。
+        ///
+        /// @param localPoetry 是否启用
+        /// @return 新配置
+        @NotNull
+        public Config withLocalPoetry(boolean localPoetry) {
+            return new Config(enabled, online, sources, localMc, localPoetry);
+        }
+
+        /// 是否至少启用一份本地语料。
+        ///
+        /// @return 启用任意一份返回 `true`
+        public boolean hasLocalSource() {
+            return localMc || localPoetry;
         }
     }
 
@@ -122,7 +161,7 @@ public final class DailyQuoteSettings {
     /// @return 默认配置
     @NotNull
     public static Config defaults() {
-        return new Config(true, true, DEFAULT_SOURCES);
+        return new Config(true, true, DEFAULT_SOURCES, true, true);
     }
 
     /// 读取配置；文件缺失或损坏时返回 [DailyQuoteSettings#defaults()] 并补回内置源。
@@ -137,7 +176,18 @@ public final class DailyQuoteSettings {
             }
             boolean enabled = JsonUtils.getBoolean(section, "enabled", true);
             boolean online = JsonUtils.getBoolean(section, "online", true);
-            return new Config(enabled, online, mergeDefaults(parseSources(section.get("sources"))));
+            boolean localMc = JsonUtils.getBoolean(section, "localMc", true);
+            boolean localPoetry = JsonUtils.getBoolean(section, "localPoetry", true);
+            if (!localMc && !localPoetry) {
+                localMc = true;
+                localPoetry = true;
+            }
+            return new Config(
+                    enabled,
+                    online,
+                    mergeDefaults(parseSources(section.get("sources"))),
+                    localMc,
+                    localPoetry);
         } catch (Throwable e) {
             LOG.warning("Failed to read daily quote settings", e);
             return defaults();
@@ -153,6 +203,8 @@ public final class DailyQuoteSettings {
             JsonObject section = new JsonObject();
             section.addProperty("enabled", config.enabled());
             section.addProperty("online", config.online());
+            section.addProperty("localMc", config.localMc());
+            section.addProperty("localPoetry", config.localPoetry());
             JsonArray sources = new JsonArray();
             for (QuoteSource source : config.sources()) {
                 JsonObject item = new JsonObject();
