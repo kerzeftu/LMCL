@@ -63,7 +63,7 @@
 }
 
 .lmcl-m3 .community-sidebar-button {
-    -fx-background-radius: 999;
+    -fx-background-radius: 16;
 }
 
 .lmcl-m3 .community-sidebar-button:hover {
