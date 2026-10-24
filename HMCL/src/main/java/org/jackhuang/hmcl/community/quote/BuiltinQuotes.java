@@ -37,8 +37,9 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 /// 启动器内置的每日一言语料。
 ///
 /// 资源位于 `assets/community/daily-quotes-mc.json` 与
-/// `assets/community/daily-quotes-poetry.json`，都是公版/原创短句，
-/// 不依赖网络。按 [LocalDate#toEpochDay()] 的奇偶交替选择 MC 与诗词，
+/// `assets/community/daily-quotes-poetry.json`；MC 语料取自 Minecraft
+/// 基岩版加载提示的中文游戏内翻译，诗词为公版内容，均不依赖网络。
+/// 按 [LocalDate#toEpochDay()] 的奇偶交替选择 MC 与诗词，
 /// 同一天多次调用返回同一条；资源缺失时返回安全兜底句，不抛异常。
 @NotNullByDefault
 public final class BuiltinQuotes {

@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 /// 每日一言的内容类别。
 public enum QuoteKind {
-    /// Minecraft 风味的原创短句。
+    /// Minecraft 风味的短句，取自基岩版加载提示。
     MC("mc"),
     /// 公版古诗词/古文。
     POETRY("poetry"),
