@@ -106,7 +106,7 @@ public boolean shouldBeReport() {
 
 结论（写进 §6 门禁）：
 
-- 要做 relocate，就必须改 `CrashReport.shouldBeReport()`（或改为按产品前缀判断）——这是**第 15 处代码侵入**，突破当前 14 处预算；
+- 要做 relocate，就必须改 `CrashReport.shouldBeReport()`（或改为按产品前缀判断）——这是**新增一处代码侵入**（按批准时的下一可用号登记，当前 M3 预留 #15–#17），突破当前 14 处预算；
 - 不动它 → 崩溃窗口静默失效，违反"绝不阻断/可诊断"原则；
 - 因此**默认结论是 No-Go（首发不做 relocate）**，除非产品明确同意把侵入预算改为 5 处。
 
