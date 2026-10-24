@@ -1,0 +1,100 @@
+@import "text.css";
+
+.tree-view.m3-tree-view,
+.tree-view.m3-tree-view:focused {
+    -fx-fixed-cell-size: 56px;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.m3-tree-view > .virtual-flow > .clipped-container > .sheet > .m3-tree-cell {
+    -fx-alignment: center-left;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-content-display: left;
+    -fx-graphic-text-gap: 8px;
+    -fx-indent: 24px;
+    -fx-padding: 0 16px 0 8px;
+    -m3-disclosure-icon-color: -m3-color-on-surface-variant;
+    -fx-text-fill: -m3-color-on-surface;
+    -fx-font-size: 14px;
+    -fx-font-weight: 400;
+}
+
+.m3-tree-cell .m3-state-layer,
+.m3-tree-cell .m3-ripple {
+    -fx-background-color: -m3-color-on-surface;
+}
+
+/* The Material state layer owns focus feedback; suppress Modena's focused-cell background stack. */
+.m3-tree-view:focused > .virtual-flow > .clipped-container > .sheet > .m3-tree-cell:filled:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.m3-tree-view.m3-highlight-tree-selection > .virtual-flow > .clipped-container > .sheet > .m3-tree-cell:selected {
+    -fx-background-color: -m3-color-secondary-container;
+    -fx-text-fill: -m3-color-on-secondary-container;
+}
+
+.m3-tree-view.m3-highlight-tree-selection:focused > .virtual-flow > .clipped-container > .sheet > .m3-tree-cell:filled:selected:focused {
+    -fx-background-color: -m3-color-secondary-container;
+    -fx-background-insets: 0;
+    -fx-text-fill: -m3-color-on-secondary-container;
+}
+
+.m3-tree-view.m3-checkbox-tree-selection > .virtual-flow > .clipped-container > .sheet > .m3-tree-cell:selected {
+    -fx-background-color: transparent;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-tree-view.m3-highlight-tree-selection .m3-tree-cell:selected .m3-state-layer,
+.m3-tree-view.m3-highlight-tree-selection .m3-tree-cell:selected .m3-ripple {
+    -fx-background-color: -m3-color-on-secondary-container;
+}
+
+.m3-tree-cell.m3-tree-row-motion .m3-state-layer,
+.m3-tree-cell.m3-tree-row-motion .m3-ripple {
+    -fx-background-color: transparent;
+}
+
+.m3-tree-view > .virtual-flow > .clipped-container > .sheet > .m3-tree-cell:disabled {
+    -fx-opacity: -m3-state-disabled-content-opacity;
+}
+
+.m3-tree-cell-leading {
+    -fx-alignment: center-left;
+    /* Offset the checkbox touch-target inset while retaining its full interaction bounds. */
+    -fx-spacing: -7px;
+}
+
+.m3-tree-view.m3-checkbox-tree-selection > .virtual-flow > .clipped-container > .sheet > .m3-tree-cell.m3-tree-cell-checkbox-only {
+    -fx-graphic-text-gap: -7px;
+}
+
+.m3-tree-selection-checkbox {
+    -fx-padding: 0;
+}
+
+.m3-tree-view .m3-tree-cell > .m3-tree-disclosure {
+    -fx-alignment: center;
+    -fx-min-width: 40px;
+    -fx-pref-width: 40px;
+    -fx-max-width: 40px;
+    -fx-min-height: 56px;
+    -fx-pref-height: 56px;
+    -fx-max-height: 56px;
+    -fx-padding: 0;
+}
+
+.m3-tree-view.m3-highlight-tree-selection .m3-tree-cell:selected {
+    -m3-disclosure-icon-color: -m3-color-on-secondary-container;
+}
+
+.m3-tree-view > .virtual-flow > .corner {
+    -fx-background-color: transparent;
+}

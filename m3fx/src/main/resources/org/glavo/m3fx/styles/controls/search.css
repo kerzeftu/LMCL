@@ -1,0 +1,92 @@
+.m3-search-bar {
+    -fx-background-color: -m3-color-surface-container-high;
+    -fx-background-radius: 999px;
+    -fx-background-insets: 0;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 6, 0.18, 0, 3);
+}
+
+.m3-search-bar .m3-state-layer,
+.m3-search-bar .m3-ripple {
+    -fx-background-color: -m3-color-on-surface;
+}
+
+.m3-search-bar-content {
+    -fx-spacing: 16px;
+}
+
+.m3-search-bar-leading,
+.m3-search-bar-trailing {
+    -fx-alignment: center;
+}
+
+.m3-search-bar-trailing {
+    -fx-spacing: 0;
+}
+
+.m3-search-bar-default-leading {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-search-bar-input,
+.m3-search-bar-input:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-font-size: 16px;
+    -fx-text-fill: -m3-color-on-surface;
+    -fx-prompt-text-fill: -m3-color-on-surface-variant;
+    -fx-highlight-fill: -m3-color-primary;
+    -fx-highlight-text-fill: -m3-color-on-primary;
+}
+
+.m3-search-view {
+    -fx-background-color: -m3-color-surface-container-high;
+    -fx-background-radius: 28px;
+    -fx-background-insets: 0;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 6, 0.18, 0, 3);
+}
+
+.m3-search-view:full-screen {
+    -fx-effect: null;
+}
+
+.m3-search-view:contained {
+    -fx-background-color: -m3-color-surface-container-low;
+}
+
+.m3-search-view:contained .m3-search-bar {
+    -fx-background-color: -m3-color-surface-container-high;
+}
+
+.m3-search-view:divided .m3-search-bar {
+    -fx-background-color: transparent;
+    -fx-effect: null;
+}
+
+.m3-search-view-content {
+    -fx-spacing: 0;
+}
+
+.m3-search-view-divider {
+    -fx-min-height: 1px;
+    -fx-pref-height: 1px;
+    -fx-max-height: 1px;
+    -fx-background-color: -m3-color-outline-variant;
+}
+
+.m3-search-view-results {
+    -fx-spacing: 0;
+    -fx-background-insets: 0;
+}
+
+.m3-search-view:contained .m3-search-view-results {
+    -fx-background-color: -m3-color-surface-container-high;
+}
+
+.m3-search-view:divided .m3-search-view-results {
+    -fx-background-color: transparent;
+}

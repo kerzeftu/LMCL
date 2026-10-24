@@ -1,7 +1,10 @@
 m3fx (Material 3 for JavaFX)
 Source: https://github.com/Glavo/m3fx
 Source commit: 96ccd6d26fa8b38b7621c47332cfcc0caff034bf
-Build used in this distribution: JitPack 2481f88fd6 (com.github.Glavo:m3fx:2481f88fd6)
+Source date: 2026-09-11 18:00:02 +0800
+Vendored in this distribution at: m3fx/src/main/java and m3fx/src/main/resources
+Modifications: LMCL added m3fx/build.gradle.kts, LICENSE, NOTICE and UPSTREAM.md;
+the vendored Java and resource trees, including module-info.java, are unchanged.
 
 Copyright 2024-2026 Glavo and m3fx contributors.
 Licensed under the Apache License, Version 2.0 (the "License");

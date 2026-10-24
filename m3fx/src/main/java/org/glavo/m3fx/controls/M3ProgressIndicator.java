@@ -1,0 +1,579 @@
+// Copyright (c) 2026 Glavo
+// SPDX-License-Identifier: Apache-2.0
+
+package org.glavo.m3fx.controls;
+
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
+import org.glavo.m3fx.internal.M3Accessible;
+import org.glavo.m3fx.internal.M3ControlStyles;
+import org.glavo.m3fx.internal.M3Css;
+import org.glavo.m3fx.internal.M3Stylesheets;
+import org.glavo.m3fx.skins.M3ProgressIndicatorSkin;
+import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+/// A Material Design 3 circular progress indicator.
+///
+/// `M3ProgressIndicator` displays determinate progress for values from `0.0` to `1.0` and indeterminate
+/// progress when the value is [INDETERMINATE_PROGRESS]. The control exposes token-backed indicator size, track
+/// thickness, active gap, and optional wave properties so the same API can render baseline and expressive
+/// circular progress styles.
+///
+/// The computed minimum and preferred dimensions equal [#getWaveIndicatorSize()] while wave amplitude is
+/// positive, or [#getIndicatorSize()] otherwise. These dimensions include insets and are available before skin
+/// installation. Explicit minimum, preferred, and maximum dimensions and their bindings are preserved when
+/// tokens change. Set a dimension to [#USE_COMPUTED_SIZE] to restore computed sizing.
+///
+/// Use this control when loading feedback needs a compact circular affordance. Indeterminate progress keeps a
+/// basic rotating sweep when reduced motion is requested through [org.glavo.m3fx.animation.M3MotionSettings],
+/// so reduced-motion mode still communicates activity. A positive wave amplitude explicitly enables the M3
+/// Expressive wavy geometry; the Flat configuration remains the default in every theme profile. See
+/// [Material Design progress indicators](https://m3.material.io/components/progress-indicators/overview).
+@NotNullByDefault
+public final class M3ProgressIndicator extends Control {
+    /// The default style class.
+    private static final String DEFAULT_STYLE_CLASS = "m3-progress-indicator";
+
+    /// The progress value that marks the control as indeterminate.
+    public static final double INDETERMINATE_PROGRESS = -1.0;
+
+    /// The pseudo class applied while progress is indeterminate.
+    private static final PseudoClass INDETERMINATE_PSEUDO_CLASS =
+            PseudoClass.getPseudoClass("indeterminate");
+
+    /// The default circular indicator stroke thickness.
+    private static final double DEFAULT_TRACK_THICKNESS = 4.0;
+
+    /// The default circular indicator size.
+    private static final double DEFAULT_INDICATOR_SIZE = 40.0;
+
+    /// The default circular wavy indicator size.
+    private static final double DEFAULT_WAVE_INDICATOR_SIZE = 48.0;
+
+    /// The default circular wave amplitude.
+    private static final double DEFAULT_WAVE_AMPLITUDE = 0.0;
+
+    /// The default circular wavelength.
+    private static final double DEFAULT_WAVELENGTH = 15.0;
+
+    /// The default gap between active progress and track.
+    private static final double DEFAULT_TRACK_GAP = 4.0;
+
+    /// The minimum accessible progress value.
+    private static final double ACCESSIBLE_MIN_VALUE = 0.0;
+
+    /// The maximum accessible progress value.
+    private static final double ACCESSIBLE_MAX_VALUE = 1.0;
+
+    /// The optional accessible value-string attribute available on newer JavaFX runtimes.
+    private static final @Nullable AccessibleAttribute VALUE_STRING_ATTRIBUTE =
+            M3Accessible.attribute("VALUE_STRING");
+
+    /// Creates an indeterminate progress indicator.
+    public M3ProgressIndicator() {
+        initialize();
+    }
+
+    /// Creates a progress indicator with an initial progress value.
+    ///
+    /// Values greater than `1.0` are normalized to `1.0`; negative values and `NaN` select indeterminate mode.
+    ///
+    /// @param progress the initial progress value
+    public M3ProgressIndicator(double progress) {
+        initialize();
+        setProgress(progress);
+    }
+
+    /// The current progress value.
+    ///
+    /// Values in the inclusive range `0.0` to `1.0` represent determinate completion. Values greater than `1.0`
+    /// are normalized to `1.0`; negative values and `NaN` are normalized to [INDETERMINATE_PROGRESS].
+    ///
+    /// @defaultValue [INDETERMINATE_PROGRESS]
+    private @Nullable DoubleProperty progress;
+
+    /// Returns the current progress value.
+    ///
+    /// @return the current progress value, or [INDETERMINATE_PROGRESS]
+    public final double getProgress() {
+        return progress == null ? INDETERMINATE_PROGRESS : progress.get();
+    }
+
+    /// Sets the current progress value.
+    ///
+    /// Values greater than `1.0` are normalized to `1.0`; negative values and `NaN` select indeterminate mode.
+    ///
+    /// @param progress the progress value
+    public final void setProgress(double progress) {
+        progressProperty().set(progress);
+    }
+
+    /// Returns the observable, bindable progress property.
+    ///
+    /// The property is [INDETERMINATE_PROGRESS] by default. Directly assigned values above `1.0` are normalized to
+    /// `1.0`; negative values and `NaN` are normalized to [INDETERMINATE_PROGRESS]. A binding source must provide
+    /// either [INDETERMINATE_PROGRESS] or a value in `0.0..1.0`. Valid changes update accessibility,
+    /// pseudo-class state, and layout.
+    ///
+    /// @return the progress property
+    public final DoubleProperty progressProperty() {
+        if (progress == null) {
+            progress = new DoublePropertyBase(INDETERMINATE_PROGRESS) {
+                /// Normalizes progress and updates the indeterminate pseudo class.
+                @Override
+                protected void invalidated() {
+                    double normalizedProgress = normalizeProgress(get());
+                    if (Double.compare(normalizedProgress, get()) != 0) {
+                        if (isBound()) {
+                            return;
+                        }
+                        set(normalizedProgress);
+                        return;
+                    }
+                    pseudoClassStateChanged(INDETERMINATE_PSEUDO_CLASS, isIndeterminate());
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.VALUE);
+                    M3Accessible.notifyAttribute(M3ProgressIndicator.this, VALUE_STRING_ATTRIBUTE);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.INDETERMINATE);
+                    requestLayout();
+                }
+
+                /// Returns the owning bean.
+                @Override
+                public Object getBean() {
+                    return M3ProgressIndicator.this;
+                }
+
+                /// Returns the property name.
+                @Override
+                public String getName() {
+                    return "progress";
+                }
+            };
+        }
+        return progress;
+    }
+
+    /// The circular track and active-indicator stroke thickness, in logical pixels.
+    ///
+    /// The value must be finite and non-negative and is styleable through `-m3-track-thickness`.
+    ///
+    /// @defaultValue `4.0`
+    private @Nullable StyleableDoubleProperty trackThickness;
+
+    /// Returns the circular indicator stroke thickness token.
+    ///
+    /// @return the circular indicator stroke thickness in logical pixels
+    public final double getTrackThickness() {
+        return trackThickness == null ? DEFAULT_TRACK_THICKNESS : trackThickness.get();
+    }
+
+    /// Sets the circular indicator stroke thickness token.
+    ///
+    /// @param trackThickness the circular indicator stroke thickness in logical pixels
+    /// @throws IllegalArgumentException if `trackThickness` is negative or not finite
+    public final void setTrackThickness(double trackThickness) {
+        trackThicknessProperty().set(M3Css.nonNegative(trackThickness, "trackThickness"));
+    }
+
+    /// Returns the observable, bindable, CSS-styleable track-thickness property.
+    ///
+    /// The property is `4.0` logical pixels by default, accepts only finite non-negative values, and is styleable
+    /// through `-m3-track-thickness`.
+    ///
+    /// @return the track-thickness property
+    public final StyleableDoubleProperty trackThicknessProperty() {
+        if (trackThickness == null) {
+            trackThickness = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_TRACK_THICKNESS,
+                    this,
+                    "trackThickness",
+                    StyleableProperties.TRACK_THICKNESS,
+                    this::requestLayout
+            );
+        }
+        return trackThickness;
+    }
+
+    /// The diameter used by flat circular geometry, in logical pixels.
+    ///
+    /// The value must be finite and non-negative and is styleable through `-m3-indicator-size`.
+    ///
+    /// @defaultValue `40.0`
+    private @Nullable StyleableDoubleProperty indicatorSize;
+
+    /// Returns the circular indicator size token.
+    ///
+    /// @return the circular indicator size in logical pixels
+    public final double getIndicatorSize() {
+        return indicatorSize == null ? DEFAULT_INDICATOR_SIZE : indicatorSize.get();
+    }
+
+    /// Sets the circular indicator size token.
+    ///
+    /// @param indicatorSize the circular indicator size in logical pixels
+    /// @throws IllegalArgumentException if `indicatorSize` is negative or not finite
+    public final void setIndicatorSize(double indicatorSize) {
+        indicatorSizeProperty().set(M3Css.nonNegative(indicatorSize, "indicatorSize"));
+    }
+
+    /// Returns the observable, bindable, CSS-styleable flat-indicator size property.
+    ///
+    /// The property is `40.0` logical pixels by default, accepts only finite non-negative values, and is styleable
+    /// through `-m3-indicator-size`.
+    ///
+    /// @return the flat-indicator size property
+    public final StyleableDoubleProperty indicatorSizeProperty() {
+        if (indicatorSize == null) {
+            indicatorSize = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_INDICATOR_SIZE,
+                    this,
+                    "indicatorSize",
+                    StyleableProperties.INDICATOR_SIZE,
+                    this::requestLayout
+            );
+        }
+        return indicatorSize;
+    }
+
+    /// The diameter used by expressive wavy geometry, in logical pixels.
+    ///
+    /// This size applies while [#waveAmplitudeProperty()] is positive. The value must be finite and non-negative and
+    /// is styleable through `-m3-wave-indicator-size`.
+    ///
+    /// @defaultValue `48.0`
+    private @Nullable StyleableDoubleProperty waveIndicatorSize;
+
+    /// Returns the circular wavy indicator size token.
+    ///
+    /// @return the circular wavy indicator size in logical pixels
+    public final double getWaveIndicatorSize() {
+        return waveIndicatorSize == null ? DEFAULT_WAVE_INDICATOR_SIZE : waveIndicatorSize.get();
+    }
+
+    /// Sets the circular wavy indicator size token.
+    ///
+    /// @param waveIndicatorSize the circular wavy indicator size in logical pixels
+    /// @throws IllegalArgumentException if `waveIndicatorSize` is negative or not finite
+    public final void setWaveIndicatorSize(double waveIndicatorSize) {
+        waveIndicatorSizeProperty().set(M3Css.nonNegative(waveIndicatorSize, "waveIndicatorSize"));
+    }
+
+    /// Returns the observable, bindable, CSS-styleable wavy-indicator size property.
+    ///
+    /// The property is `48.0` logical pixels by default, accepts only finite non-negative values, and is styleable
+    /// through `-m3-wave-indicator-size`. It is used while [#getWaveAmplitude()] is positive.
+    ///
+    /// @return the wavy-indicator size property
+    public final StyleableDoubleProperty waveIndicatorSizeProperty() {
+        if (waveIndicatorSize == null) {
+            waveIndicatorSize = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_WAVE_INDICATOR_SIZE,
+                    this,
+                    "waveIndicatorSize",
+                    StyleableProperties.WAVE_INDICATOR_SIZE,
+                    this::requestLayout
+            );
+        }
+        return waveIndicatorSize;
+    }
+
+    /// The expressive wave amplitude, in logical pixels.
+    ///
+    /// A value of `0.0` selects flat geometry. The value must be finite and non-negative and is styleable through
+    /// `-m3-wave-amplitude`.
+    ///
+    /// @defaultValue `0.0`
+    private @Nullable StyleableDoubleProperty waveAmplitude;
+
+    /// Returns the wavy progress amplitude token.
+    ///
+    /// @return the wavy progress amplitude in logical pixels
+    public final double getWaveAmplitude() {
+        return waveAmplitude == null ? DEFAULT_WAVE_AMPLITUDE : waveAmplitude.get();
+    }
+
+    /// Sets the wavy progress amplitude token.
+    ///
+    /// @param waveAmplitude the wavy progress amplitude in logical pixels
+    /// @throws IllegalArgumentException if `waveAmplitude` is negative or not finite
+    public final void setWaveAmplitude(double waveAmplitude) {
+        waveAmplitudeProperty().set(M3Css.nonNegative(waveAmplitude, "waveAmplitude"));
+    }
+
+    /// Returns the observable, bindable, CSS-styleable wave-amplitude property.
+    ///
+    /// The property is `0.0` logical pixels by default, which selects flat geometry. It accepts only finite
+    /// non-negative values and is styleable through `-m3-wave-amplitude`.
+    ///
+    /// @return the wave-amplitude property
+    public final StyleableDoubleProperty waveAmplitudeProperty() {
+        if (waveAmplitude == null) {
+            waveAmplitude = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_WAVE_AMPLITUDE,
+                    this,
+                    "waveAmplitude",
+                    StyleableProperties.WAVE_AMPLITUDE,
+                    this::requestLayout
+            );
+        }
+        return waveAmplitude;
+    }
+
+    /// The circular wave length, in logical pixels.
+    ///
+    /// The value must be finite and non-negative and is styleable through `-m3-wavelength`.
+    ///
+    /// @defaultValue `15.0`
+    private @Nullable StyleableDoubleProperty wavelength;
+
+    /// Returns the wavy progress wavelength token.
+    ///
+    /// @return the wavy progress wavelength in logical pixels
+    public final double getWavelength() {
+        return wavelength == null ? DEFAULT_WAVELENGTH : wavelength.get();
+    }
+
+    /// Sets the wavy progress wavelength token.
+    ///
+    /// @param wavelength the wavy progress wavelength in logical pixels
+    /// @throws IllegalArgumentException if `wavelength` is negative or not finite
+    public final void setWavelength(double wavelength) {
+        wavelengthProperty().set(M3Css.nonNegative(wavelength, "wavelength"));
+    }
+
+    /// Returns the observable, bindable, CSS-styleable wavelength property.
+    ///
+    /// The property is `15.0` logical pixels by default, accepts only finite non-negative values, and is styleable
+    /// through `-m3-wavelength`.
+    ///
+    /// @return the wavelength property
+    public final StyleableDoubleProperty wavelengthProperty() {
+        if (wavelength == null) {
+            wavelength = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_WAVELENGTH,
+                    this,
+                    "wavelength",
+                    StyleableProperties.WAVELENGTH,
+                    this::requestLayout
+            );
+        }
+        return wavelength;
+    }
+
+    /// The visual gap between active progress and inactive track, in logical pixels.
+    ///
+    /// The value must be finite and non-negative and is styleable through `-m3-track-gap`.
+    ///
+    /// @defaultValue `4.0`
+    private @Nullable StyleableDoubleProperty trackGap;
+
+    /// Returns the gap token between active progress and track.
+    ///
+    /// @return the gap between active progress and track in logical pixels
+    public final double getTrackGap() {
+        return trackGap == null ? DEFAULT_TRACK_GAP : trackGap.get();
+    }
+
+    /// Sets the gap token between active progress and track.
+    ///
+    /// @param trackGap the gap between active progress and track in logical pixels
+    /// @throws IllegalArgumentException if `trackGap` is negative or not finite
+    public final void setTrackGap(double trackGap) {
+        trackGapProperty().set(M3Css.nonNegative(trackGap, "trackGap"));
+    }
+
+    /// Returns the observable, bindable, CSS-styleable track-gap property.
+    ///
+    /// The property is `4.0` logical pixels by default, accepts only finite non-negative values, and is styleable
+    /// through `-m3-track-gap`.
+    ///
+    /// @return the track-gap property
+    public final StyleableDoubleProperty trackGapProperty() {
+        if (trackGap == null) {
+            trackGap = M3Css.nonNegativeStyleableDoubleProperty(
+                    DEFAULT_TRACK_GAP,
+                    this,
+                    "trackGap",
+                    StyleableProperties.TRACK_GAP,
+                    this::requestLayout
+            );
+        }
+        return trackGap;
+    }
+
+    /// Returns whether the current progress value is indeterminate.
+    ///
+    /// @return `true` when the current progress value is indeterminate
+    public final boolean isIndeterminate() {
+        return getProgress() == INDETERMINATE_PROGRESS;
+    }
+
+    /// Returns the CSS metadata for this control class.
+    ///
+    /// @return the CSS metadata for `M3ProgressIndicator`
+    public static @Unmodifiable List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /// Returns the CSS metadata for this control.
+    @Override
+    public @Unmodifiable List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
+
+    /// Creates the default progress indicator skin.
+    ///
+    /// @return the default progress indicator skin
+    @Override
+    protected Skin<?> createDefaultSkin() {
+        return new M3ProgressIndicatorSkin(this);
+    }
+
+    /// Returns accessibility attributes for the progress value.
+    ///
+    /// @param attribute  the requested accessibility attribute
+    /// @param parameters optional attribute-specific parameters
+    /// @return the requested accessibility value, or `null` when no value is available
+    /// @throws NullPointerException if `attribute` is `null`
+    @Override
+    public @Nullable Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        Objects.requireNonNull(attribute, "attribute");
+        if (attribute == VALUE_STRING_ATTRIBUTE) {
+            return isIndeterminate() ? "Indeterminate" : Math.round(getProgress() * 100.0) + "%";
+        }
+        return switch (attribute) {
+            case INDETERMINATE -> isIndeterminate();
+            case MIN_VALUE -> ACCESSIBLE_MIN_VALUE;
+            case MAX_VALUE -> ACCESSIBLE_MAX_VALUE;
+            case VALUE -> getProgress();
+            default -> super.queryAccessibleAttribute(attribute, parameters);
+        };
+    }
+
+    /// Returns the user-agent stylesheet for M3FX progress controls.
+    @Override
+    public String getUserAgentStylesheet() {
+        return M3Stylesheets.controlStylesheet("progress.css");
+    }
+
+    /// Adds base style classes.
+    private void initialize() {
+        M3ControlStyles.initialize(this, DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.PROGRESS_INDICATOR);
+        setFocusTraversable(false);
+        pseudoClassStateChanged(INDETERMINATE_PSEUDO_CLASS, true);
+    }
+
+    /// Computes the minimum progress indicator width from its size tokens.
+    @Override
+    protected double computeMinWidth(double height) {
+        return computePrefWidth(height);
+    }
+
+    /// Computes the minimum progress indicator height from its size tokens.
+    @Override
+    protected double computeMinHeight(double width) {
+        return computePrefHeight(width);
+    }
+
+    /// Computes the preferred progress indicator width from its size tokens.
+    @Override
+    protected double computePrefWidth(double height) {
+        return getWaveAmplitude() > 0.0 ? getWaveIndicatorSize() : getIndicatorSize();
+    }
+
+    /// Computes the preferred progress indicator height from its size tokens.
+    @Override
+    protected double computePrefHeight(double width) {
+        return computePrefWidth(width);
+    }
+
+    /// Normalizes progress values to the supported range.
+    private static double normalizeProgress(double progress) {
+        if (Double.isNaN(progress) || progress < 0.0) {
+            return INDETERMINATE_PROGRESS;
+        }
+        return Math.min(1.0, progress);
+    }
+
+    /// CSS metadata for M3FX progress indicator component tokens.
+    @NotNullByDefault
+    private static final class StyleableProperties {
+        /// CSS metadata for the circular indicator stroke thickness token.
+        private static final CssMetaData<M3ProgressIndicator, Number> TRACK_THICKNESS =
+                M3Css.sizeMetaData(
+                        "-m3-track-thickness",
+                        DEFAULT_TRACK_THICKNESS,
+                        M3ProgressIndicator::trackThicknessProperty
+                );
+
+        /// CSS metadata for the circular indicator size token.
+        private static final CssMetaData<M3ProgressIndicator, Number> INDICATOR_SIZE =
+                M3Css.sizeMetaData(
+                        "-m3-indicator-size",
+                        DEFAULT_INDICATOR_SIZE,
+                        M3ProgressIndicator::indicatorSizeProperty
+                );
+
+        /// CSS metadata for the circular wavy indicator size token.
+        private static final CssMetaData<M3ProgressIndicator, Number> WAVE_INDICATOR_SIZE =
+                M3Css.sizeMetaData(
+                        "-m3-wave-indicator-size",
+                        DEFAULT_WAVE_INDICATOR_SIZE,
+                        M3ProgressIndicator::waveIndicatorSizeProperty
+                );
+
+        /// CSS metadata for the wave amplitude token.
+        private static final CssMetaData<M3ProgressIndicator, Number> WAVE_AMPLITUDE =
+                M3Css.sizeMetaData(
+                        "-m3-wave-amplitude",
+                        DEFAULT_WAVE_AMPLITUDE,
+                        M3ProgressIndicator::waveAmplitudeProperty
+                );
+
+        /// CSS metadata for the wavelength token.
+        private static final CssMetaData<M3ProgressIndicator, Number> WAVELENGTH =
+                M3Css.sizeMetaData(
+                        "-m3-wavelength",
+                        DEFAULT_WAVELENGTH,
+                        M3ProgressIndicator::wavelengthProperty
+                );
+
+        /// CSS metadata for the active-to-track gap token.
+        private static final CssMetaData<M3ProgressIndicator, Number> TRACK_GAP =
+                M3Css.sizeMetaData(
+                        "-m3-track-gap",
+                        DEFAULT_TRACK_GAP,
+                        M3ProgressIndicator::trackGapProperty
+                );
+
+        /// The complete immutable CSS metadata list.
+        private static final @Unmodifiable List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+
+        static {
+            List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Control.getClassCssMetaData());
+            styleables.add(TRACK_THICKNESS);
+            styleables.add(INDICATOR_SIZE);
+            styleables.add(WAVE_INDICATOR_SIZE);
+            styleables.add(WAVE_AMPLITUDE);
+            styleables.add(WAVELENGTH);
+            styleables.add(TRACK_GAP);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+}

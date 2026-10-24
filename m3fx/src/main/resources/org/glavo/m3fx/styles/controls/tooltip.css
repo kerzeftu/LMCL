@@ -1,0 +1,52 @@
+.m3-tooltip-popup-root {
+    -fx-background-color: transparent;
+}
+
+.m3-tooltip {
+    -fx-background-color: -m3-color-inverse-surface;
+    -fx-background-radius: 4px;
+    -fx-background-insets: 0;
+    -fx-padding: 4px 8px;
+    -fx-font-size: 12px;
+    -fx-text-fill: -m3-color-inverse-on-surface;
+}
+
+.m3-rich-tooltip {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.m3-rich-tooltip-container {
+    -fx-background-color: -m3-color-surface-container;
+    -fx-background-radius: 12px;
+    -fx-background-insets: 0;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 3, 0.18, 0, 2);
+    -fx-padding: 12px 16px 8px 16px;
+    -fx-spacing: 8px;
+    -fx-pref-width: 320px;
+}
+
+.m3-rich-tooltip-title {
+    -fx-text-fill: -m3-color-on-surface-variant;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+}
+
+.m3-rich-tooltip-supporting-text {
+    -fx-text-fill: -m3-color-on-surface-variant;
+    -fx-font-size: 14px;
+    -fx-line-spacing: 2px;
+}
+
+.m3-rich-tooltip-actions {
+    -fx-alignment: center-left;
+    -fx-spacing: 8px;
+    -fx-padding: 4px 0 0 0;
+}
+
+.m3-rich-tooltip-actions .m3-button {
+    -m3-container-height: 32px;
+    -m3-horizontal-padding: 12px;
+}

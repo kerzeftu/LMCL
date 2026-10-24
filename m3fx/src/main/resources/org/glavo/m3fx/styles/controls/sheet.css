@@ -1,0 +1,92 @@
+.m3-side-sheet {
+    -fx-min-width: 256px;
+    -fx-pref-width: 256px;
+    -fx-max-width: 400px;
+    -fx-background-color: -m3-color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+}
+
+.m3-side-sheet.m3-modal-sheet {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-background-radius: 16px 0 0 16px;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 1, 0.18, 0, 1);
+}
+
+.m3-side-sheet.m3-modal-sheet:rtl {
+    -fx-background-radius: 0 16px 16px 0;
+}
+
+.m3-side-sheet.m3-side-sheet:detached {
+    -fx-background-radius: 16px;
+}
+
+.m3-bottom-sheet {
+    -fx-max-width: 640px;
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-background-insets: 0;
+    -fx-background-radius: 28px 28px 0 0;
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 1, 0.18, 0, 1);
+}
+
+.m3-sheet-header {
+    -fx-alignment: center-left;
+    -fx-spacing: 12px;
+    -fx-padding: 24px 24px 12px 24px;
+}
+
+.m3-sheet-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 400;
+    -fx-text-fill: -m3-color-on-surface;
+}
+
+.m3-side-sheet .m3-sheet-title {
+    -fx-text-fill: -m3-color-on-surface-variant;
+}
+
+.m3-side-sheet-header-actions {
+    -fx-alignment: center;
+    -fx-spacing: 8px;
+}
+
+.m3-side-sheet-actions {
+    -fx-alignment: center-left;
+    -fx-spacing: 8px;
+    -fx-min-height: 72px;
+    -fx-padding: 16px 24px 24px 24px;
+}
+
+.m3-bottom-sheet .m3-sheet-actions {
+    -fx-alignment: center;
+    -fx-spacing: 8px;
+}
+
+.m3-sheet-content {
+    -fx-padding: 24px;
+}
+
+.m3-bottom-sheet-drag-handle-container {
+    -fx-alignment: center;
+    -fx-padding: 22px 0;
+}
+
+.m3-bottom-sheet-drag-handle {
+    -fx-min-width: 32px;
+    -fx-pref-width: 32px;
+    -fx-max-width: 32px;
+    -fx-min-height: 4px;
+    -fx-pref-height: 4px;
+    -fx-max-height: 4px;
+    -fx-background-color: -m3-color-on-surface-variant;
+    -fx-background-radius: 2px;
+    -fx-opacity: 0.4;
+}
+
+.m3-bottom-sheet-drag-handle-container:focus-visible .m3-bottom-sheet-drag-handle {
+    -fx-border-color: -m3-state-focus-indicator-color;
+    -fx-border-width: 3px;
+    -fx-border-insets: -2px;
+    -fx-border-radius: 4px;
+}

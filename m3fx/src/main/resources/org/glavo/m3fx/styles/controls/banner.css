@@ -1,0 +1,25 @@
+.m3-banner {
+    -m3-container-min-height: 80px;
+    -m3-vertical-padding: 16px;
+    -m3-horizontal-padding: 24px;
+    -m3-content-spacing: 16px;
+    -m3-action-spacing: 8px;
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-border-color: transparent transparent -m3-color-outline-variant transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+
+.m3-banner-icon {
+    -fx-alignment: center;
+}
+
+.m3-banner-text {
+    -fx-text-fill: -m3-color-on-surface;
+    -fx-font-size: 14px;
+    -fx-line-spacing: 2px;
+}
+
+.m3-banner-actions {
+    -fx-alignment: center-right;
+}

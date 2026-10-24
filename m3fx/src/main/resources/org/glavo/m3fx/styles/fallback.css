@@ -1,0 +1,181 @@
+.root,
+.m3-fallback-root {
+    -monet-primary: rgb(101,85,143);
+    -m3-color-primary: rgb(101,85,143);
+    -monet-on-primary: rgb(255,255,255);
+    -m3-color-on-primary: rgb(255,255,255);
+    -monet-primary-container: rgb(233,221,255);
+    -m3-color-primary-container: rgb(233,221,255);
+    -monet-on-primary-container: rgb(77,61,117);
+    -m3-color-on-primary-container: rgb(77,61,117);
+    -monet-secondary: rgb(98,91,113);
+    -m3-color-secondary: rgb(98,91,113);
+    -monet-on-secondary: rgb(255,255,255);
+    -m3-color-on-secondary: rgb(255,255,255);
+    -monet-secondary-container: rgb(232,222,248);
+    -m3-color-secondary-container: rgb(232,222,248);
+    -monet-on-secondary-container: rgb(74,68,88);
+    -m3-color-on-secondary-container: rgb(74,68,88);
+    -monet-tertiary: rgb(126,82,96);
+    -m3-color-tertiary: rgb(126,82,96);
+    -monet-on-tertiary: rgb(255,255,255);
+    -m3-color-on-tertiary: rgb(255,255,255);
+    -monet-tertiary-container: rgb(255,217,227);
+    -m3-color-tertiary-container: rgb(255,217,227);
+    -monet-on-tertiary-container: rgb(99,59,72);
+    -m3-color-on-tertiary-container: rgb(99,59,72);
+    -monet-error: rgb(186,26,26);
+    -m3-color-error: rgb(186,26,26);
+    -monet-on-error: rgb(255,255,255);
+    -m3-color-on-error: rgb(255,255,255);
+    -monet-error-container: rgb(255,218,214);
+    -m3-color-error-container: rgb(255,218,214);
+    -monet-on-error-container: rgb(147,0,10);
+    -m3-color-on-error-container: rgb(147,0,10);
+    -monet-surface: rgb(253,247,255);
+    -m3-color-surface: rgb(253,247,255);
+    -monet-on-surface: rgb(29,27,32);
+    -m3-color-on-surface: rgb(29,27,32);
+    -m3-button-icon-color: rgb(73,69,79);
+    -monet-surface-dim: rgb(222,216,224);
+    -m3-color-surface-dim: rgb(222,216,224);
+    -monet-surface-bright: rgb(253,247,255);
+    -m3-color-surface-bright: rgb(253,247,255);
+    -monet-surface-container-lowest: rgb(255,255,255);
+    -m3-color-surface-container-lowest: rgb(255,255,255);
+    -monet-surface-container-low: rgb(248,242,250);
+    -m3-color-surface-container-low: rgb(248,242,250);
+    -monet-surface-container: rgb(242,236,244);
+    -m3-color-surface-container: rgb(242,236,244);
+    -monet-surface-container-high: rgb(236,230,238);
+    -m3-color-surface-container-high: rgb(236,230,238);
+    -monet-surface-container-highest: rgb(230,224,233);
+    -m3-color-surface-container-highest: rgb(230,224,233);
+    -monet-surface-variant: rgb(231,224,235);
+    -m3-color-surface-variant: rgb(231,224,235);
+    -monet-on-surface-variant: rgb(73,69,78);
+    -m3-color-on-surface-variant: rgb(73,69,78);
+    -m3-disclosure-icon-color: -m3-color-on-surface-variant;
+    -monet-background: rgb(253,247,255);
+    -m3-color-background: rgb(253,247,255);
+    -monet-on-background: rgb(29,27,32);
+    -m3-color-on-background: rgb(29,27,32);
+    -monet-outline: rgb(122,117,127);
+    -m3-color-outline: rgb(122,117,127);
+    -monet-outline-variant: rgb(202,196,207);
+    -m3-color-outline-variant: rgb(202,196,207);
+    -monet-shadow: rgb(0,0,0);
+    -m3-color-shadow: rgb(0,0,0);
+    -m3-elevation-shadow-color: rgba(0,0,0,0.18);
+    -m3-elevation-strong-shadow-color: rgba(0,0,0,0.20);
+    -monet-scrim: rgb(0,0,0);
+    -m3-color-scrim: rgb(0,0,0);
+    -monet-inverse-surface: rgb(50,47,53);
+    -m3-color-inverse-surface: rgb(50,47,53);
+    -monet-inverse-on-surface: rgb(245,239,247);
+    -m3-color-inverse-on-surface: rgb(245,239,247);
+    -monet-inverse-primary: rgb(207,189,254);
+    -m3-color-inverse-primary: rgb(207,189,254);
+    -monet-surface-tint: rgb(101,85,143);
+    -m3-color-surface-tint: rgb(101,85,143);
+    -m3-shape-corner-none: 0px;
+    -m3-shape-corner-extra-small: 4px;
+    -m3-shape-corner-small: 8px;
+    -m3-shape-corner-medium: 12px;
+    -m3-shape-corner-large: 16px;
+    -m3-shape-corner-large-increased: 20px;
+    -m3-shape-corner-extra-large: 28px;
+    -m3-shape-corner-extra-large-increased: 32px;
+    -m3-shape-corner-extra-extra-large: 48px;
+    -m3-shape-corner-full: 999px;
+    -m3-list-segmented-gap: 2px;
+    -m3-state-hover-opacity: 0.08;
+    -m3-state-focus-opacity: 0.10;
+    -m3-state-pressed-opacity: 0.10;
+    -m3-state-dragged-opacity: 0.16;
+    -m3-state-disabled-container-opacity: 0.12;
+    -m3-state-disabled-content-opacity: 0.38;
+    -m3-state-disabled-container-color: rgba(29,27,32,0.12);
+    -m3-state-disabled-content-color: rgba(29,27,32,0.38);
+    -m3-button-disabled-container-color: rgba(29,27,32,0.1);
+    -m3-list-item-disabled-state-layer-color: rgba(29,27,32,0.1);
+    -m3-filled-card-disabled-container-color: rgba(230,224,233,0.38);
+    -m3-elevated-card-disabled-container-color: rgba(253,247,255,0.38);
+    -m3-outlined-card-disabled-outline-color: rgba(122,117,127,0.12);
+    -m3-text-field-disabled-container-color: rgba(29,27,32,0.04);
+    -m3-text-field-hover-container-color: rgb(214,208,217);
+    -m3-text-input-trailing-icon-color: -m3-color-error;
+    -m3-state-focus-indicator-color: -m3-color-secondary;
+    -m3-state-focus-indicator-thickness: 3px;
+    -m3-state-focus-indicator-outer-offset: 2px;
+    -m3-state-focus-indicator-inner-offset: -2px;
+    -m3-time-picker-container-shape: 28px;
+    -m3-time-picker-container-padding: 24px;
+    -m3-time-picker-container-spacing: 24px;
+    -m3-time-picker-display-spacing: 4px;
+    -m3-time-picker-display-cell-shape: 4px;
+    -m3-time-picker-display-cell-width: 96px;
+    -m3-time-picker-display-24-hour-cell-width: 114px;
+    -m3-time-picker-display-cell-height: 80px;
+    -m3-time-picker-period-vertical-width: 52px;
+    -m3-time-picker-period-vertical-height: 80px;
+    -m3-time-picker-period-horizontal-width: 216px;
+    -m3-time-picker-period-horizontal-height: 38px;
+    -m3-time-picker-dial-size: 256px;
+    -m3-time-picker-dial-handle-size: 48px;
+    -m3-time-picker-dial-center-size: 8px;
+    -m3-time-picker-dial-track-width: 2px;
+    -m3-time-picker-input-field-width: 96px;
+    -m3-time-picker-input-field-height: 72px;
+    -m3-menu-container-color: -m3-color-surface-container;
+    -m3-menu-item-state-layer-color: -m3-color-on-surface;
+    -m3-menu-selected-item-container-color: -m3-color-secondary-container;
+    -m3-menu-selected-item-content-color: -m3-color-on-secondary-container;
+    -m3-menu-selected-disabled-container-color: -m3-color-secondary-container;
+    -m3-menu-vibrant-container-color: -m3-color-tertiary-container;
+    -m3-menu-vibrant-item-content-color: -m3-color-on-tertiary-container;
+    -m3-menu-vibrant-item-state-layer-color: -m3-color-on-tertiary-container;
+    -m3-menu-vibrant-selected-item-container-color: -m3-color-tertiary;
+    -m3-menu-vibrant-selected-item-content-color: -m3-color-on-tertiary;
+    -m3-menu-vibrant-interaction-icon-color: -m3-color-on-tertiary-container;
+    -m3-menu-item-icon-size: 24px;
+    -m3-menu-section-header-horizontal-padding: 12px;
+    -m3-navigation-bar-selected-label-color: -m3-color-on-surface;
+    -m3-navigation-bar-state-layer-color: -m3-color-on-surface;
+}
+
+.m3-internal-icon-path {
+    -fx-fill: -m3-color-on-surface-variant;
+}
+
+.m3-internal-icon-primary .m3-internal-icon-path {
+    -fx-fill: -m3-color-primary;
+}
+
+.m3-internal-icon-on-surface .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-surface;
+}
+
+.m3-internal-icon-inverse-on-surface .m3-internal-icon-path {
+    -fx-fill: -m3-color-inverse-on-surface;
+}
+
+.m3-internal-icon-on-surface-variant .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-surface-variant;
+}
+
+.m3-internal-icon-on-primary-container .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-primary-container;
+}
+
+.m3-internal-icon-on-primary .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-primary;
+}
+
+.m3-internal-icon-on-secondary .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-secondary;
+}
+
+.m3-internal-icon-on-tertiary .m3-internal-icon-path {
+    -fx-fill: -m3-color-on-tertiary;
+}

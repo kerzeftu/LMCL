@@ -1,0 +1,827 @@
+// Copyright (c) 2026 Glavo
+// SPDX-License-Identifier: Apache-2.0
+
+package org.glavo.m3fx.internal;
+
+import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableBooleanValue;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+import org.glavo.m3fx.animation.M3MotionSettings;
+import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
+
+/// Observes resolved M3FX motion context and presentation activity while an owner node is attached to a scene.
+///
+/// Observers that share an owner also share one owner coordinator and one tree-visible observation. The native JavaFX
+/// property is preferred; the public parent chain is observed when that property is inaccessible. Scene dispatchers
+/// register coordinators rather than individual callbacks, so controls with several animated features do not multiply
+/// ancestor, scene, or window observation overhead. Notifications raised off the JavaFX application thread are
+/// coalesced and dispatched on that thread. Callback dispatch does not allocate snapshots and remains stable when
+/// callbacks dispose subscriptions or move their owner to another scene.
+/// Application-wide motion settings are not observed while the presenting window is hidden or iconified; restoring
+/// the presentation refreshes subscribers against the latest setting.
+///
+/// Construction and lifecycle methods must be invoked on the JavaFX application thread. A disposed observer cannot
+/// be restarted. Calling [stop] or [dispose] more than once has no effect.
+@NotNullByDefault
+public final class M3MotionSettingsObserver {
+    /// Opaque owner property key for the shared owner coordinator.
+    private static final IdentityKey OWNER_OBSERVER_KEY =
+            new IdentityKey(M3MotionSettingsObserver.class.getName() + ".ownerObserver");
+
+    /// Opaque scene property key for the shared motion-settings dispatcher.
+    private static final IdentityKey SCENE_OBSERVER_KEY =
+            new IdentityKey(M3MotionSettingsObserver.class.getName() + ".sceneObserver");
+
+    /// Changes whenever global or node-local reduced-motion settings change.
+    private static final AtomicLong REDUCED_MOTION_REVISION = new AtomicLong();
+
+    /// Empty nullable observer storage reused before the first owner subscription.
+    private static final @Nullable M3MotionSettingsObserver[] EMPTY_OBSERVERS =
+            new M3MotionSettingsObserver[0];
+
+    /// Empty nullable owner storage reused before the first scene registration.
+    private static final @Nullable OwnerObserver[] EMPTY_OWNERS = new OwnerObserver[0];
+
+    /// Empty nullable node storage reused before the first ancestor-chain observation.
+    private static final @Nullable Node[] EMPTY_NODES = new Node[0];
+
+    /// The node whose attachment controls observation lifetime.
+    private final Node owner;
+
+    /// The shared coordinator used while this observer is active.
+    private @Nullable OwnerObserver ownerObserver;
+
+    /// The action invoked when motion settings or presentation activity may affect the owner.
+    private final Runnable refreshAction;
+
+    /// Whether this observer has been disposed.
+    private volatile boolean disposed;
+
+    /// Whether this observer is currently registered with its owner coordinator.
+    private volatile boolean observing;
+
+    /// Creates an observer for one owner node.
+    ///
+    /// @param owner         the node whose scene attachment controls listener lifetime
+    /// @param refreshAction the action invoked when motion settings or presentation activity may affect the owner
+    /// @throws NullPointerException if `owner` or `refreshAction` is `null`
+    public M3MotionSettingsObserver(Node owner, Runnable refreshAction) {
+        this(owner, refreshAction, true);
+    }
+
+    /// Creates an observer for one owner node with explicit initial activation.
+    ///
+    /// An inactive observer does not allocate owner or scene observation state until [start] is called.
+    ///
+    /// @param owner              the node whose scene attachment controls listener lifetime
+    /// @param refreshAction      the action invoked when motion settings or presentation activity may affect the owner
+    /// @param observeImmediately whether observation should start during construction
+    /// @throws NullPointerException if `owner` or `refreshAction` is `null`
+    public M3MotionSettingsObserver(Node owner, Runnable refreshAction, boolean observeImmediately) {
+        this.owner = Objects.requireNonNull(owner, "owner");
+        this.refreshAction = Objects.requireNonNull(refreshAction, "refreshAction");
+        if (observeImmediately) {
+            start();
+        }
+    }
+
+    /// Starts observation when it is not already active.
+    ///
+    /// Calling this method while observation is active has no effect.
+    ///
+    /// @throws IllegalStateException if this observer has been disposed
+    public void start() {
+        if (disposed) {
+            throw new IllegalStateException("motion settings observer is disposed");
+        }
+        if (observing) {
+            return;
+        }
+
+        OwnerObserver coordinator = ownerObserver(owner);
+        ownerObserver = coordinator;
+        observing = true;
+        try {
+            coordinator.add(this);
+        } catch (RuntimeException | Error exception) {
+            observing = false;
+            coordinator.remove(this);
+            ownerObserver = null;
+            throw exception;
+        }
+    }
+
+    /// Pauses observation without disposing this observer.
+    ///
+    /// Calling this method while observation is inactive has no effect. A stopped observer may be restarted with
+    /// [start] until it is disposed.
+    public void stop() {
+        if (!observing) {
+            return;
+        }
+
+        observing = false;
+        @Nullable OwnerObserver coordinator = ownerObserver;
+        ownerObserver = null;
+        if (coordinator != null) {
+            coordinator.remove(this);
+        }
+    }
+
+    /// Permanently stops observing ancestor, scene, window, and runtime motion-setting changes.
+    public void dispose() {
+        if (disposed) {
+            return;
+        }
+
+        disposed = true;
+        stop();
+    }
+
+    /// Invokes this observer's callback unless it has been disposed.
+    private void refresh() {
+        if (!disposed && observing) {
+            refreshAction.run();
+        }
+    }
+
+    /// Returns the coordinator owned by a node, creating it when needed.
+    ///
+    /// @param owner the node that owns the coordinator
+    /// @return the existing or created owner coordinator
+    private static OwnerObserver ownerObserver(Node owner) {
+        Object value = owner.getProperties().get(OWNER_OBSERVER_KEY);
+        if (value instanceof OwnerObserver observer) {
+            return observer;
+        }
+
+        OwnerObserver observer = new OwnerObserver(owner);
+        owner.getProperties().put(OWNER_OBSERVER_KEY, observer);
+        return observer;
+    }
+
+    /// Returns the dispatcher owned by a scene, creating it when needed.
+    ///
+    /// @param scene the scene that owns the dispatcher
+    /// @return the existing or created dispatcher
+    private static SceneObserver sceneObserver(Scene scene) {
+        Object value = scene.getProperties().get(SCENE_OBSERVER_KEY);
+        if (value instanceof SceneObserver observer) {
+            return observer;
+        }
+
+        SceneObserver observer = new SceneObserver(scene);
+        scene.getProperties().put(SCENE_OBSERVER_KEY, observer);
+        return observer;
+    }
+
+    /// Returns the current internal reduced-motion revision.
+    ///
+    /// @return the revision used to invalidate resolved-setting caches
+    public static long reducedMotionRevision() {
+        return REDUCED_MOTION_REVISION.get();
+    }
+
+    /// Notifies internal observers after a reduced-motion setting changes.
+    ///
+    /// @param source the root of the affected subtree, or null for a global change
+    public static void reducedMotionChanged(@Nullable Node source) {
+        REDUCED_MOTION_REVISION.incrementAndGet();
+        if (source != null) {
+            motionContextChanged(source);
+        }
+    }
+
+    /// Notifies internal motion observers after one subtree's reduced-motion settings or theme motion tokens change.
+    ///
+    /// Global reduced-motion changes are delivered by the global property's weak per-scene listeners instead.
+    /// Detached subtrees have no active scene dispatcher and require no notification.
+    ///
+    /// @param source the root of the affected subtree
+    public static void motionContextChanged(Node source) {
+        Objects.requireNonNull(source, "source");
+        @Nullable Scene scene = source.getScene();
+        if (scene == null || !scene.hasProperties()) {
+            return;
+        }
+        @Nullable Object value = scene.getProperties().get(SCENE_OBSERVER_KEY);
+        if (value instanceof SceneObserver observer) {
+            observer.requestRefresh(source);
+        }
+    }
+
+    /// Shares owner lifecycle observation across all subscriptions attached to one node.
+    @NotNullByDefault
+    private static final class OwnerObserver {
+        /// The node whose scene attachment controls this coordinator.
+        private final Node owner;
+
+        /// The scene dispatcher currently responsible for this owner.
+        private @Nullable SceneObserver registeredSceneObserver;
+
+        /// Re-registers this coordinator when the owner moves between scenes.
+        private final InvalidationListener sceneListener = observable -> updateRegistration();
+
+        /// Refreshes presentation activity when the owner or one of its ancestors changes visibility.
+        private final InvalidationListener visibilityListener = observable -> refreshAfterVisibilityChange();
+
+        /// Rebuilds presentation observation when any link in the current ancestor chain changes.
+        private final InvalidationListener parentListener = observable -> refreshAfterParentChange();
+
+        /// The native JavaFX tree-visible property currently observed, or `null` while using the public fallback.
+        private @Nullable ObservableBooleanValue observedTreeVisibleProperty;
+
+        /// Nullable node slots containing the owner followed by its currently observed ancestors.
+        private @Nullable Node[] observedNodes = EMPTY_NODES;
+
+        /// The number of occupied slots in the observed ancestor chain.
+        private int observedNodeCount;
+
+        /// The most recently observed effective tree-visible state.
+        private boolean treeVisible;
+
+        /// Nullable observer slots; removals during dispatch leave temporary tombstones.
+        private @Nullable M3MotionSettingsObserver[] observers = EMPTY_OBSERVERS;
+
+        /// The number of occupied observer slots, including temporary tombstones.
+        private int observerSlots;
+
+        /// The number of live observers.
+        private int observerCount;
+
+        /// The number of active callback dispatches.
+        private int dispatchDepth;
+
+        /// Whether a nested notification requested another pass.
+        private boolean refreshRequested;
+
+        /// Changes whenever this owner transfers between scene dispatchers.
+        private long registrationVersion;
+
+        /// Creates a coordinator for one owner node.
+        ///
+        /// @param owner the node whose subscriptions are coordinated
+        private OwnerObserver(Node owner) {
+            this.owner = owner;
+        }
+
+        /// Adds one subscription and installs owner lifecycle observation when it is the first.
+        ///
+        /// @param observer the subscription to add
+        private void add(M3MotionSettingsObserver observer) {
+            boolean wasEmpty = observerCount == 0;
+            append(observer);
+            if (wasEmpty) {
+                owner.sceneProperty().addListener(sceneListener);
+                installTreeVisibilityObservation();
+                updateRegistration();
+                return;
+            }
+
+            @Nullable SceneObserver sceneObserver = registeredSceneObserver;
+            if (sceneObserver != null && owner.getScene() == sceneObserver.scene) {
+                observer.refresh();
+            }
+        }
+
+        /// Removes one subscription and tears down this coordinator when it becomes empty.
+        ///
+        /// @param observer the subscription to remove
+        private void remove(M3MotionSettingsObserver observer) {
+            int index = indexOf(observer);
+            if (index < 0) {
+                return;
+            }
+
+            if (dispatchDepth == 0) {
+                int moved = observerSlots - index - 1;
+                if (moved > 0) {
+                    System.arraycopy(observers, index + 1, observers, index, moved);
+                }
+                observers[--observerSlots] = null;
+            } else {
+                observers[index] = null;
+            }
+            observerCount--;
+
+            if (observerCount == 0) {
+                refreshRequested = false;
+                unregisterSceneObserver();
+                owner.sceneProperty().removeListener(sceneListener);
+                releaseTreeVisibilityObservation();
+                if (owner.getProperties().get(OWNER_OBSERVER_KEY) == this) {
+                    owner.getProperties().remove(OWNER_OBSERVER_KEY);
+                }
+            } else if (dispatchDepth == 0) {
+                compactObservers();
+            }
+        }
+
+        /// Appends one observer, growing compact storage only during registration changes.
+        ///
+        /// @param observer the observer to append
+        private void append(M3MotionSettingsObserver observer) {
+            if (observerSlots == observers.length) {
+                int currentCapacity = observers.length;
+                int nextCapacity = currentCapacity == 0 ? 4 : currentCapacity + (currentCapacity >> 1);
+                observers = Arrays.copyOf(observers, nextCapacity);
+            }
+            observers[observerSlots++] = observer;
+            observerCount++;
+        }
+
+        /// Returns the identity index of one observer, or -1 when it is absent.
+        ///
+        /// @param observer the observer to find
+        /// @return its slot index, or -1
+        private int indexOf(M3MotionSettingsObserver observer) {
+            for (int index = 0; index < observerSlots; index++) {
+                if (observers[index] == observer) {
+                    return index;
+                }
+            }
+            return -1;
+        }
+
+        /// Updates scene registration after owner attachment changes.
+        private void updateRegistration() {
+            @Nullable Scene scene = owner.getScene();
+            @Nullable SceneObserver currentObserver = registeredSceneObserver;
+            if (currentObserver == null ? scene == null : currentObserver.scene == scene) {
+                return;
+            }
+
+            registrationVersion++;
+            unregisterSceneObserver();
+            if (scene != null) {
+                SceneObserver nextObserver = sceneObserver(scene);
+                nextObserver.add(this);
+                registeredSceneObserver = nextObserver;
+            }
+            requestRefresh();
+        }
+
+        /// Refreshes subscriptions when effective tree visibility changes.
+        private void refreshAfterVisibilityChange() {
+            boolean currentTreeVisible = M3PresentationActivity.isTreeVisible(owner);
+            if (treeVisible == currentTreeVisible) {
+                return;
+            }
+
+            treeVisible = currentTreeVisible;
+            @Nullable SceneObserver sceneObserver = registeredSceneObserver;
+            if (sceneObserver != null && owner.getScene() == sceneObserver.scene) {
+                requestRefresh();
+            }
+        }
+
+        /// Rebuilds ancestor observation and refreshes inherited settings after a parent link changes.
+        private void refreshAfterParentChange() {
+            @Nullable ObservableBooleanValue property = observedTreeVisibleProperty;
+            if (property == null) {
+                rebuildObservedChain();
+            } else {
+                treeVisible = property.get();
+            }
+            @Nullable SceneObserver sceneObserver = registeredSceneObserver;
+            if (sceneObserver != null
+                    && owner.getScene() == sceneObserver.scene
+                    && (owner.getParent() != null || sceneObserver.scene.getRoot() == owner)) {
+                requestRefresh();
+            }
+        }
+
+        /// Installs native tree-visible observation or a public ancestor-chain fallback.
+        private void installTreeVisibilityObservation() {
+            @Nullable ObservableBooleanValue property = M3TreeVisibility.treeVisibleProperty(owner);
+            observedTreeVisibleProperty = property;
+            if (property == null) {
+                rebuildObservedChain();
+                return;
+            }
+
+            property.addListener(visibilityListener);
+            owner.parentProperty().addListener(parentListener);
+            treeVisible = property.get();
+        }
+
+        /// Removes native or fallback tree-visible observation and releases fallback storage.
+        private void releaseTreeVisibilityObservation() {
+            @Nullable ObservableBooleanValue property = observedTreeVisibleProperty;
+            observedTreeVisibleProperty = null;
+            if (property != null) {
+                property.removeListener(visibilityListener);
+                owner.parentProperty().removeListener(parentListener);
+            }
+            releaseObservedChain();
+        }
+
+        /// Rebuilds visible and parent-property observation from the owner through its current public parent root.
+        private void rebuildObservedChain() {
+            removeObservedChain();
+            @Nullable Node current = owner;
+            while (current != null) {
+                ensureObservedNodeCapacity();
+                observedNodes[observedNodeCount++] = current;
+                current.visibleProperty().addListener(visibilityListener);
+                current.parentProperty().addListener(parentListener);
+                current = current.getParent();
+            }
+            treeVisible = M3PresentationActivity.isTreeVisible(owner);
+        }
+
+        /// Grows ancestor storage before one node is appended.
+        private void ensureObservedNodeCapacity() {
+            if (observedNodeCount < observedNodes.length) {
+                return;
+            }
+            int currentCapacity = observedNodes.length;
+            int nextCapacity = currentCapacity == 0 ? 8 : currentCapacity + (currentCapacity >> 1);
+            observedNodes = Arrays.copyOf(observedNodes, nextCapacity);
+        }
+
+        /// Removes listeners from the currently observed ancestor chain while retaining reusable storage.
+        private void removeObservedChain() {
+            for (int index = 0; index < observedNodeCount; index++) {
+                @Nullable Node node = observedNodes[index];
+                if (node != null) {
+                    node.visibleProperty().removeListener(visibilityListener);
+                    node.parentProperty().removeListener(parentListener);
+                }
+            }
+            Arrays.fill(observedNodes, 0, observedNodeCount, null);
+            observedNodeCount = 0;
+        }
+
+        /// Removes ancestor listeners and releases reusable node storage.
+        private void releaseObservedChain() {
+            removeObservedChain();
+            observedNodes = EMPTY_NODES;
+        }
+
+        /// Removes this owner from its current scene and releases an empty scene dispatcher.
+        private void unregisterSceneObserver() {
+            @Nullable SceneObserver currentObserver = registeredSceneObserver;
+            if (currentObserver == null) {
+                return;
+            }
+
+            registeredSceneObserver = null;
+            if (currentObserver.remove(this)
+                    && currentObserver.scene.getProperties().get(SCENE_OBSERVER_KEY) == currentObserver) {
+                currentObserver.scene.getProperties().remove(SCENE_OBSERVER_KEY);
+            }
+        }
+
+        /// Refreshes this owner's subscriptions when called by its current scene dispatcher.
+        ///
+        /// @param source the scene dispatcher requesting the refresh
+        private void refreshFrom(SceneObserver source) {
+            if (registeredSceneObserver == source && owner.getScene() == source.scene) {
+                requestRefresh();
+            }
+        }
+
+        /// Dispatches callbacks without allocating snapshots and coalesces nested refresh requests.
+        private void requestRefresh() {
+            if (observerCount == 0) {
+                return;
+            }
+            if (dispatchDepth != 0) {
+                refreshRequested = true;
+                return;
+            }
+
+            do {
+                refreshRequested = false;
+                long dispatchRegistrationVersion = registrationVersion;
+                int dispatchLimit = observerSlots;
+                dispatchDepth++;
+                try {
+                    for (int index = 0; index < dispatchLimit; index++) {
+                        @Nullable M3MotionSettingsObserver observer = observers[index];
+                        if (observer != null) {
+                            observer.refresh();
+                        }
+                        if (registrationVersion != dispatchRegistrationVersion) {
+                            break;
+                        }
+                    }
+                } finally {
+                    dispatchDepth--;
+                    compactObservers();
+                }
+            } while (refreshRequested && observerCount != 0);
+        }
+
+        /// Compacts observer tombstones after the outermost dispatch.
+        private void compactObservers() {
+            if (dispatchDepth != 0) {
+                return;
+            }
+
+            if (observerSlots != observerCount) {
+                int destination = 0;
+                for (int source = 0; source < observerSlots; source++) {
+                    @Nullable M3MotionSettingsObserver observer = observers[source];
+                    if (observer != null) {
+                        observers[destination++] = observer;
+                    }
+                }
+                Arrays.fill(observers, destination, observerSlots, null);
+                observerSlots = destination;
+            }
+
+            int capacity = observers.length;
+            if (observerCount != 0 && capacity > 8 && observerCount <= (capacity >> 2)) {
+                int targetCapacity = Math.max(4, observerCount + (observerCount >> 1));
+                observers = Arrays.copyOf(observers, targetCapacity);
+            }
+        }
+    }
+
+    /// Dispatches global settings and window lifecycle notifications once per scene.
+    @NotNullByDefault
+    private static final class SceneObserver {
+        /// The scene that owns this dispatcher.
+        private final Scene scene;
+
+        /// Nullable owner slots; removals during dispatch leave temporary tombstones.
+        private @Nullable OwnerObserver[] owners = EMPTY_OWNERS;
+
+        /// The number of occupied owner slots, including temporary tombstones.
+        private int ownerSlots;
+
+        /// The number of live owner coordinators.
+        private int ownerCount;
+
+        /// Receives global reduced-motion changes without retaining this scene from the static property.
+        private final InvalidationListener globalSettingsListener = observable -> requestRefresh(null);
+
+        /// Weak wrapper registered with the application-wide reduced-motion property.
+        private final WeakInvalidationListener weakGlobalSettingsListener =
+                new WeakInvalidationListener(globalSettingsListener);
+
+        /// Receives changes to the window that presents the scene.
+        private final ChangeListener<@Nullable Window> windowListener =
+                (observable, oldWindow, newWindow) -> updateWindow(newWindow, true);
+
+        /// Receives showing-state changes from the current scene window.
+        private final InvalidationListener windowShowingListener = observable -> handleWindowShowingChanged();
+
+        /// Receives iconification changes from the stage that presents the current scene window.
+        private final InvalidationListener stageIconifiedListener = observable -> handleStageIconifiedChanged();
+
+        /// The window whose showing state is currently observed.
+        private @Nullable Window observedWindow;
+
+        /// The stage whose iconification state controls the current window's presentation.
+        private @Nullable Stage observedStage;
+
+        /// Whether the global reduced-motion property currently contains this dispatcher's weak listener.
+        private boolean globalSettingsObserved;
+
+        /// The number of active owner dispatches.
+        private int dispatchDepth;
+
+        /// Whether an off-thread settings notification already scheduled one FX-thread refresh.
+        private volatile boolean refreshPending;
+
+        /// The common local source retained while one off-thread refresh is pending.
+        private @Nullable Node pendingSource;
+
+        /// Whether pending changes require refreshing every owner in this scene.
+        private boolean refreshAllPending;
+
+        /// Creates a dispatcher owned by one scene.
+        ///
+        /// @param scene the scene that owns the dispatcher
+        private SceneObserver(Scene scene) {
+            this.scene = scene;
+        }
+
+        /// Adds one owner coordinator and installs shared settings listeners when it is the first.
+        ///
+        /// @param ownerObserver the owner coordinator to add
+        private void add(OwnerObserver ownerObserver) {
+            if (ownerSlots == owners.length) {
+                int currentCapacity = owners.length;
+                int nextCapacity = currentCapacity == 0 ? 8 : currentCapacity + (currentCapacity >> 1);
+                owners = Arrays.copyOf(owners, nextCapacity);
+            }
+            owners[ownerSlots++] = ownerObserver;
+            if (ownerCount++ == 0) {
+                scene.windowProperty().addListener(windowListener);
+                updateWindow(scene.getWindow(), false);
+            }
+        }
+
+        /// Removes one owner coordinator and returns whether this dispatcher became empty.
+        ///
+        /// @param ownerObserver the owner coordinator to remove
+        /// @return true when no owner coordinators remain
+        private boolean remove(OwnerObserver ownerObserver) {
+            int index = indexOf(ownerObserver);
+            if (index < 0) {
+                return false;
+            }
+
+            if (dispatchDepth == 0) {
+                int moved = ownerSlots - index - 1;
+                if (moved > 0) {
+                    System.arraycopy(owners, index + 1, owners, index, moved);
+                }
+                owners[--ownerSlots] = null;
+            } else {
+                owners[index] = null;
+            }
+
+            if (--ownerCount != 0) {
+                if (dispatchDepth == 0) {
+                    compactOwners();
+                }
+                return false;
+            }
+
+            scene.windowProperty().removeListener(windowListener);
+            updateWindow(null, false);
+            return true;
+        }
+
+        /// Returns the identity index of one owner coordinator, or -1 when it is absent.
+        ///
+        /// @param ownerObserver the owner coordinator to find
+        /// @return its slot index, or -1
+        private int indexOf(OwnerObserver ownerObserver) {
+            for (int index = 0; index < ownerSlots; index++) {
+                if (owners[index] == ownerObserver) {
+                    return index;
+                }
+            }
+            return -1;
+        }
+
+        /// Reattaches shared render-activity listeners to the scene's current window.
+        ///
+        /// @param window  the new window, or null when detached
+        /// @param refresh whether subscribers should be refreshed
+        private void updateWindow(@Nullable Window window, boolean refresh) {
+            if (observedWindow == window) {
+                updateGlobalSettingsObservation();
+                if (refresh) {
+                    requestRefresh(null);
+                }
+                return;
+            }
+
+            @Nullable Window currentWindow = observedWindow;
+            if (currentWindow != null) {
+                currentWindow.showingProperty().removeListener(windowShowingListener);
+            }
+            @Nullable Stage currentStage = observedStage;
+            if (currentStage != null) {
+                currentStage.iconifiedProperty().removeListener(stageIconifiedListener);
+            }
+            observedWindow = window;
+            observedStage = M3PresentationActivity.presentationStage(window);
+            if (window != null) {
+                window.showingProperty().addListener(windowShowingListener);
+            }
+            @Nullable Stage stage = observedStage;
+            if (stage != null) {
+                stage.iconifiedProperty().addListener(stageIconifiedListener);
+            }
+            updateGlobalSettingsObservation();
+            if (refresh) {
+                requestRefresh(null);
+            }
+        }
+
+        /// Updates global setting observation for the current presentation lifecycle.
+        private void updateGlobalSettingsObservation() {
+            boolean shouldObserve = ownerCount != 0
+                    && (observedWindow == null
+                    || observedWindow.isShowing() && (observedStage == null || !observedStage.isIconified()));
+            if (globalSettingsObserved == shouldObserve) {
+                return;
+            }
+            globalSettingsObserved = shouldObserve;
+            if (shouldObserve) {
+                M3MotionSettings.globalReducedMotionRequestedProperty().addListener(weakGlobalSettingsListener);
+            } else {
+                M3MotionSettings.globalReducedMotionRequestedProperty().removeListener(weakGlobalSettingsListener);
+            }
+        }
+
+        /// Refreshes presentation state and global setting observation after a window shows or hides.
+        private void handleWindowShowingChanged() {
+            updateGlobalSettingsObservation();
+            requestRefresh(null);
+        }
+
+        /// Refreshes presentation state and global setting observation after the presenting stage is iconified.
+        private void handleStageIconifiedChanged() {
+            updateGlobalSettingsObservation();
+            requestRefresh(null);
+        }
+
+        /// Coalesces off-thread notifications into one JavaFX application-thread dispatch per scene.
+        private void requestRefresh(@Nullable Node source) {
+            if (Platform.isFxApplicationThread()) {
+                refreshOwners(source);
+                return;
+            }
+
+            synchronized (this) {
+                if (refreshPending) {
+                    if (!refreshAllPending && pendingSource != source) {
+                        pendingSource = null;
+                        refreshAllPending = true;
+                    }
+                    return;
+                }
+                refreshPending = true;
+                pendingSource = source;
+                refreshAllPending = source == null;
+            }
+            Platform.runLater(() -> {
+                @Nullable Node sourceToRefresh;
+                synchronized (this) {
+                    refreshPending = false;
+                    sourceToRefresh = refreshAllPending ? null : pendingSource;
+                    pendingSource = null;
+                    refreshAllPending = false;
+                }
+                refreshOwners(sourceToRefresh);
+            });
+        }
+
+        /// Refreshes affected owner coordinators without allocating a per-notification snapshot.
+        private void refreshOwners(@Nullable Node source) {
+            if (source != null && source.getScene() != scene) {
+                return;
+            }
+            int dispatchLimit = ownerSlots;
+            dispatchDepth++;
+            try {
+                for (int index = 0; index < dispatchLimit; index++) {
+                    @Nullable OwnerObserver ownerObserver = owners[index];
+                    if (ownerObserver != null && (source == null || contains(source, ownerObserver.owner))) {
+                        ownerObserver.refreshFrom(this);
+                    }
+                }
+            } finally {
+                dispatchDepth--;
+                compactOwners();
+            }
+        }
+
+        /// Returns whether one owner belongs to the subtree rooted at the changed settings node.
+        private static boolean contains(Node source, Node owner) {
+            @Nullable Node current = owner;
+            while (current != null) {
+                if (current == source) {
+                    return true;
+                }
+                current = current.getParent();
+            }
+            return false;
+        }
+
+        /// Compacts owner tombstones after the outermost dispatch.
+        private void compactOwners() {
+            if (dispatchDepth != 0) {
+                return;
+            }
+
+            if (ownerSlots != ownerCount) {
+                int destination = 0;
+                for (int source = 0; source < ownerSlots; source++) {
+                    @Nullable OwnerObserver ownerObserver = owners[source];
+                    if (ownerObserver != null) {
+                        owners[destination++] = ownerObserver;
+                    }
+                }
+                Arrays.fill(owners, destination, ownerSlots, null);
+                ownerSlots = destination;
+            }
+
+            int capacity = owners.length;
+            if (ownerCount != 0 && capacity > 16 && ownerCount <= (capacity >> 2)) {
+                int targetCapacity = Math.max(8, ownerCount + (ownerCount >> 1));
+                owners = Arrays.copyOf(owners, targetCapacity);
+            }
+        }
+    }
+}

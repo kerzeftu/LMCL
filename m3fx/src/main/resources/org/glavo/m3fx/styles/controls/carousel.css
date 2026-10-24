@@ -1,0 +1,59 @@
+.m3-carousel {
+    -fx-background-color: transparent;
+}
+
+.m3-carousel-viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.m3-carousel-viewport > .viewport {
+    -fx-background-color: transparent;
+}
+
+.m3-carousel-viewport > .corner {
+    -fx-background-color: transparent;
+}
+
+.m3-carousel-track {
+    -fx-alignment: center-left;
+    -fx-padding: 8px 16px 8px 16px;
+    -fx-spacing: 8px;
+    -m3-carousel-item-mask-shape: 28px;
+    -m3-carousel-small-item-min-width: 40px;
+    -m3-carousel-small-item-max-width: 56px;
+    -m3-carousel-large-item-max-width: 320px;
+}
+
+.m3-carousel-item-container {
+    -fx-background-color: transparent;
+    -fx-cursor: default;
+    -fx-effect: null;
+}
+
+.m3-carousel-item-container:hover {
+    -fx-effect: dropshadow(gaussian, -m3-elevation-shadow-color, 8, 0.18, 0, 2);
+}
+
+.m3-carousel-item-container:pressed,
+.m3-carousel-item-container:disabled {
+    -fx-effect: null;
+}
+
+.m3-carousel-item-container:disabled {
+    -fx-opacity: 0.38;
+}
+
+.m3-carousel-item-state-layer .m3-state-layer,
+.m3-carousel-item-state-layer .m3-ripple {
+    -fx-background-color: -m3-color-on-surface;
+}
+
+.m3-carousel .m3-card {
+    -m3-container-shape: 28px;
+}
+
+.m3-carousel .m3-card .m3-card-container {
+    -fx-effect: null;
+}

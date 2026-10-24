@@ -30,6 +30,7 @@ language-subtag-registry
 /HMCL/build/
 /HMCLCore/build/
 /HMCLBoot/build/
+/m3fx/build/
 /minecraft/libraries/HMCLTransformerDiscoveryService/build/
 /minecraft/libraries/HMCLMultiMCBootstrap/build/
 /buildSrc/build/

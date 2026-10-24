@@ -1,0 +1,8 @@
+.m3-number-field {
+    -fx-background-color: transparent;
+}
+
+.m3-number-field-stepper {
+    -fx-alignment: center;
+    -fx-spacing: 0;
+}

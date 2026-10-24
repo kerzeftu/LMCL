@@ -1,0 +1,728 @@
+// Copyright (c) 2026 Glavo
+// SPDX-License-Identifier: Apache-2.0
+
+package org.glavo.m3fx.skins;
+
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
+import javafx.beans.property.ReadOnlyProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.collections.WeakListChangeListener;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Pos;
+import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.control.SkinBase;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.TextAlignment;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.glavo.m3fx.controls.M3FormValidator;
+import org.glavo.m3fx.controls.M3FormInput;
+import org.glavo.m3fx.controls.M3ValidationSummary;
+import org.glavo.m3fx.internal.M3NodeLayout;
+import org.glavo.m3fx.internal.M3ScrollReveal;
+import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
+
+/// The default Material Design 3 skin for [M3ValidationSummary].
+///
+/// The skin observes the configured form validator and presents either the valid empty state or an ordered list of
+/// invalid inputs. Activating a validation row reveals and focuses its input; row text remains synchronized with field
+/// labels, prompts, and error text while the summary is attached.
+@NotNullByDefault
+public final class M3ValidationSummarySkin extends SkinBase<M3ValidationSummary> {
+    /// The title label style class.
+    private static final String TITLE_STYLE_CLASS = "m3-validation-summary-title";
+
+    /// The empty-state label style class.
+    private static final String EMPTY_TEXT_STYLE_CLASS = "m3-validation-summary-empty-text";
+
+    /// The item container style class.
+    private static final String ITEMS_STYLE_CLASS = "m3-validation-summary-items";
+
+    /// The item style class.
+    private static final String ITEM_STYLE_CLASS = "m3-validation-summary-item";
+
+    /// The item label style class.
+    private static final String ITEM_LABEL_STYLE_CLASS = "m3-validation-summary-item-label";
+
+    /// The item error style class.
+    private static final String ITEM_ERROR_STYLE_CLASS = "m3-validation-summary-item-error";
+
+    /// The spacing between top-level summary content rows.
+    private static final double CONTENT_SPACING = 10.0;
+
+    /// The spacing between invalid item rows.
+    private static final double ITEM_SPACING = 4.0;
+
+    /// The spacing between the invalid item field label and error text.
+    private static final double ITEM_TEXT_SPACING = 2.0;
+
+    /// The internal content container.
+    private final VBox container = new VBox(CONTENT_SPACING);
+
+    /// The label that renders the summary title.
+    private final Label titleLabel = new Label();
+
+    /// The label that renders the valid empty state.
+    private final Label emptyLabel = new Label();
+
+    /// The container that renders invalid item rows.
+    private final VBox items = new VBox(ITEM_SPACING);
+
+    /// Updates skin content when simple summary properties change.
+    private final InvalidationListener summaryListener = observable -> updateContent();
+
+    /// Rebuilds orientation-sensitive item rows when the effective node orientation changes.
+    private final InvalidationListener nodeOrientationInvalidation = observable -> {
+        updateNodeOrientationLayout();
+        updateContent();
+    };
+
+    /// Updates skin content when the validator invalid input list changes.
+    private final ListChangeListener<M3FormInput> invalidInputsListener = change -> updateContent();
+
+    /// Weak invalid-input listener that prevents a validator from retaining a detached summary skin.
+    private final WeakListChangeListener<M3FormInput> weakInvalidInputsListener =
+            new WeakListChangeListener<>(invalidInputsListener);
+
+    /// Updates only the rendered row whose label, error, wrapped input, or prompt changed.
+    private final InvalidationListener invalidInputContentListener = this::updateInvalidInputContent;
+
+    /// Weak content listener that prevents invalid inputs from retaining a detached summary skin.
+    private final WeakInvalidationListener weakInvalidInputContentListener =
+            new WeakInvalidationListener(invalidInputContentListener);
+
+    /// Invalid inputs currently observed for row text changes.
+    private final Set<M3FormInput> observedInvalidInputs = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    /// Wrapped text inputs currently observed for prompt fallback changes.
+    private final Map<M3FormInput, TextInputControl> observedInvalidInputControls = new IdentityHashMap<>();
+
+    /// Cached rendered item rows keyed by invalid input identity.
+    private final Map<M3FormInput, ValidationItemRow> itemRows = new IdentityHashMap<>();
+
+    /// Reusable invalid input list populated during one content update.
+    private final ArrayList<M3FormInput> invalidInputsScratch = new ArrayList<>();
+
+    /// Reusable identity set used while reconciling observed inputs and rendered rows.
+    private final Set<M3FormInput> invalidInputSetScratch =
+            Collections.newSetFromMap(new IdentityHashMap<>());
+
+    /// Reusable ordered row list used while reconciling the item container.
+    private final ArrayList<Node> itemRowsScratch = new ArrayList<>();
+
+    /// Moves invalid input listeners when the summary validator changes.
+    private final ChangeListener<@Nullable M3FormValidator> validatorListener =
+            (observable, oldValue, newValue) -> updateValidator(newValue);
+
+    /// The validator currently observed by this skin.
+    private @Nullable M3FormValidator observedValidator;
+
+    /// Creates a validation summary skin.
+    ///
+    /// @param control the validation summary controlled by this skin
+    public M3ValidationSummarySkin(M3ValidationSummary control) {
+        super(control);
+
+        container.setManaged(false);
+        container.setAlignment(Pos.CENTER_LEFT);
+        items.setAlignment(Pos.CENTER_LEFT);
+        titleLabel.alignmentProperty().bind(M3NodeLayout.createPhysicalStartCenterAlignmentBinding(control));
+        emptyLabel.alignmentProperty().bind(M3NodeLayout.createPhysicalStartCenterAlignmentBinding(control));
+        container.nodeOrientationProperty().bind(control.effectiveNodeOrientationProperty());
+        items.nodeOrientationProperty().bind(control.effectiveNodeOrientationProperty());
+        titleLabel.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+        emptyLabel.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+        titleLabel.getStyleClass().add(TITLE_STYLE_CLASS);
+        emptyLabel.getStyleClass().add(EMPTY_TEXT_STYLE_CLASS);
+        items.getStyleClass().add(ITEMS_STYLE_CLASS);
+        titleLabel.setMaxWidth(Double.MAX_VALUE);
+        emptyLabel.setMaxWidth(Double.MAX_VALUE);
+        items.setMaxWidth(Double.MAX_VALUE);
+
+        control.titleTextProperty().addListener(summaryListener);
+        control.emptyTextProperty().addListener(summaryListener);
+        control.showWhenValidProperty().addListener(summaryListener);
+        control.visibleInvalidInputCountProperty().addListener(summaryListener);
+        control.validatorProperty().addListener(validatorListener);
+        control.effectiveNodeOrientationProperty().addListener(nodeOrientationInvalidation);
+
+        updateValidator(control.getValidator());
+        updateNodeOrientationLayout();
+        updateContent();
+        getChildren().setAll(container);
+    }
+
+    /// Removes listeners, bindings, and child references before disposal.
+    @Override
+    public void dispose() {
+        M3ValidationSummary control = getSkinnable();
+        control.titleTextProperty().removeListener(summaryListener);
+        control.emptyTextProperty().removeListener(summaryListener);
+        control.showWhenValidProperty().removeListener(summaryListener);
+        control.visibleInvalidInputCountProperty().removeListener(summaryListener);
+        control.validatorProperty().removeListener(validatorListener);
+        control.effectiveNodeOrientationProperty().removeListener(nodeOrientationInvalidation);
+        container.nodeOrientationProperty().unbind();
+        items.nodeOrientationProperty().unbind();
+        titleLabel.alignmentProperty().unbind();
+        emptyLabel.alignmentProperty().unbind();
+        updateValidator(null);
+        updateObservedInvalidInputs(List.of());
+        clearInvalidItemRows();
+        container.getChildren().clear();
+        getChildren().remove(container);
+        super.dispose();
+    }
+
+    /// Computes the minimum width from the internal content container.
+    @Override
+    protected double computeMinWidth(
+            double height,
+            double topInset,
+            double rightInset,
+            double bottomInset,
+            double leftInset
+    ) {
+        if (!getSkinnable().isShowingSummary()) {
+            return leftInset + rightInset;
+        }
+        return leftInset + container.minWidth(height) + rightInset;
+    }
+
+    /// Computes the minimum height from the internal content container.
+    @Override
+    protected double computeMinHeight(
+            double width,
+            double topInset,
+            double rightInset,
+            double bottomInset,
+            double leftInset
+    ) {
+        if (!getSkinnable().isShowingSummary()) {
+            return topInset + bottomInset;
+        }
+        return topInset + container.minHeight(width) + bottomInset;
+    }
+
+    /// Computes the preferred width from the internal content container.
+    @Override
+    protected double computePrefWidth(
+            double height,
+            double topInset,
+            double rightInset,
+            double bottomInset,
+            double leftInset
+    ) {
+        if (!getSkinnable().isShowingSummary()) {
+            return leftInset + rightInset;
+        }
+        return leftInset + container.prefWidth(height) + rightInset;
+    }
+
+    /// Computes the preferred height from the internal content container.
+    @Override
+    protected double computePrefHeight(
+            double width,
+            double topInset,
+            double rightInset,
+            double bottomInset,
+            double leftInset
+    ) {
+        if (!getSkinnable().isShowingSummary()) {
+            return topInset + bottomInset;
+        }
+        return topInset + container.prefHeight(width) + bottomInset;
+    }
+
+    /// Lays out the internal content container in the summary content bounds.
+    @Override
+    protected void layoutChildren(double x, double y, double width, double height) {
+        container.resizeRelocate(x, y, width, height);
+    }
+
+    /// Moves the invalid input listener to a new validator.
+    private void updateValidator(@Nullable M3FormValidator validator) {
+        if (observedValidator != null) {
+            observedValidator.getInvalidInputs().removeListener(weakInvalidInputsListener);
+        }
+        observedValidator = validator;
+        if (observedValidator != null) {
+            observedValidator.getInvalidInputs().addListener(weakInvalidInputsListener);
+        }
+        updateContent();
+    }
+
+    /// Rebuilds visible summary content from the current validator state.
+    private void updateContent() {
+        M3ValidationSummary control = getSkinnable();
+        boolean showingSummary = control.isShowingSummary();
+        container.setVisible(showingSummary);
+        container.setManaged(showingSummary);
+
+        if (!showingSummary) {
+            updateObservedInvalidInputs(List.of());
+            clearInvalidItemRows();
+            container.getChildren().clear();
+            control.requestLayout();
+            return;
+        }
+
+        titleLabel.setText(control.getTitleText());
+        invalidInputsScratch.clear();
+        int invalidInputCount = control.getInvalidInputCount();
+        for (int index = 0; index < invalidInputCount; index++) {
+            @Nullable M3FormInput input = control.getInvalidInput(index);
+            if (input != null && control.isInvalidInputShown(input)) {
+                invalidInputsScratch.add(input);
+            }
+        }
+        List<M3FormInput> invalidInputs = invalidInputsScratch;
+        updateObservedInvalidInputs(invalidInputs);
+        if (invalidInputs.isEmpty()) {
+            clearInvalidItemRows();
+            emptyLabel.setText(control.getEmptyText());
+            setContainerChildren(titleLabel, emptyLabel);
+        } else {
+            updateInvalidItemRows(invalidInputs);
+            setContainerChildren(titleLabel, items);
+        }
+        invalidInputsScratch.clear();
+        control.requestLayout();
+    }
+
+    /// Updates listeners for invalid input row text and fallback prompt changes.
+    private void updateObservedInvalidInputs(List<M3FormInput> invalidInputs) {
+        invalidInputSetScratch.clear();
+        invalidInputSetScratch.addAll(invalidInputs);
+
+        Iterator<M3FormInput> iterator = observedInvalidInputs.iterator();
+        while (iterator.hasNext()) {
+            M3FormInput input = iterator.next();
+            if (!invalidInputSetScratch.contains(input)) {
+                iterator.remove();
+                input.labelTextProperty().removeListener(weakInvalidInputContentListener);
+                input.validationErrorTextProperty().removeListener(weakInvalidInputContentListener);
+                input.validationFocusTargetProperty().removeListener(weakInvalidInputContentListener);
+                @Nullable TextInputControl textInput = observedInvalidInputControls.remove(input);
+                if (textInput != null) {
+                    textInput.promptTextProperty().removeListener(weakInvalidInputContentListener);
+                }
+            }
+        }
+
+        for (M3FormInput input : invalidInputs) {
+            if (observedInvalidInputs.add(input)) {
+                input.labelTextProperty().addListener(weakInvalidInputContentListener);
+                input.validationErrorTextProperty().addListener(weakInvalidInputContentListener);
+                input.validationFocusTargetProperty().addListener(weakInvalidInputContentListener);
+            }
+            updateObservedInvalidInputControl(input);
+        }
+        invalidInputSetScratch.clear();
+    }
+
+    /// Updates the prompt listener for the wrapped input used as row-label fallback text.
+    private void updateObservedInvalidInputControl(M3FormInput input) {
+        @Nullable TextInputControl oldInput = observedInvalidInputControls.get(input);
+        @Nullable Node focusTarget = input.getValidationFocusTarget();
+        @Nullable TextInputControl newInput = focusTarget instanceof TextInputControl textInput ? textInput : null;
+        if (oldInput == newInput) {
+            return;
+        }
+        if (oldInput != null) {
+            oldInput.promptTextProperty().removeListener(weakInvalidInputContentListener);
+            observedInvalidInputControls.remove(input);
+        }
+        if (newInput != null) {
+            newInput.promptTextProperty().addListener(weakInvalidInputContentListener);
+            observedInvalidInputControls.put(input, newInput);
+        }
+    }
+
+    /// Updates one cached row after an observed invalid-input content property changes.
+    private void updateInvalidInputContent(Observable observable) {
+        @Nullable M3FormInput input = invalidInputForObservable(observable);
+        if (input == null) {
+            updateContent();
+            return;
+        }
+        if (observable == input.validationFocusTargetProperty()) {
+            updateObservedInvalidInputControl(input);
+        }
+
+        @Nullable ValidationItemRow row = itemRows.get(input);
+        if (row != null) {
+            updateItem(row, input);
+            getSkinnable().requestLayout();
+        }
+    }
+
+    /// Returns the observed invalid input that owns one changed property.
+    private @Nullable M3FormInput invalidInputForObservable(Observable observable) {
+        if (!(observable instanceof ReadOnlyProperty<?> property)) {
+            return null;
+        }
+        Object bean = property.getBean();
+        if (bean instanceof M3FormInput input && observedInvalidInputs.contains(input)) {
+            return input;
+        }
+        if (bean instanceof TextInputControl textInput) {
+            for (Map.Entry<M3FormInput, TextInputControl> entry : observedInvalidInputControls.entrySet()) {
+                if (entry.getValue() == textInput) {
+                    return entry.getKey();
+                }
+            }
+        }
+        return null;
+    }
+
+    /// Updates top-level summary children without publishing redundant list changes.
+    private void setContainerChildren(Node first, Node second) {
+        ObservableList<Node> currentChildren = container.getChildren();
+        if (currentChildren.size() != 2
+                || currentChildren.get(0) != first
+                || currentChildren.get(1) != second) {
+            currentChildren.setAll(first, second);
+        }
+    }
+
+    /// Updates rendered invalid item rows while preserving existing row nodes when possible.
+    private void updateInvalidItemRows(List<M3FormInput> invalidInputs) {
+        invalidInputSetScratch.clear();
+        invalidInputSetScratch.addAll(invalidInputs);
+        Iterator<Map.Entry<M3FormInput, ValidationItemRow>> iterator = itemRows.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<M3FormInput, ValidationItemRow> entry = iterator.next();
+            if (!invalidInputSetScratch.contains(entry.getKey())) {
+                entry.getValue().dispose();
+                iterator.remove();
+            }
+        }
+
+        itemRowsScratch.clear();
+        itemRowsScratch.ensureCapacity(invalidInputs.size());
+        for (M3FormInput input : invalidInputs) {
+            ValidationItemRow row = itemRows.get(input);
+            if (row == null) {
+                row = createItem(input);
+                itemRows.put(input, row);
+            } else {
+                updateItem(row, input);
+            }
+            itemRowsScratch.add(row);
+        }
+
+        ObservableList<Node> children = items.getChildren();
+        if (!sameNodes(children, itemRowsScratch)) {
+            children.setAll(itemRowsScratch);
+        }
+        itemRowsScratch.clear();
+        invalidInputSetScratch.clear();
+    }
+
+    /// Removes rendered invalid item rows and cached row references.
+    private void clearInvalidItemRows() {
+        items.getChildren().clear();
+        for (ValidationItemRow row : itemRows.values()) {
+            row.dispose();
+        }
+        itemRows.clear();
+    }
+
+    /// Returns whether two node lists contain the same nodes in the same order.
+    private static boolean sameNodes(ObservableList<Node> first, List<Node> second) {
+        if (first.size() != second.size()) {
+            return false;
+        }
+        for (int index = 0; index < first.size(); index++) {
+            if (first.get(index) != second.get(index)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// Updates text and orientation-sensitive alignment for one cached invalid item row.
+    private void updateItem(ValidationItemRow item, M3FormInput input) {
+        String labelText = itemLabel(input);
+        String errorText = itemError(input);
+        String accessibleText = labelText + ": " + errorText;
+        if (!Objects.equals(item.getAccessibleText(), accessibleText)) {
+            item.setAccessibleText(accessibleText);
+        }
+        Pos alignment = textAlignment();
+        if (item.text.getAlignment() != alignment) {
+            item.text.setAlignment(alignment);
+        }
+        if (StackPane.getAlignment(item.text) != alignment) {
+            StackPane.setAlignment(item.text, alignment);
+        }
+        TextAlignment textAlignment = textTextAlignment();
+        if (item.label.getAlignment() != alignment) {
+            item.label.setAlignment(alignment);
+        }
+        if (item.label.getTextAlignment() != textAlignment) {
+            item.label.setTextAlignment(textAlignment);
+        }
+        if (!labelText.equals(item.label.getText())) {
+            item.label.setText(labelText);
+        }
+        if (item.error.getAlignment() != alignment) {
+            item.error.setAlignment(alignment);
+        }
+        if (item.error.getTextAlignment() != textAlignment) {
+            item.error.setTextAlignment(textAlignment);
+        }
+        if (!errorText.equals(item.error.getText())) {
+            item.error.setText(errorText);
+        }
+    }
+
+    /// Creates one clickable invalid input item row.
+    private ValidationItemRow createItem(M3FormInput input) {
+        return new ValidationItemRow(input);
+    }
+
+    /// Plays pointer feedback for an invalid item press.
+    private void handleItemMousePressed(ValidationItemRow item, MouseEvent event) {
+        if (item.isDisabled() || event.getButton() != MouseButton.PRIMARY) {
+            return;
+        }
+
+        item.pointerPressed = true;
+        item.stateLayer.playRipple(event.getX(), event.getY());
+        event.consume();
+    }
+
+    /// Releases pointer feedback and focuses the related invalid input when release stays inside the row.
+    private void handleItemMouseReleased(ValidationItemRow item, MouseEvent event) {
+        if (!item.pointerPressed || event.getButton() != MouseButton.PRIMARY) {
+            return;
+        }
+
+        item.pointerPressed = false;
+        item.stateLayer.releaseRipple();
+        if (!item.isDisabled() && item.contains(event.getX(), event.getY())) {
+            getSkinnable().focusInput(item.input);
+        }
+        event.consume();
+    }
+
+    /// Handles activation and in-summary keyboard traversal for one invalid item row.
+    private void handleItemKeyPressed(ValidationItemRow item, M3FormInput input, KeyEvent event) {
+        if (item.isDisabled()) {
+            return;
+        }
+
+        switch (event.getCode()) {
+            case ENTER, SPACE -> {
+                item.stateLayer.playCenteredRipple();
+                item.stateLayer.releaseRipple();
+                getSkinnable().focusInput(input);
+                event.consume();
+            }
+            case UP -> {
+                focusAdjacentItem(item, false);
+                event.consume();
+            }
+            case DOWN -> {
+                focusAdjacentItem(item, true);
+                event.consume();
+            }
+            case HOME -> {
+                if (focusIndexedItem(0)) {
+                    event.consume();
+                }
+            }
+            case END -> {
+                if (focusIndexedItem(items.getChildren().size() - 1)) {
+                    event.consume();
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    /// Moves focus to the adjacent invalid item row when one exists.
+    private void focusAdjacentItem(Node item, boolean forward) {
+        int currentIndex = items.getChildren().indexOf(item);
+        if (currentIndex < 0) {
+            return;
+        }
+        focusIndexedItem(currentIndex + (forward ? 1 : -1));
+    }
+
+    /// Moves focus to one invalid item row by rendered row index.
+    private boolean focusIndexedItem(int index) {
+        if (index < 0 || index >= items.getChildren().size()) {
+            return false;
+        }
+
+        Node item = items.getChildren().get(index);
+        if (!item.isDisabled() && item.isVisible()) {
+            return M3ScrollReveal.requestFocusAndReveal(getSkinnable(), item);
+        }
+        return false;
+    }
+
+    /// Updates orientation-dependent summary text alignment.
+    private void updateNodeOrientationLayout() {
+        titleLabel.setTextAlignment(textTextAlignment());
+        emptyLabel.setTextAlignment(textTextAlignment());
+    }
+
+    /// Returns the current logical label-node alignment.
+    private Pos textAlignment() {
+        return M3NodeLayout.physicalStartCenterAlignment(getSkinnable());
+    }
+
+    /// Returns the current logical multi-line text alignment.
+    private TextAlignment textTextAlignment() {
+        return M3NodeLayout.isRightToLeft(getSkinnable()) ? TextAlignment.RIGHT : TextAlignment.LEFT;
+    }
+
+    /// Returns the field label shown for one invalid input item.
+    private static String itemLabel(M3FormInput input) {
+        String label = input.getLabelText();
+        if (!label.isBlank()) {
+            return label;
+        }
+
+        @Nullable Node focusTarget = input.getValidationFocusTarget();
+        @Nullable TextInputControl textInput = focusTarget instanceof TextInputControl target ? target : null;
+        if (textInput != null && !textInput.getPromptText().isBlank()) {
+            return textInput.getPromptText();
+        }
+        return "Field";
+    }
+
+    /// Returns the error text shown for one invalid input item.
+    private static String itemError(M3FormInput input) {
+        String errorText = input.getValidationErrorText();
+        return errorText.isBlank() ? "Invalid value" : errorText;
+    }
+
+    /// A cached validation row that owns its content nodes, event routing, and state-layer lifecycle.
+    @NotNullByDefault
+    private final class ValidationItemRow extends StackPane implements EventHandler<Event>, InvalidationListener {
+        /// The invalid input represented by this row.
+        private final M3FormInput input;
+
+        /// The bounded interaction state layer.
+        private final M3StateLayer stateLayer = new M3StateLayer();
+
+        /// The field label rendered by this row.
+        private final Label label = new Label();
+
+        /// The validation error rendered by this row.
+        private final Label error = new Label();
+
+        /// The text column shared by the field label and validation error.
+        private final VBox text = new VBox(ITEM_TEXT_SPACING, label, error);
+
+        /// Whether this row owns an unfinished primary pointer press.
+        private boolean pointerPressed;
+
+        /// Creates one reusable validation row for an invalid input.
+        ///
+        /// @param input the invalid input represented by this row
+        private ValidationItemRow(M3FormInput input) {
+            this.input = input;
+            getStyleClass().add(ITEM_STYLE_CLASS);
+            setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+            setMaxWidth(Double.MAX_VALUE);
+            setAccessibleRole(AccessibleRole.BUTTON);
+            setAccessibleText(itemLabel(input) + ": " + itemError(input));
+            setFocusTraversable(true);
+            setPickOnBounds(true);
+            stateLayer.installStateTransitions(this);
+
+            label.getStyleClass().add(ITEM_LABEL_STYLE_CLASS);
+            label.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+            label.setMaxWidth(Double.MAX_VALUE);
+            error.getStyleClass().add(ITEM_ERROR_STYLE_CLASS);
+            error.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+            error.setWrapText(true);
+            error.setMaxWidth(Double.MAX_VALUE);
+
+            text.setMaxWidth(Double.MAX_VALUE);
+            text.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+            getChildren().addAll(stateLayer, text);
+            updateItem(this, input);
+
+            addEventHandler(MouseEvent.MOUSE_PRESSED, this);
+            addEventHandler(MouseEvent.MOUSE_RELEASED, this);
+            addEventHandler(KeyEvent.KEY_PRESSED, this);
+            disabledProperty().addListener(this);
+            sceneProperty().addListener(this);
+        }
+
+        /// Lays out the bounded state layer after ordinary row content.
+        @Override
+        protected void layoutChildren() {
+            super.layoutChildren();
+            stateLayer.layoutLayer(0.0, 0.0, getWidth(), getHeight(), 8.0);
+        }
+
+        /// Routes pointer and keyboard events without allocating per-row handler closures.
+        ///
+        /// @param event the row event to route
+        @Override
+        public void handle(Event event) {
+            if (event.getEventType() == MouseEvent.MOUSE_PRESSED) {
+                handleItemMousePressed(this, (MouseEvent) event);
+            } else if (event.getEventType() == MouseEvent.MOUSE_RELEASED) {
+                handleItemMouseReleased(this, (MouseEvent) event);
+            } else if (event.getEventType() == KeyEvent.KEY_PRESSED) {
+                handleItemKeyPressed(this, input, (KeyEvent) event);
+            }
+        }
+
+        /// Cancels pointer ownership when this row can no longer complete its gesture.
+        ///
+        /// @param observable the changed disabled or scene property
+        @Override
+        public void invalidated(Observable observable) {
+            if (isDisabled() || getScene() == null) {
+                pointerPressed = false;
+                stateLayer.cancelRipple();
+            }
+        }
+
+        /// Releases handlers, state transitions, and child references before this row leaves the cache.
+        private void dispose() {
+            pointerPressed = false;
+            removeEventHandler(MouseEvent.MOUSE_PRESSED, this);
+            removeEventHandler(MouseEvent.MOUSE_RELEASED, this);
+            removeEventHandler(KeyEvent.KEY_PRESSED, this);
+            disabledProperty().removeListener(this);
+            sceneProperty().removeListener(this);
+            stateLayer.uninstallStateTransitions();
+            getChildren().clear();
+        }
+    }
+
+}

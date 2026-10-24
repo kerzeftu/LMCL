@@ -84,7 +84,7 @@ public final class M3SpikePane extends VBox {
 
         getChildren().addAll(
                 new M3Text("Material 3 Expressive spike", M3TextRole.HEADLINE_MEDIUM),
-                new M3Text("m3fx 2481f88fd6 · JavaFX 21.0.8 · 阶段 0 仅验证", M3TextRole.BODY_MEDIUM),
+                new M3Text("m3fx 96ccd6d · JavaFX 21.0.8 · 阶段 0 仅验证", M3TextRole.BODY_MEDIUM),
                 buildButtons(),
                 buildCards(),
                 buildProgress(),
