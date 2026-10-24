@@ -67,7 +67,10 @@ import static org.jackhuang.hmcl.ui.ToolbarListPageSkin.createToolbarButton2;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// Shows installed theme packs and common theme-pack actions.
+/// Shows installed custom theme packs and common theme-pack actions.
+///
+/// Built-in launcher themes are exposed as appearance modes instead of theme packs, so they are
+/// intentionally filtered out of this page.
 @NotNullByDefault
 public final class ThemePackManagementPage extends ListPageBase<ThemePackManager.InstalledThemePack> implements DecoratorPage {
     /// The icon container size used by theme-pack icons.
@@ -77,7 +80,7 @@ public final class ThemePackManagementPage extends ListPageBase<ThemePackManager
     private static final int ICON_IMAGE_SIZE = (int) (ICON_SIZE * 2);
 
     /// The decorator title state for this page.
-    private final ObjectProperty<State> state = new SimpleObjectProperty<>(State.fromTitle(i18n("theme_pack.manage")));
+    private final ObjectProperty<State> state = new SimpleObjectProperty<>(State.fromTitle(i18n("theme_pack.custom.manage")));
 
     /// Source list containing all installed theme packs.
     private final ObservableList<ThemePackManager.InstalledThemePack> sourceList =
@@ -122,9 +125,11 @@ public final class ThemePackManagementPage extends ListPageBase<ThemePackManager
     private void refreshThemePacks() {
         iconCache.clear();
         try {
-            List<ThemePackManager.InstalledThemePack> themePacks = ThemePackManager.listInstalled();
+            List<ThemePackManager.InstalledThemePack> themePacks = ThemePackManager.listInstalled().stream()
+                    .filter(themePack -> !themePack.builtin())
+                    .toList();
             sourceList.setAll(themePacks);
-            setFailedReason(themePacks.isEmpty() ? i18n("theme_pack.empty") : null);
+            setFailedReason(themePacks.isEmpty() ? i18n("theme_pack.custom.empty") : null);
         } catch (IOException | RuntimeException e) {
             LOG.warning("Failed to load installed theme packs", e);
             sourceList.clear();

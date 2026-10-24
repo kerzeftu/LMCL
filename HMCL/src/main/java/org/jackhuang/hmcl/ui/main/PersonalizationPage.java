@@ -41,7 +41,6 @@ import javafx.css.PseudoClass;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.stage.FileChooser;
-import org.glavo.monetfx.Brightness;
 import org.glavo.monetfx.ColorStyle;
 import org.glavo.uuid.UUIDs;
 import org.jackhuang.hmcl.community.dashboard.builtin.HomeCustomizationPane;
@@ -82,7 +81,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -112,6 +113,12 @@ public class PersonalizationPage extends StackPane {
     private static final DateTimeFormatter EXPORTED_THEME_NAME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
 
+    /// Built-in launcher theme modes, in display order.
+    private static final List<String> THEME_MODES = List.of("auto", "light", "dark");
+
+    /// Built-in classic theme-pack identifier that is no longer exposed as a selectable theme.
+    private static final String LEGACY_CLASSIC_THEME_PACK = "hmcl.classic";
+
     /// 页面滚动容器。
     private final ScrollPane scrollPane;
 
@@ -123,6 +130,12 @@ public class PersonalizationPage extends StackPane {
 
     /// 每日一言设置区。
     private final DailyQuoteSettingsPane dailyQuoteSettingsPane;
+
+    /// Base-theme mode rows shown in the appearance page.
+    private final List<LineButton> themeModeButtons = new ArrayList<>();
+
+    /// Entry point to custom theme packs.
+    private @Nullable LineButton customThemeButton;
 
     /// Snaps a percent value to the nearest 5% opacity tick.
     private static double snapOpacity(double val) {
@@ -314,6 +327,73 @@ public class PersonalizationPage extends StackPane {
         return manifest.displayName() + " - " + themeName;
     }
 
+    /// Migrates the removed built-in classic theme-pack selection to the light base theme.
+    private static void migrateLegacyThemeSelection() {
+        if (LEGACY_CLASSIC_THEME_PACK.equals(settings().getSelectedThemeOrDefault().packId())) {
+            settings().selectedThemeProperty().set(LauncherSettings.DEFAULT_THEME_REFERENCE);
+            settings().themeBrightnessModeProperty().set("light");
+            settings().getThemeAppearanceOverrides().add(
+                    LauncherSettings.THEME_APPEARANCE_BRIGHTNESS_MODE);
+        }
+    }
+
+    /// Returns the active built-in brightness mode when no custom theme pack is selected.
+    private static String currentThemeMode() {
+        if (!settings().getThemeAppearanceOverrides().contains(
+                LauncherSettings.THEME_APPEARANCE_BRIGHTNESS_MODE)) {
+            return "auto";
+        }
+
+        String mode = settings().themeBrightnessModeProperty().get();
+        return "light".equals(mode) || "dark".equals(mode) ? mode : "auto";
+    }
+
+    /// Applies one of the built-in themes and returns to the default theme pack.
+    private static void applyThemeMode(String mode) {
+        LauncherSettings launcherSettings = settings();
+        if (!LauncherSettings.DEFAULT_THEME_REFERENCE.equals(launcherSettings.getSelectedThemeOrDefault())) {
+            launcherSettings.selectedThemeProperty().set(LauncherSettings.DEFAULT_THEME_REFERENCE);
+        }
+        launcherSettings.themeBrightnessModeProperty().set(mode);
+        launcherSettings.getThemeAppearanceOverrides().add(
+                LauncherSettings.THEME_APPEARANCE_BRIGHTNESS_MODE);
+    }
+
+    /// Updates the selected built-in theme check mark and the custom theme-pack subtitle.
+    private void updateThemeSelection() {
+        boolean builtInTheme = LauncherSettings.DEFAULT_THEME_REFERENCE.packId().equals(
+                settings().getSelectedThemeOrDefault().packId());
+        String activeMode = builtInTheme ? currentThemeMode() : null;
+
+        for (int i = 0; i < themeModeButtons.size(); i++) {
+            LineButton button = themeModeButtons.get(i);
+            boolean selected = builtInTheme && THEME_MODES.get(i).equals(activeMode);
+            if (selected) {
+                button.setTrailingIcon(SVG.CHECK);
+            } else {
+                button.setTrailingIcon((Node) null);
+            }
+        }
+
+        if (customThemeButton != null) {
+            customThemeButton.setSubtitle(getCustomThemeSubtitle());
+        }
+    }
+
+    /// Returns the selected custom theme-pack title, or the empty-state hint.
+    private static String getCustomThemeSubtitle() {
+        ThemeReference reference = settings().getSelectedThemeOrDefault();
+        try {
+            @Nullable ThemePackManager.InstalledThemePack themePack = ThemePackManager.findInstalled(reference);
+            if (themePack != null && !themePack.builtin()) {
+                return getSelectedThemeTitle();
+            }
+        } catch (IOException | RuntimeException e) {
+            LOG.warning("Failed to load selected custom theme", e);
+        }
+        return i18n("theme_pack.custom.none");
+    }
+
     /// Sanitizes a package name for use as a file name without changing the package metadata.
     private static String sanitizeThemePackFileName(String value) {
         StringBuilder builder = new StringBuilder(value.length());
@@ -438,16 +518,30 @@ public class PersonalizationPage extends StackPane {
         homeCustomizationPane = new HomeCustomizationPane();
         dailyQuoteSettingsPane = new DailyQuoteSettingsPane();
 
+        migrateLegacyThemeSelection();
+
         ComponentList themeList = new ComponentList();
         {
-            LineButton currentThemeButton = LineButton.createNavigationButton();
-            currentThemeButton.setTitle(i18n("theme_pack.theme"));
-            Runnable updateCurrentThemeButton = () -> currentThemeButton.setSubtitle(getSelectedThemeTitle());
-            FXUtils.onChange(settings().selectedThemeProperty(), ignored -> updateCurrentThemeButton.run());
-            updateCurrentThemeButton.run();
-            currentThemeButton.setOnAction(event ->
-                    Controllers.navigateForward(new ThemePackManagementPage(updateCurrentThemeButton)));
-            themeList.getContent().add(currentThemeButton);
+            ComponentSublist baseThemeSublist = new ComponentSublist();
+            baseThemeSublist.setTitle(i18n("settings.launcher.theme.base"));
+            baseThemeSublist.setSubtitle(i18n("settings.launcher.theme.base.subtitle"));
+            baseThemeSublist.setHasSubtitle(true);
+
+            for (String mode : THEME_MODES) {
+                LineButton button = new LineButton();
+                button.setTitle(i18n("settings.launcher.brightness." + mode));
+                button.setSubtitle(i18n("settings.launcher.theme_mode." + mode + ".description"));
+                button.setOnAction(event -> applyThemeMode(mode));
+                themeModeButtons.add(button);
+                baseThemeSublist.getContent().add(button);
+            }
+            themeList.getContent().add(baseThemeSublist);
+
+            customThemeButton = LineButton.createNavigationButton();
+            customThemeButton.setTitle(i18n("theme_pack.custom"));
+            customThemeButton.setOnAction(event ->
+                    Controllers.navigateForward(new ThemePackManagementPage(this::updateThemeSelection)));
+            themeList.getContent().add(customThemeButton);
 
             LineButton exportThemeButton = new LineButton();
             exportThemeButton.setTitle(i18n("theme_pack.export"));
@@ -458,33 +552,14 @@ public class PersonalizationPage extends StackPane {
         }
         content.getChildren().addAll(ComponentList.createComponentListTitle(i18n("settings.launcher.theme")), themeList);
 
+        InvalidationListener themeSelectionListener = ignored -> updateThemeSelection();
+        settings().selectedThemeProperty().addListener(themeSelectionListener);
+        settings().themeBrightnessModeProperty().addListener(themeSelectionListener);
+        settings().getThemeAppearanceOverrides().addListener(themeSelectionListener);
+        updateThemeSelection();
+
         ComponentList themeAppearanceList = new ComponentList();
         ComponentList backgroundLoadingList = new ComponentList();
-
-        {
-            LineSelectButton<String> brightnessPane = new LineSelectButton<>();
-            brightnessPane.setTitle(i18n("settings.launcher.brightness"));
-            brightnessPane.setConverter(name -> i18n("settings.launcher.brightness."
-                    + Objects.requireNonNullElse(name, "auto")));
-            brightnessPane.setItems(Arrays.asList("auto", "light", "dark"));
-            bindThemeAppearanceLineSelectButton(
-                    brightnessPane,
-                    LauncherSettings.THEME_APPEARANCE_BRIGHTNESS_MODE,
-                    settings().themeBrightnessModeProperty(),
-                    () -> {
-                        try {
-                            @Nullable Brightness brightness = ThemePackManager.resolveCurrentThemeBrightness(
-                                    ThemePackManager.currentResolveContext());
-                            return brightness == null
-                                    ? "auto"
-                                    : brightness == Brightness.DARK ? "dark" : "light";
-                        } catch (IOException | RuntimeException e) {
-                            return "auto";
-                        }
-                    });
-
-            themeAppearanceList.getContent().add(brightnessPane);
-        }
 
         {
             ComponentSublist themeColorSublist = new ComponentSublist();
