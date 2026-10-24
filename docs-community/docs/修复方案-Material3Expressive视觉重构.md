@@ -1,9 +1,9 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-24 规划优化）：切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.10 已按用户反馈把 B1 的侧栏选中框从 999 胶囊还原为 16px 圆角；v3.17.11 已修复主页圆角按钮“视觉形状与可点击边界不一致”；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 每日一言设置层级调整、v3.17.8 MC 语料改用游戏加载提示已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
+> **状态（2026-10-24 规划优化）：v3.17.12 仅文档更新——`HMCLGameRepository` 补登记为第 14 处，M3 进度侵入顺延为 #15–#17；切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.10 已按用户反馈把 B1 的侧栏选中框从 999 胶囊还原为 16px 圆角；v3.17.11 已修复主页圆角按钮“视觉形状与可点击边界不一致”；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 每日一言设置层级调整、v3.17.8 MC 语料改用游戏加载提示已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.11
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.11 交付后 `main`；切片 A 的 `m3expressive1` 已由 `m3expressive13` 取代
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.12
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.11 交付后 `main`（v3.17.12 仅文档：第 14 处登记与侵入政策）；切片 A 的 `m3expressive1` 已由 `m3expressive13` 取代
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   `-Dlmcl.visual.m3=on` 时只给壳层子树安装 m3fx，默认关闭时与 1.0.0 一致。
 > - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + 16px 圆角选中框（v3.17.10 从 999 胶囊还原）；
@@ -126,7 +126,7 @@ D6（进度侵入）**已批准**；D7（启动按钮是否 FAB）与 D8（MVP �
 4. **性能**：冷启动增量 ≤ 300 ms；主页空闲 60 FPS；滚动无明显掉帧；
 5. **可降级**：`visual.m3=off` 时回到 v3.15 视觉；`visual.glass=off` 时回到不透明 M3 表面；
 6. **可复现**：不依赖 JitPack 运行时；构建可离线（依赖已 vendor）；
-7. **不扩散侵入**：设计上不新增第 14 处；完整 Wavy/加载若必须改 `TaskListPane`/`DialogPane`/`SpinnerPane`，须先批准并登记为 #14–#16（见 §6.2）。
+7. **不扩散侵入**：设计上不新增第 15 处；完整 Wavy/加载若必须改 `TaskListPane`/`DialogPane`/`SpinnerPane`，须先批准并登记为 #15–#17（见 §6.2）。
 
 ### 1.4 非目标
 
@@ -215,7 +215,7 @@ D6（进度侵入）**已批准**；D7（启动按钮是否 FAB）与 D8（MVP �
 
 ### 2.7 侵入预算
 
-`docs/00-整体要求.md` §4.2 当前固定 **13 处**代码侵入。与本方案相关的已有位置：
+`docs/00-整体要求.md` §4.2 当前登记 **14 处**代码侵入。与本方案相关的已有位置：
 
 | # | 文件 | 用途 |
 |---|---|---|
@@ -223,8 +223,10 @@ D6（进度侵入）**已批准**；D7（启动按钮是否 FAB）与 D8（MVP �
 | 9 | `Controllers.java` | 深链/对话框入口 |
 | 12 | `PersonalizationPage.java` | 外观设置内嵌主页自定义 |
 
+> 2026-10-24：`HMCLGameRepository.java` 已因默认隔离 fallback 登记为第 14 处；因此下文原先批准的 M3 三处进度侵入点编号顺延为 #15–#17。
+
 **侵入策略**：M3 主题安装、玻璃、样式默认不新增侵入；只有“完整 Wavy/加载替换”
-需要把 `TaskListPane`/`DialogPane`/`SpinnerPane` 登记为 #14–#16（需批准，见 §6.2/§14）。默认落点：
+需要把 `TaskListPane`/`DialogPane`/`SpinnerPane` 登记为 #15–#17（需批准，见 §6.2/§14）。默认落点：
 
 - 已有第 7 处 `DecoratorController.java` 内（壳层组装）；
 - 新增 `org.jackhuang.hmcl.community.ui.m3` 包；
@@ -1941,15 +1943,15 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 | `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunitySideBar.java` | 透明背景/M3 激活态 | 社区文件 |
 | `HMCL/src/main/java/org/jackhuang/hmcl/community/dashboard/builtin/HomePane.java` | GlassCard 包装、头部 M3 | 社区文件 |
 | `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunityStyles.java` | 可选加载 m3 CSS | 社区文件 |
-| `HMCL/src/main/java/org/jackhuang/hmcl/ui/construct/TaskListPane.java` | 进度条替换 | 上游文件，拟 #14（需批准） |
-| `.../construct/DialogPane.java` | 进度条替换 | 上游文件，拟 #15（需批准） |
-| `.../construct/SpinnerPane.java` | spinner 替换 | 上游文件，拟 #16（需批准） |
+| `HMCL/src/main/java/org/jackhuang/hmcl/ui/construct/TaskListPane.java` | 进度条替换 | 上游文件，拟 #15（需批准） |
+| `.../construct/DialogPane.java` | 进度条替换 | 上游文件，拟 #16（需批准） |
+| `.../construct/SpinnerPane.java` | spinner 替换 | 上游文件，拟 #17（需批准） |
 | `.../account/ClassicAccountLoginDialog.java` | 进度条替换（CSS 近似） | 不改字段，0 新增 |
 | `.../terracotta/TerracottaControllerPage.java` | 进度条替换（CSS 近似） | 不改字段，0 新增 |
 
 > **重要**：`TaskListPane`/`DialogPane`/`SpinnerPane`/`ClassicAccountLoginDialog`/
 > `TerracottaControllerPage` 是上游文件。若直接改字段类型，会新增 **5 个代码侵入点**
-> （#14–#18）；未批准时违反“固定 13 处”。本方案只申请前 3 个（#14–#16），
+> （#15–#19）；未批准时违反当前 14 处预算。本方案只申请前 3 个（#15–#17），
 > 登录/Terracotta 两处保留 `JFXProgressBar`，用 CSS 近似。
 >
 > 处理方式（三选一，阶段 4 前必须定）：
@@ -1957,11 +1959,11 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 > 1. **不改上游类**：在社区层用 CSS 给 `JFXProgressBar` 套 M3 皮肤（`-fx-shape`/动画），
 >    但无法实现真正 Wavy；不满足 R5；
 > 2. **批准新增 3 处侵入**：`TaskListPane`（任务/下载进度）、`DialogPane`（对话框进度）、
->    `SpinnerPane`（加载圈），登记为 #14/#15/#16，更新 00 §4.2、README、审查记录；
+>    `SpinnerPane`（加载圈），登记为 #15/#16/#17，更新 00 §4.2、README、审查记录；
 > 3. **子类/替换注入**：用 `TaskListPane` 的 public API 替换 bar？字段是 private，做不到。
 >
 > 推荐 **方案 2 的收敛版**：只改上述 3 处（覆盖任务/下载/对话框/加载四类主场景，
-> 登记 #14–#16）；`ClassicAccountLoginDialog`/`TerracottaControllerPage` 保留
+> 登记 #15–#17）；`ClassicAccountLoginDialog`/`TerracottaControllerPage` 保留
 > `JFXProgressBar`，用 CSS 圆角/颜色近似，直到下一次侵入审批。
 >
 > 这需要用户明确批准“新增 3 处侵入”，否则阶段 4 只能做 CSS 近似，R5 不完整。
@@ -2101,11 +2103,11 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 ### 10.1 代码侵入
 
 - 本方案设计上 **0 新增**；
-- 阶段 4 若坚持替换 `TaskListPane`/`DialogPane`/`SpinnerPane` 的进度条/加载，需要 **+3 处**（#14–#16）；
+- 阶段 4 若坚持替换 `TaskListPane`/`DialogPane`/`SpinnerPane` 的进度条/加载，需要 **+3 处**（#15–#17）；
 - 这 3 处必须：
   1. 写入 `docs/00-整体要求.md` §4.2 表；
   2. 更新 §7.2 固定数量、§8 DoD、§9 风险；
-  3. README 第 111 行“侵入 13 处”改 16；
+  3. README 决策 #4“侵入 14 处”改 17；
   4. 审查记录新增条目；
   5. 用户书面批准（对话即可，但要记录 ref）。
 
@@ -2215,7 +2217,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 | D3 | 依赖 | **已批准** | 阶段 0 JitPack，阶段 1 起 vendor m3fx 源码 |
 | D4 | 侧栏 | **已批准** | 保留 64px 自定义侧栏，M3 重绘 |
 | D5 | 波浪强度 | 默认 2.5 | 用户未反对；实机验收可调 2.5/4.0 |
-| D6 | 进度侵入 | **已批准** | +3：`TaskListPane`(#14)、`DialogPane`(#15)、`SpinnerPane`(#16)；阶段 4 落地后 00 改为 16 处 |
+| D6 | 进度侵入 | **已批准** | +3：`TaskListPane`(#15)、`DialogPane`(#16)、`SpinnerPane`(#17)；阶段 4 落地后 00 改为 17 处；2026-10-24 因 #14 被 `HMCLGameRepository` 占用而顺延 |
 | D7 | 启动按钮 | **已选（暂定）：形态 1** | 保留双段按钮/滚轮/菜单，只做 M3 视觉；形态 2 留作后续增强 |
 | D8 | 排期 | 未确认 | 暂按 MVP 8–11 周估算，不作为承诺；实机后按阶段报进度 |
 
@@ -2244,7 +2246,7 @@ D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保
 | 2026-10-22 | D1 范围 | 全量视觉 + 重点组件，不含全量控件行为重写 |
 | 2026-10-22 | D3 依赖 | 阶段 0 JitPack，阶段 1 起 vendor m3fx 源码 |
 | 2026-10-22 | D4 侧栏 | 保留 64px 自定义侧栏，M3 重绘 |
-| 2026-10-22 | D6 进度侵入 | 批准 +3（#14–#16），待阶段 4 落地 |
+| 2026-10-22 | D6 进度侵入 | 批准 +3（原 #14–#16；2026-10-24 顺延为 #15–#17），待阶段 4 落地 |
 | 2026-10-22 | D2 毛玻璃 | 暂定选 A 壁纸快照磨砂；保留后续 C 实验位 |
 | 2026-10-22 | D7 启动按钮 | 暂定选形态 1 保留双段按钮只做 M3 视觉 |
 | 待定 | D8 排期 | 暂按 MVP 8–11 周估算，待实机后确认 |
@@ -2481,7 +2483,7 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 | # | 约束 | 在 LMCL 的落点 |
 |---|---|---|
 | H1 | 禁止引入 Jetpack Compose、Android、Web 前端 API | 只允许 JavaFX 21 + 现有 HMCL/m3fx API；不引入 WebView 方案 |
-| H2 | 不改 `HMCLCore` 的下载、认证、游戏版本、任务框架逻辑 | M3 切片只改 `HMCL/src/main/java/org/jackhuang/hmcl/community/**`、CSS、资源；上游侵入只走已登记的 13 处 |
+| H2 | 不改 `HMCLCore` 的下载、认证、游戏版本、任务框架逻辑 | M3 切片只改 `HMCL/src/main/java/org/jackhuang/hmcl/community/**`、CSS、资源；上游侵入只走已登记的 14 处 |
 | H3 | 不修改既有 i18n key 的含义/拼写 | M3 重构阶段不重命名上游 key；只新增 `community.*` key，并跑 `:HMCL:checkTranslations` |
 | H4 | 每个切片必须能过构建 | `:HMCL:compileJava`、`:HMCL:checkTranslations`、community 测试；切片合并前再跑全量测试 |
 | H5 | 尊重 reduced motion；触控目标 ≥ 48dp（桌面按钮至少 36–40px 视觉 + 足够点击区） | 复用 `animationDisabled` 与 `M3Settings.reducedMotion`；图标按钮不缩小到不可点 |

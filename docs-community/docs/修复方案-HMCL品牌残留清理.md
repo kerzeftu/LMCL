@@ -588,7 +588,7 @@ about.dependency.*
 
 ### 6.1 侵入预算与批准点
 
-当前 `docs/00-整体要求.md` §4.2 的固定预算是 **13 处上游 `.java` 侵入**。本方案中：
+当前 `docs/00-整体要求.md` §4.2 登记 **14 处上游 `.java` 侵入**。本方案中（2026-10-24：`HMCLGameRepository.java` 已登记为第 14 处，下表 P0/P1 候选从 #15 起，按批准顺序重排）：
 
 **复用已有侵入点**
 
@@ -604,12 +604,12 @@ about.dependency.*
 
 | 候选编号 | 文件 | 改动 | 是否可避免 |
 |---:|---|---|---|
-| #14 | `HMCL/src/main/java/org/jackhuang/hmcl/ui/account/MicrosoftAccountLoginPane.java` | 去掉 `!isOfficial()` 警告；空 client id 改 LMCL 文案 | 否；这是登录页本身 |
-| #15 | `HMCL/src/main/java/org/jackhuang/hmcl/ui/account/CreateAccountPane.java` | 去掉 authlib 的 `!isOfficial()` 警告 | 否；这是账户创建页 |
-| #16 | `HMCL/src/main/java/org/jackhuang/hmcl/ui/main/SettingsPage.java` | 社区构建隐藏上游更新组 | 可用新页面替代，但会复制大量设置区，维护成本更高 |
-| #17 | `HMCLBoot/src/main/java/org/jackhuang/hmcl/Main.java` | 启动失败下载页改 LMCL；顺带解决既有候选 #15 的旧 Java 链接 | 可与旧 Java 链接修复合并为同一处 |
+| #15 | `HMCL/src/main/java/org/jackhuang/hmcl/ui/account/MicrosoftAccountLoginPane.java` | 去掉 `!isOfficial()` 警告；空 client id 改 LMCL 文案 | 否；这是登录页本身 |
+| #16 | `HMCL/src/main/java/org/jackhuang/hmcl/ui/account/CreateAccountPane.java` | 去掉 authlib 的 `!isOfficial()` 警告 | 否；这是账户创建页 |
+| #17 | `HMCL/src/main/java/org/jackhuang/hmcl/ui/main/SettingsPage.java` | 社区构建隐藏上游更新组 | 可用新页面替代，但会复制大量设置区，维护成本更高 |
+| #18 | `HMCLBoot/src/main/java/org/jackhuang/hmcl/Main.java` | 启动失败下载页改 LMCL；顺带解决既有候选（旧 Java 链接） | 可与旧 Java 链接修复合并为同一处 |
 
-> 若四项全部批准，预算从 13 增至 **17**。执行前必须同步修改 `docs/00-整体要求.md` §4.2、README 决策表、审查记录，并在提交说明中写明“用户批准”。
+> 若四项全部批准，预算从 14 增至 **18**；候选编号按批准顺序重排，若 relocate #15 先批准则整体顺延。执行前必须同步修改 `docs/00-整体要求.md` §4.2、README 决策表、审查记录，并在提交说明中写明“用户批准”。
 
 **P2 内部标识（建议单独批准，不混在本次 UI 修复）**
 
@@ -627,7 +627,7 @@ about.dependency.*
 - `assets/about/*`；
 - 新增社区 Help/Feedback 页面与 `OtherPage` 接线。
 
-这些文件仍需在变更记录中登记，但不占用 13 处 Java 侵入预算。
+这些文件仍需在变更记录中登记，但不占用 14 处 Java 侵入预算。
 
 ### 工期估算
 
