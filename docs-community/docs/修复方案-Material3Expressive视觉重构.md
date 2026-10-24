@@ -1,14 +1,14 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-24 规划优化）：切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 每日一言设置层级调整、v3.17.8 MC 语料改用游戏加载提示已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
+> **状态（2026-10-24 规划优化）：切片 A 基座与 B1 侧栏玻璃已实现并默认关闭；v3.17.10 已按用户反馈把 B1 的侧栏选中框从 999 胶囊还原为 16px 圆角；v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 日历色阶随主题明暗反转、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 每日一言设置层级调整、v3.17.8 MC 语料改用游戏加载提示已交付；本文新增 §19 执行规范（参考 M3E 主提示词）；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.9
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.9 交付后 `main`；切片 A 的 `m3expressive1` 已由 `m3expressive11` 取代
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.10
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.10 交付后 `main`；切片 A 的 `m3expressive1` 已由 `m3expressive12` 取代
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   `-Dlmcl.visual.m3=on` 时只给壳层子树安装 m3fx，默认关闭时与 1.0.0 一致。
-> - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + M3 激活胶囊；
+> - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + 16px 圆角选中框（v3.17.10 从 999 胶囊还原）；
 >   `-Dlmcl.visual.glass=auto/on/off` 控制，默认 auto，失败自动回退 CSS 表面色。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive11`（v3.17.9 M3 B1 侧栏玻璃；基于 v3.17.8 的 MC 语料加载提示 + 每日一言 + 账户卡/5×7 日历 + 右栏统计 + 明暗自适应色阶）。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive12`（v3.17.10 M3 B1 侧栏玻璃 + 选中框还原；基于 v3.17.8 的 MC 语料加载提示 + 每日一言 + 账户卡/5×7 日历 + 右栏统计 + 明暗自适应色阶）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 > - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
@@ -2290,8 +2290,8 @@ D2/D7 已按“暂定”记录：首版采用 A 壁纸磨砂 + 形态 1，但保
 | **B. 壳层与玻璃** | 壁纸快照、`GlassBackdrop`/`GlassSurface`/`GlassCard`；侧栏玻璃与 M3 激活胶囊；标题栏/窗口背景兜底 | 4–6 人日 | `m3expressive2` |
 | **C. 主页** | 头部、9 卡、按钮、指标、日历、空态/错误态统一 M3；卡片玻璃 | 4–6 人日 | `m3expressive3` |
 | **D. 四个入口页** | 管理/其他/设置/下载：200px 导航、列表、表单、按钮、页头 | 5–7 人日 | `m3expressive4` |
-| **E. 进度与加载** | 生产级 Wavy 线性/环形、`TaskListPane`/`SpinnerPane`/`DialogPane` 三处侵入 | 2–3 人日 | `m3expressive11+` |
-| **F. 对话框与独立窗口** | `DialogPane`、`MessageDialogPane`、`JFXPopup`、独立 Stage 的主题安装 | 3–5 人日 | `m3expressive11+` |
+| **E. 进度与加载** | 生产级 Wavy 线性/环形、`TaskListPane`/`SpinnerPane`/`DialogPane` 三处侵入 | 2–3 人日 | `m3expressive12+` |
+| **F. 对话框与独立窗口** | `DialogPane`、`MessageDialogPane`、`JFXPopup`、独立 Stage 的主题安装 | 3–5 人日 | `m3expressive12+` |
 | **G. 收口** | 无障碍、对比度、RTL、性能、4K/HiDPI、回归与文档 | 4–6 人日 | 候选发布包 |
 
 每个切片结束必须：编译 + community 测试 + 全量测试 + `checkTranslations` + `makeExecutables` +
@@ -2572,19 +2572,21 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 |---|---|---|
 | 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
 | 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
-| 当前测试包 | `m3expressive1` | `m3expressive11`（jar 11,978,863 B / zip 74,835,109 B） |
+| 当前测试包 | `m3expressive1` | `m3expressive12`（jar 11,978,858 B / zip 74,835,161 B） |
 | 切片 A/B1 状态 | 待 Windows 验收 | A/B1 均已实现、默认关闭，仍待 Windows 实机验收；未改发布默认值 |
 | 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转；v3.17.5 问候语下改为每日一言；v3.17.6 本地源可分别启用；v3.17.7 每日一言设置收为单卡片 |
 
 ### 19.8 下一步建议
 
-1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive11` 继承，不并入 M3 B2–G；
-2. 用户先对 `m3expressive11` 做 Windows 实机验收（侧栏玻璃/激活胶囊/`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
+1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive12` 继承，不并入 M3 B2–G；
+2. 用户先对 `m3expressive12` 做 Windows 实机验收（侧栏玻璃/16px 选中框/`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
 3. 玻璃通过后继续切片 B2（主页头部/卡片玻璃）；标题栏玻璃留到 B2/C；
 4. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
 
 
 ## 20. 切片 B1 实施记录（壁纸玻璃侧栏，2026-10-24）
+
+> v3.17.10 注：本节记录 B1 首次交付，随后按用户反馈把侧栏 active 圆角从 999 还原为 16px；下方验证数字已更新为 m3expressive12，还原过程见 §21。
 
 ### 20.1 本次范围
 
@@ -2633,7 +2635,7 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 - `.community-sidebar-content` 透明；
 - `.lmcl-m3-glass-surface` 透明；
 - `.lmcl-m3-glass-tint` 用 `-m3-color-surface-container-low` + `-fx-opacity:0.42`；
-- 侧栏按钮 active 圆角改为 `999`，形成 M3 胶囊。
+- 侧栏按钮 active 圆角首次改为 `999`（M3 胶囊）；v3.17.10 按用户反馈还原为 `16`，见 §21。
 
 ### 20.3 本地验证
 
@@ -2644,9 +2646,9 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 | `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` | 182 / 0 / 0 / 0 |
 | 全量 `:HMCL:test` | 292 / 0 / 0 / 2 skipped |
 | `:HMCL:makeExecutables` | BUILD SUCCESSFUL |
-| jar | 11,978,863 B，SHA-256 `0d2d8b8c7fe9a8d359a9ddc5f40a89da19eae705ec2e4a0916b71e8569d82d9e` |
-| exe | 13,180,015 B，SHA-256 `03625f3de02361abe3da6f3873043318e99eae5b4ceed7c3010587244ef44451` |
-| 测试包 | `LMCL-1.0.0-win-x64-m3expressive11.zip` 74,835,109 B，SHA-256 `fb3bad17dc961cd5318ef5c70aab16365b1bd74374fc41c7907e9249b87f645d` |
+| jar | 11,978,858 B，SHA-256 `73b386708559f9e378d022d2f6fb30982e21428398d12c79fc1d9da486a42ff9` |
+| exe | 13,180,010 B，SHA-256 `435f74f29f1fa258e9b2cc4aec7e41ada1ef5f7246e07ea26847c1d84c80e44e` |
+| 测试包 | `LMCL-1.0.0-win-x64-m3expressive12.zip` 74,835,161 B，SHA-256 `ebdee79fc13abff1c2cb5ea00bf64fd6b3e6cfae5e3885932c31f44434c5c659` |
 
 Windows 实机视觉、DPI、窗口缩放和性能尚未验证；WSL2 无 DISPLAY。
 
@@ -2662,6 +2664,48 @@ Windows 实机视觉、DPI、窗口缩放和性能尚未验证；WSL2 无 DISPLA
 
 ### 20.5 下一步
 
-1. 用户用 `m3expressive11` 验收侧栏玻璃、胶囊、回退、缩放；
+1. 用户用 `m3expressive12` 验收侧栏玻璃、16px 选中框、回退、缩放；
 2. 通过后做 B2：主页头部/卡片玻璃，并评估是否给标题栏玻璃；
 3. B2 仍需遵守“不新增上游侵入点”优先；确需改 `DecoratorSkin` 时先写方案登记。
+
+
+## 21. 切片 B1 修正：侧栏选中框还原 16px（v3.17.10）
+
+### 21.1 触发
+
+v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-background-radius` 从 16 改成 999，意图做 M3 胶囊。用户反馈：
+
+> 这一版迭代完侧边栏选中页面那个框怎么变了
+
+选中框由圆角方形变成胶囊/圆形，与侧栏 44px 方形按钮和原版视觉不一致。
+
+### 21.2 根因与修复
+
+- 按钮尺寸未变：`CommunitySideBar.createButton` 仍固定 44×44；`CommunitySideBar` 从 `VBox` 改为 `StackPane` 只增加玻璃层，不影响按钮尺寸。
+- 唯一变量是 CSS 圆角：`.lmcl-m3 .community-sidebar-button { -fx-background-radius: 16; }` 被改为 999。
+- 修复：只把该值改回 `16`；不改 Java、不新增侵入点，玻璃层与回退逻辑保持原样。
+
+### 21.3 验证与产物
+
+| 项 | 结果 |
+|---|---|
+| `:HMCL:compileJava` | BUILD SUCCESSFUL（仅 3 条既有 JavaFX `--add-exports` 警告） |
+| `:HMCL:checkTranslations` | BUILD SUCCESSFUL |
+| `:HMCL:test --tests 'org.jackhuang.hmcl.community.*'` | 182 / 0 / 0 / 0 |
+| 全量 `:HMCL:test` | 292 / 0 / 0 / 2 skipped |
+| `:HMCL:makeExecutables` | BUILD SUCCESSFUL |
+| jar | 11,978,858 B，SHA-256 `73b386708559f9e378d022d2f6fb30982e21428398d12c79fc1d9da486a42ff9` |
+| exe | 13,180,010 B，SHA-256 `435f74f29f1fa258e9b2cc4aec7e41ada1ef5f7246e07ea26847c1d84c80e44e` |
+| 测试包 | `LMCL-1.0.0-win-x64-m3expressive12.zip` 74,835,161 B，SHA-256 `ebdee79fc13abff1c2cb5ea00bf64fd6b3e6cfae5e3885932c31f44434c5c659` |
+
+### 21.4 限制
+
+- Windows 实机视觉仍未验证；WSL2 无 DISPLAY。
+- 只还原选中框圆角，玻璃效果、M3 主题、侧栏宽度与按钮尺寸均未改。
+- 回退：`-Dlmcl.visual.glass=off` 只关玻璃；`-Dlmcl.visual.m3=off` 关 M3；完整回退从 git 恢复 v3.17.9 或更早源码。
+
+### 21.5 下一步
+
+1. 用户用 m3expressive12 验收 16px 选中框与玻璃侧栏；
+2. 通过后进入 B2：主页头部/卡片玻璃，再评估标题栏玻璃；
+3. B2 仍优先不新增上游侵入点。
