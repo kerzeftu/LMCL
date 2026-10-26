@@ -1,6 +1,6 @@
 # HMCL 品牌残留清理与账户登录修复方案
 
-> 状态：**暂停（2026-10-23）**。方案稿已完成，未修改代码；当前优先做 M3 UI 重构。  
+> 状态：**P0 暂停（2026-10-23）；P1/P2 部分收口（2026-10-27，v3.17.16）**。B1、B5 的 `CrashWindow`、B13 的英/简/繁/日四条崩溃文案、C6 已完成；P0 微软 OAuth 仍暂停，其余条目待办。
 > 暂停原因：P0 微软登录依赖 LMCL 自己的 Entra 应用与 Minecraft AppID 审核，注册前置的租户问题尚未解决（详见 §2.4.2）。  
 > 基线：LMCL 1.0.0，基于 HMCL v3.16.4；文档基线 v3.16.13。  
 > 触发：用户 m18469——微软账户、第三方认证服务器登录时提示“非官方构建的 HMCL”，设置 → 外观 → 启动器字体等位置仍出现 HMCL。  
@@ -314,11 +314,11 @@ grep -RIn -E 'hmcl\.huangyuhui\.net|docs\.hmcl\.net|github\.com/HMCL-dev' \
 
 | # | 文件/资源 | 现状 | 处理 |
 |---|---|---|---|
-| B1 | `PersonalizationPage.java:1227` | 外观 → 启动器字体预览写死 `Hello Minecraft! Launcher` | 改为 `Metadata.FULL_NAME` / 社区产品名 |
+| B1 | `PersonalizationPage.java:1227` | 外观 → 启动器字体预览写死 `Hello Minecraft! Launcher` | 改为 `Metadata.FULL_NAME` / 社区产品名（**v3.17.16 已处理**） |
 | B2 | `HelpPage.java` | 抓取 `Metadata.DOCS_URL + "/index.json"`，即 `docs.hmcl.net`；无兜底 | 用 LMCL 帮助页替代；或明确标注“上游 HMCL 文档”并做失败兜底 |
 | B3 | `FeedbackPage.java:50/54/64` | HMCL B 站群、HMCL Discord、HMCL GitHub issue | 改为 LMCL 官网/邮箱/仓库；没有仓库时隐藏 issue 入口 |
 | B4 | `DecoratorSkin.java:263` | 帮助按钮打开 `Metadata.CONTACT_URL`（HMCL 文档） | 指向 LMCL 帮助/反馈 |
-| B5 | `CrashWindow.java:56`、`GameCrashWindow.java:469` | 联系按钮打开 HMCL 文档 | 指向 LMCL 反馈 |
+| B5 | `CrashWindow.java:56`、`GameCrashWindow.java:469` | 联系按钮打开 HMCL 文档 | 指向 LMCL 反馈（**v3.17.16 已处理 `CrashWindow`；`GameCrashWindow` 待办**） |
 | B6 | `MainPage.java:130-170` | `Metadata.isNightly()` 对社区构建为 true，显示 nightly 公告；含 HMCL 下载/反馈/Bilibili 链接；关闭按钮只对 dev 持久化 | 社区构建跳过该公告；LMCL 更新走已有 `CommunityUpdateNotifier` |
 | B7 | `SettingsPage.java:90-160` | 仍显示上游更新通道、预览、自动显示更新对话框 | 社区构建隐藏该组；把“检查更新”放到关于 LMCL/其他页 |
 | B8 | `CommunitySettingsPanel` / 关于 LMCL | 部分法律/上游链接 | 保留上游归因；LMCL 条款单独提供 |
@@ -326,7 +326,7 @@ grep -RIn -E 'hmcl\.huangyuhui\.net|docs\.hmcl\.net|github\.com/HMCL-dev' \
 | B10 | i18n 主翻译 | 大量 HMCL 文案/链接；见附录 A | 分批替换；见第 5 节 |
 | B11 | `logwindow.help`、`logwindow.export_dump.no_dependency` | 指向 HMCL 社区/QQ/Discord | 改为 LMCL 反馈/官网 |
 | B12 | `launcher.april_fools.*` | 愚人节文案含 HMCL | 社区构建停用或改 LMCL |
-| B13 | `launcher.crash.*`、`exception.*`、`fatal.*` | 含 HMCL 与 `docs.hmcl.net` | 改 LMCL 文案/链接 |
+| B13 | `launcher.crash.*`、`exception.*`、`fatal.*` | 含 HMCL 与 `docs.hmcl.net` | 改 LMCL 文案/链接（**v3.17.16 已处理英/简/繁/日的 `launcher.crash*` 三条；`exception.*`/`fatal.*`、其他语言待办**） |
 | B14 | `modpack.*`、`settings.*.unsupported` | 含 HMCL 兼容说明 | 保留技术含义，改产品名；明确“上游 HMCL”语义 |
 
 ### 3.3 P2：链接、网络身份、日志、引导
@@ -338,7 +338,7 @@ grep -RIn -E 'hmcl\.huangyuhui\.net|docs\.hmcl\.net|github\.com/HMCL-dev' \
 | C3 | `HMCLBoot/src/main/java/org/jackhuang/hmcl/Main.java:35` | `DOWNLOAD_PAGE=https://hmcl.huangyuhui.net/download/` | 改 LMCL 官网下载/说明 |
 | C4 | `EntryPoint.java:48` | `http.agent = "HMCL/" + VERSION` | 改 `LMCL/<version>`；确认无服务端白名单依赖 |
 | C5 | `NetworkUtils.java:46` | 默认 User-Agent fallback `"HMCL"` | 改 LMCL；保留属性覆盖 |
-| C6 | `CrashReport.java:55` | `---- Hello Minecraft! Crash Report ----` | 改 LMCL |
+| C6 | `CrashReport.java:55` | `---- Hello Minecraft! Crash Report ----` | 改 LMCL（**v3.17.16 已处理：`Metadata.FULL_NAME`**） |
 | C7 | `Launcher.java:354-357` | 日志标签 `HMCL User Home/...` | 改 LMCL |
 | C8 | `LauncherHelper.java:985` | `[HMCL ProcessListener]` | 改 LMCL |
 | C9 | `Logger.java:250/254` | 线程名 `HMCL Logger Thread` | 改 LMCL |
@@ -710,6 +710,23 @@ about.dependency.*
 6. **主题命名**：显示为“LMCL 默认/经典”还是“上游 HMCL 经典外观（LMCL 适配）”？建议保留上游归因。
 7. **第三方服务器安全提示**：移除官方构建警告后，是否保留中性“仅连接可信服务器”？
 8. **其他语言**：是否接受机械替换产品名/URL、其余文案回退英文？
+
+---
+
+## 10. v3.17.16 部分收口记录（2026-10-27）
+
+用户 m25658 批准《M3 主题切换崩溃修复与崩溃/字体品牌收口方案》后，先完成以下用户可见品牌项：
+
+| 项 | 状态 | 说明 |
+|---|---|---|
+| B1 字体预览 | 完成 | `PersonalizationPage` 的 `Label("Hello Minecraft! Launcher")` 改为 `Metadata.FULL_NAME`；复用第 12 处侵入 |
+| B5 崩溃窗口联系按钮 | 部分完成 | `CrashWindow.java:56` 改 `CommunityMetadata.WEBSITE`（第 17 处侵入）；`GameCrashWindow.java:469` 未改 |
+| B13 崩溃文案 | 部分完成 | `I18N.properties`、`I18N_zh.properties`、`I18N_zh_CN.properties`、`I18N_ja.properties` 的 `launcher.crash`/`launcher.crash.java_internal_error`/`launcher.crash.hmcl_out_dated` 已改；其他语言与 `exception.*`/`fatal.*` 未改 |
+| C6 崩溃报告头 | 完成 | `CrashReport.java:55` 改 `Metadata.FULL_NAME`（第 16 处侵入） |
+
+验证：`:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community 189/0、全量 299/0/2 skipped；测试包 `m3expressive17`（jar 12,448,057 B、exe 13,649,209 B、zip 75,741,178 B `621b1542…`）；未在 Windows 实机验证。
+
+仍未处理：P0 微软 OAuth（缺自有 Entra 应用/租户与 Minecraft AppID 审核）、B2 帮助页、B3 反馈页、B4 主界面帮助按钮、B6 nightly 公告、B7 设置更新区、B10/B11/B12/B14、C1–C5/C7–C10、其他语言与 `GameCrashWindow`。`Metadata.CONTACT_URL` 未全局替换，避免影响未审计入口。
 
 ---
 
