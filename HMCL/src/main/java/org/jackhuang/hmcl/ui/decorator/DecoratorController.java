@@ -50,6 +50,7 @@ import org.jackhuang.hmcl.ui.main.RootPage;
 import org.jackhuang.hmcl.ui.wizard.Refreshable;
 import org.jackhuang.hmcl.ui.wizard.WizardProvider;
 import org.jackhuang.hmcl.util.platform.OperatingSystem;
+import org.jetbrains.annotations.Nullable;
 
 import static org.jackhuang.hmcl.ui.FXUtils.onEscPressed;
 
@@ -57,6 +58,10 @@ public class DecoratorController {
     private final Decorator decorator;
     private final Navigator navigator;
     private final CommunitySideBar sidebar;
+    private final HBox shell;
+
+    /// 当前挂在外壳上的 M3 宿主；Classic 主题下为 `null`。
+    private @Nullable M3Host m3Host;
 
     public DecoratorController(Stage stage, Node mainPage) {
         decorator = new Decorator(stage);
@@ -68,11 +73,11 @@ public class DecoratorController {
         navigator.init(mainPage);
         sidebar.setActive(mainPage);
 
-        HBox shell = new HBox(sidebar, navigator);
+        shell = new HBox(sidebar, navigator);
         shell.setFillHeight(true);
         HBox.setHgrow(navigator, Priority.ALWAYS);
         navigator.setMaxWidth(Double.MAX_VALUE);
-        decorator.getContent().setAll(M3Settings.isM3Enabled() ? new M3Host(shell) : shell);
+        applyVisualTheme();
         decorator.onCloseNavButtonActionProperty().set(e -> close());
         decorator.onBackNavButtonActionProperty().set(e -> back());
         decorator.onRefreshNavButtonActionProperty().set(e -> refresh());
@@ -137,6 +142,28 @@ public class DecoratorController {
                 e.consume();
             }
         });
+    }
+
+    /// Applies the selected visual theme to the launcher shell.
+    ///
+    /// The sidebar and navigator are kept alive, so changing the theme does not
+    /// reset the current page or its scroll position. Must be called on the
+    /// JavaFX application thread.
+    public void applyVisualTheme() {
+        if (m3Host != null) {
+            // Detach the shell before creating the next host, so the shell never
+            // belongs to two parents even if JavaFX's reparenting order changes.
+            m3Host.setContent(null);
+            m3Host.dispose();
+            m3Host = null;
+        }
+
+        if (M3Settings.isM3Enabled()) {
+            m3Host = new M3Host(shell);
+            decorator.getContent().setAll(m3Host);
+        } else {
+            decorator.getContent().setAll(shell);
+        }
     }
 
     public Decorator getDecorator() {

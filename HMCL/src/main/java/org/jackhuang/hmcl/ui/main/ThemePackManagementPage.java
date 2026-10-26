@@ -67,10 +67,7 @@ import static org.jackhuang.hmcl.ui.ToolbarListPageSkin.createToolbarButton2;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// Shows installed custom theme packs and common theme-pack actions.
-///
-/// Built-in launcher themes are exposed as appearance modes instead of theme packs, so they are
-/// intentionally filtered out of this page.
+/// Shows installed theme packs and common theme-pack actions.
 @NotNullByDefault
 public final class ThemePackManagementPage extends ListPageBase<ThemePackManager.InstalledThemePack> implements DecoratorPage {
     /// The icon container size used by theme-pack icons.
