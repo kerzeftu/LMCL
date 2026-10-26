@@ -86,4 +86,28 @@ public final class M3SettingsTest {
         System.setProperty(M3Settings.M3_PROPERTY, "off");
         assertFalse(M3Settings.isGlassEnabled());
     }
+
+    @Test
+    public void visualThemeMapsEffectiveFlags() {
+        System.setProperty(M3Settings.M3_PROPERTY, "on");
+        System.setProperty(M3Settings.GLASS_PROPERTY, "on");
+        assertEquals(VisualTheme.M3_EXPRESSIVE, M3Settings.visualTheme());
+
+        System.setProperty(M3Settings.GLASS_PROPERTY, "auto");
+        assertEquals(VisualTheme.M3_EXPRESSIVE, M3Settings.visualTheme());
+
+        System.setProperty(M3Settings.GLASS_PROPERTY, "off");
+        assertEquals(VisualTheme.M3_GLASS_OFF, M3Settings.visualTheme());
+
+        System.setProperty(M3Settings.M3_PROPERTY, "off");
+        System.setProperty(M3Settings.GLASS_PROPERTY, "on");
+        assertEquals(VisualTheme.CLASSIC, M3Settings.visualTheme());
+    }
+
+    @Test
+    public void visualThemeRequiresM3ForGlassVariants() {
+        assertEquals(VisualTheme.CLASSIC, VisualTheme.from(false, "on"));
+        assertEquals(VisualTheme.M3_GLASS_OFF, VisualTheme.from(true, "off"));
+        assertEquals(VisualTheme.M3_EXPRESSIVE, VisualTheme.from(true, "auto"));
+    }
 }

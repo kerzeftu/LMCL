@@ -130,6 +130,29 @@ public final class M3Settings {
         CommunitySettings.get().putSection(SECTION, section);
     }
 
+    /// 返回当前视觉主题。
+    ///
+    /// 该值由 [VisualTheme] 从 M3 与玻璃开关推导，不单独持久化。
+    ///
+    /// @return 当前视觉主题
+    public static VisualTheme visualTheme() {
+        return VisualTheme.from(isM3Enabled(), glassMode());
+    }
+
+    /// 写入视觉主题。
+    ///
+    /// 同时写入 M3 开关与玻璃模式；不会清理系统属性。用户主动选择主题时
+    /// 应调用 [VisualTheme#apply()]，由它清理本次启动的系统属性覆盖。
+    ///
+    /// @param theme 视觉主题
+    public static void setVisualTheme(VisualTheme theme) {
+        JsonObject section = CommunitySettings.get().section(SECTION);
+        section.addProperty(ENABLED_KEY, theme.m3Enabled());
+        section.addProperty(GLASS_KEY, theme.glassMode());
+        section.remove(LEGACY_ENABLED_KEY);
+        CommunitySettings.get().putSection(SECTION, section);
+    }
+
     /// 返回是否启用玻璃表面。
     ///
     /// M3 总开关关闭时始终返回 `false`；玻璃模式为 `off` 时也返回 `false`。
