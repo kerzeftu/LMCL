@@ -159,8 +159,14 @@ public class DecoratorController {
         }
 
         if (M3Settings.isM3Enabled()) {
-            m3Host = new M3Host(shell);
-            decorator.getContent().setAll(m3Host);
+            // Swap in an empty host before moving the shell. DecoratorSkin binds
+            // the content list to its placeholder; reparenting the shell first
+            // desynchronizes that binding and ContentBinding then removes an
+            // element from an already-empty destination list (toIndex = 1).
+            M3Host nextHost = new M3Host();
+            decorator.getContent().setAll(nextHost);
+            nextHost.setContent(shell);
+            m3Host = nextHost;
         } else {
             decorator.getContent().setAll(shell);
         }

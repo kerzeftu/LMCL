@@ -27,6 +27,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.jackhuang.hmcl.Metadata;
+import org.jackhuang.hmcl.community.CommunityMetadata;
 import org.jackhuang.hmcl.countly.CrashReport;
 import org.jackhuang.hmcl.upgrade.UpdateChecker;
 
@@ -53,7 +54,7 @@ public class CrashWindow extends Stage {
 
         Button btnContact = new Button();
         btnContact.setText(i18n("launcher.contact"));
-        btnContact.setOnAction(event -> FXUtils.openLink(Metadata.CONTACT_URL));
+        btnContact.setOnAction(event -> FXUtils.openLink(CommunityMetadata.WEBSITE));
         HBox box = new HBox();
         box.setStyle("-fx-padding: 8px;");
         box.getChildren().add(btnContact);

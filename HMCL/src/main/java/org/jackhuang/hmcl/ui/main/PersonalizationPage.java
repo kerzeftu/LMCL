@@ -44,6 +44,7 @@ import javafx.stage.FileChooser;
 import org.glavo.monetfx.Brightness;
 import org.glavo.monetfx.ColorStyle;
 import org.glavo.uuid.UUIDs;
+import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.community.dashboard.builtin.HomeCustomizationPane;
 import org.jackhuang.hmcl.community.ui.DailyQuoteSettingsPane;
 import org.jackhuang.hmcl.community.ui.m3.M3Settings;
@@ -1316,7 +1317,7 @@ public class PersonalizationPage extends StackPane {
                     }
                 }
 
-                vbox.getChildren().add(new Label("Hello Minecraft! Launcher"));
+                vbox.getChildren().add(new Label(Metadata.FULL_NAME));
 
                 fontPane.getContent().add(vbox);
             }

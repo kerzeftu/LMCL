@@ -110,4 +110,11 @@ public final class M3SettingsTest {
         assertEquals(VisualTheme.M3_GLASS_OFF, VisualTheme.from(true, "off"));
         assertEquals(VisualTheme.M3_EXPRESSIVE, VisualTheme.from(true, "auto"));
     }
+
+    @Test
+    public void defaultThemeIsM3Expressive() {
+        assertTrue(M3Settings.DEFAULT_M3_ENABLED);
+        assertEquals(VisualTheme.M3_EXPRESSIVE,
+                VisualTheme.from(M3Settings.DEFAULT_M3_ENABLED, "auto"));
+    }
 }

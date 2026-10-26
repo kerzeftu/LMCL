@@ -61,6 +61,12 @@ public final class M3Settings {
     /// 阶段 A 早期使用的兼容键名；读取时回退，写入时清理。
     private static final String LEGACY_ENABLED_KEY = "m3";
 
+    /// 未保存过视觉主题时的默认值：M3 Expressive。
+    ///
+    /// 只有显式保存过 `visual.enabled`（包括从外观页选择 Classic）时才会
+    /// 覆盖该默认值，因此升级不会把已经选择 Classic 的用户强制切回 M3。
+    public static final boolean DEFAULT_M3_ENABLED = true;
+
     /// 玻璃模式在段落中的键名。
     private static final String GLASS_KEY = "glass";
 
@@ -76,7 +82,9 @@ public final class M3Settings {
 
     /// 返回是否启用 Material 3 视觉。
     ///
-    /// 系统属性优先；未设置时读取共享设置，缺失或解析失败按 `false` 处理。
+    /// 系统属性优先；未设置时读取共享设置。设置缺失或解析失败时按
+    /// [DEFAULT_M3_ENABLED]（M3 Expressive）处理；显式保存的 `false`
+    /// 仍然表示 Classic。
     ///
     /// @return 是否启用
     public static boolean isM3Enabled() {
@@ -84,7 +92,7 @@ public final class M3Settings {
         if (override != null) {
             return override;
         }
-        return booleanSetting(ENABLED_KEY, booleanSetting(LEGACY_ENABLED_KEY, false));
+        return booleanSetting(ENABLED_KEY, booleanSetting(LEGACY_ENABLED_KEY, DEFAULT_M3_ENABLED));
     }
 
     /// [isM3Enabled()] 的短别名，供调用点保持可读。

@@ -33,6 +33,9 @@ import org.jetbrains.annotations.NotNullByDefault;
 /// [M3Settings#setVisualTheme(VisualTheme)] 写入设置，再由
 /// [org.jackhuang.hmcl.ui.decorator.DecoratorController#applyVisualTheme()]
 /// 重新包裹外壳，因此不需要重启启动器。
+///
+/// 未保存过视觉主题时默认使用 [M3_EXPRESSIVE]；显式选择 [CLASSIC] 的用户
+/// 保持 Classic。
 @NotNullByDefault
 public enum VisualTheme {
 
