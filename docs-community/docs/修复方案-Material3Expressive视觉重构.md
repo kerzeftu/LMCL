@@ -2862,3 +2862,38 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 - 模糊：`GlassBackdrop` 半径上限 18→32，`BoxBlur` iterations 3，padding 1.5×；`lmcl-m3-glass-tint` 0.42→0.30。
 - 验证：community 189/0、全量 299/0/2 skipped；jar 12,452,175 B `d79d649b…`、exe 13,653,327 B `26869bc5…`、m3expressive19-debug zip 76,016,381 B `9812f62d…`；未在 Windows 实机验证。
 - 文档：本节、[毛玻璃方案 §10.5](修复方案-毛玻璃未生效.md)、[审查记录 §73](审查记录-v3.16.4源码核对.md)、README v3.17.18。
+
+
+## 26. v3.17.19 主页磨砂亚克力与顶栏动态取色（2026-10-28）
+
+用户 m26915：主页卡片都做成磨砂亚克力质感，顶栏改为跟随 MD3 动态取色。本节是 B2 玻璃观感的收口，不改变切片边界与侵入预算。
+
+### 26.1 亚克力
+
+- `GlassSurface` 在模糊快照 + tint 之上新增顶部高光与噪点：
+  - `lmcl-m3-glass-sheen`：顶部白色高光，0.14 alpha → 透明，Stop 0.38；
+  - `lmcl-m3-glass-noise`：96×96 固定种子噪声，`BlendMode.OVERLAY`，opacity 0.55，平铺；
+- `community.css` 给 `.community-glass-card.community-glass-active` 加 1 px `rgba(255,255,255,0.20)` 高光边框与 16 px 圆角；
+- 9 张主页组件卡仍统一经 `BuiltinWidgets.glassCard(...,16)`，自动获得；账户卡/页头保持无外层框；
+- `glass=off`、Classic、快照失败时只显示 M3 实色卡片，不出现半透明噪点。
+
+### 26.2 顶栏动态取色
+
+- 新增 `M3DynamicColors`：从 `Themes.backgroundProperty()` 的壁纸在 IO 线程生成 MonetFX `ColorScheme`；纯色背景用第一填充色作种子；无背景回退 `Themes.getColorScheme()`；壁纸 `Image` 未加载完时监听 `progress/width/error` 后重算，generation 防止旧结果覆盖。
+- `DecoratorController`（第 7 处）在标题栏记录原 style 并监听 scheme，把 `primaryContainer`/`onPrimaryContainer`/`outlineVariant` 写为 `-lmcl-title-surface/-on-surface/-outline`；CSS 用这三个 looked-up color，缺省仍是 `-monet-surface-container` 系。
+- 顶栏动态取色不依赖 `glass` 开关；`glass=off` 只关侧栏/卡片模糊。
+
+### 26.3 验证与包
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **189/0/0/0**；全量 **299/0/0/2 skipped**；
+- JavaFX `CssParser`：`community.css` 73 rules、`m3-community.css` 31 rules，无 ParseError；inline `-lmcl-title-*` 可解析；
+- jar **12,457,991 B** `f36c2853…`；exe **13,659,143 B** `d2644a57…`；stub 1,201,152 B `ded29e28…`；
+- 包 `dist/LMCL-1.0.0-win-x64-m3expressive20-debug.zip` **75,761,826 B** `1eb895d0…`；328 entries、`testzip=None`；包内 `SHA256SUMS` 327 文件通过；
+- 无新增上游代码侵入点；`DecoratorController.java` 复用第 7 处。
+
+### 26.4 未验证与下一步
+
+- WSL2 无 Windows GUI：噪点/高光强度、DPI、顶栏动态色与文字对比度（H6）未实机确认；
+- 壁纸切换/缩放/三主题连续切换是否有颜色闪烁或旧 scheme 残留，需 `m3expressive20-debug` 复测；
+- 磨砂亚克力是 JavaFX 叠加层，不是 Windows 系统 Acrylic；系统级方案若要上，单独立项；
+- 通过后继续切片 C（主页控件/指标/空态统一 M3），不在本切片重写控件行为。
