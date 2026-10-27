@@ -33,6 +33,7 @@ import org.jackhuang.hmcl.community.update.CommunityUpdateDialog;
 import org.jackhuang.hmcl.community.update.CommunityUpdateNotifier;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.theme.Themes;
+import org.jackhuang.hmcl.util.i18n.I18n;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
@@ -53,8 +54,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 /// “关于 LMCL”页面。
 ///
-/// 内容顺序：产品信息、开发人员、上游 HMCL 致谢（全部条目）、捐赠者
-/// （当前为空态）、更新检查、法律信息。致谢列表直接读取上游
+/// 内容顺序：产品信息、开发人员、上游 HMCL 致谢（全部条目）、捐赠者、
+/// 更新检查、法律信息。致谢列表直接读取上游
 /// `assets/about/thanks.json`，不在本页复制或筛选名单。
 ///
 /// 线程：构造、渲染与按钮回调都在 FX 线程；数据读取经
@@ -215,8 +216,10 @@ public final class AboutLMCLPage extends SpinnerPane {
             LineButton button = new LineButton();
             button.setLargeTitle(true);
             button.setTitle(donor.name());
-            if (donor.note() != null && !donor.note().isBlank()) {
-                button.setSubtitle(donor.note());
+            String note = donor.note();
+            if (note != null && !note.isBlank()) {
+                // 捐赠者备注允许直接写 i18n key，便于同一份数据在中英文界面复用。
+                button.setSubtitle(I18n.hasKey(note) ? i18n(note) : note);
             }
             if (donor.link() != null && !donor.link().isBlank()) {
                 button.setTrailingIcon(SVG.OPEN_IN_NEW);

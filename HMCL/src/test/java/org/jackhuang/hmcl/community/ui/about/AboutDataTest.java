@@ -65,12 +65,14 @@ public final class AboutDataTest {
     }
 
     @Test
-    public void loadsUpstreamThanksAndEmptyDonorPlaceholder() {
+    public void loadsUpstreamThanksAndDonorList() {
         AboutData data = AboutData.load();
 
         assertFalse(data.thanks().isEmpty());
         assertTrue(data.thanks().stream().anyMatch(entry ->
                 "yushijinhun".equals(entry.title()) || "Glavo".equals(entry.title())));
-        assertTrue(data.donors().isEmpty());
+        assertEquals(1, data.donors().size());
+        assertEquals("木子呆、法棍与仰望星空派", data.donors().get(0).name());
+        assertEquals("community.about.developer.icon", data.donors().get(0).note());
     }
 }
