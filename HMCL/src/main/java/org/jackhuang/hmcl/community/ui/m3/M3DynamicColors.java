@@ -20,6 +20,7 @@
 package org.jackhuang.hmcl.community.ui.m3;
 
 import javafx.beans.InvalidationListener;
+import javafx.collections.SetChangeListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.image.Image;
@@ -30,19 +31,24 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import org.glavo.monetfx.ColorScheme;
 import org.jackhuang.hmcl.task.Schedulers;
+import org.jackhuang.hmcl.setting.LauncherSettings;
+import org.jackhuang.hmcl.setting.SettingsManager;
+import org.jackhuang.hmcl.setting.ThemeColorType;
 import org.jackhuang.hmcl.theme.LauncherBackground;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
-/// 从当前启动器壁纸生成 Material 3 动态取色方案。
+/// 生成 Material 3 动态取色方案，作为 M3 界面与标题栏的统一颜色来源。
 ///
-/// 上游 `Themes` 的颜色方案只有在“主题色跟随背景”时才由壁纸驱动；默认主题
-/// 使用固定的种子色。这里按 MD3 的动态取色规则直接从壁纸图片生成方案，供位于
-/// M3 宿主之外的标题栏使用；纯色背景则退回当前 `Themes` 方案。
+/// 只有用户在外观设置中选择“跟随壁纸（莫奈）”并且该选择覆盖主题包时，才从
+/// 当前壁纸图片生成完整动态方案；其他情况（默认、自定义强调色、跟随系统、
+/// 主题包默认）直接采用上游 `Themes.getColorScheme()`，保证 M3 界面与上游
+/// 主题设置一致。纯色背景在壁纸不可用时用背景色作种子色。
 ///
 /// 图片可能在异步加载，生成过程放在 IO 线程，结果回到 JavaFX 线程后再发布；
 /// 过期结果通过代数号丢弃。线程：构造与属性监听都在 JavaFX 应用线程。
@@ -58,6 +64,14 @@ public final class M3DynamicColors {
     /// 壁纸、主题色或图片加载状态变化时重新生成。
     private final InvalidationListener refreshListener = observable -> refresh();
 
+    /// 主题色覆盖项增删时重新生成。
+    private final SetChangeListener<String> overrideListener = change -> {
+        if (LauncherSettings.THEME_APPEARANCE_COLOR.equals(change.getElementAdded())
+                || LauncherSettings.THEME_APPEARANCE_COLOR.equals(change.getElementRemoved())) {
+            refresh();
+        }
+    };
+
     /// 最近一次观察加载状态的图片。
     private @Nullable Image watchedImage;
 
@@ -68,6 +82,11 @@ public final class M3DynamicColors {
     private M3DynamicColors() {
         Themes.backgroundProperty().addListener(refreshListener);
         Themes.colorSchemeProperty().addListener(refreshListener);
+
+        LauncherSettings settings = SettingsManager.settings();
+        settings.themeColorTypeProperty().addListener(refreshListener);
+        settings.customThemeColorProperty().addListener(refreshListener);
+        settings.getThemeAppearanceOverrides().addListener(overrideListener);
         refresh();
     }
 
@@ -85,19 +104,30 @@ public final class M3DynamicColors {
         return scheme.getReadOnlyProperty();
     }
 
-    /// 当前动态方案。
+    /// 当前取色方案。
     ///
-    /// @return 当前方案；初始化完成前为 `Themes.getColorScheme()`
+    /// @return 当前方案；初始化完成前或未启用莫奈取色时为 `Themes.getColorScheme()`
     public ColorScheme getScheme() {
         ColorScheme current = scheme.get();
         return current != null ? current : Themes.getColorScheme();
     }
 
     /// 重新计算方案。
+    ///
+    /// 只有“跟随壁纸”覆盖生效时才做壁纸取色；其余模式直接跟随 `Themes`，
+    /// 这样自定义强调色、跟随系统和主题包配色都会同步到 M3 界面。
     private void refresh() {
         int current = ++generation;
+        boolean wallpaperAccent = isWallpaperAccent();
+        if (!wallpaperAccent) {
+            watchImage(null);
+            scheme.set(Themes.getColorScheme());
+            return;
+        }
+
         LauncherBackground background = Themes.backgroundProperty().get();
         if (background == null) {
+            watchImage(null);
             scheme.set(Themes.getColorScheme());
             return;
         }
@@ -117,6 +147,18 @@ public final class M3DynamicColors {
         } else {
             scheme.set(Themes.getColorScheme());
         }
+    }
+
+    /// 判断当前是否应使用壁纸莫奈取色。
+    ///
+    /// 必须同时满足：主题色覆盖已启用、覆盖类型为“跟随壁纸”。
+    private static boolean isWallpaperAccent() {
+        LauncherSettings settings = SettingsManager.settings();
+        if (!settings.getThemeAppearanceOverrides().contains(LauncherSettings.THEME_APPEARANCE_COLOR)) {
+            return false;
+        }
+        return Objects.requireNonNullElse(settings.themeColorTypeProperty().get(), ThemeColorType.DEFAULT)
+                == ThemeColorType.BACKGROUND;
     }
 
     /// 在 IO 线程从壁纸生成方案，避免大图取色阻塞 UI。

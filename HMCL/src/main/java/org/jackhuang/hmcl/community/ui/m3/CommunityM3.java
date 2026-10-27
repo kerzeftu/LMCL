@@ -24,7 +24,6 @@ import org.glavo.m3fx.theme.M3Theme;
 import org.glavo.m3fx.theme.M3ThemeManager;
 import org.glavo.m3fx.tokens.M3Profile;
 import org.jackhuang.hmcl.setting.FontManager;
-import org.jackhuang.hmcl.theme.Themes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
@@ -33,9 +32,9 @@ import java.net.URL;
 
 /// 把 LMCL 的当前主题色与字体桥接给 m3fx。
 ///
-/// 这里只做阶段 0 的最小验证：把 M3 主题安装在指定子树，并追加社区覆盖样式。
-/// 不接管 `Scene`、不修改 `StyleSheets`，因此不会影响上游页面的样式表绑定。
-/// 阶段 1 会把字体/主题色监听、动效开关和持久化配置补全。
+/// 颜色来自 [M3DynamicColors]（莫奈取色、自定义强调色、跟随系统或主题包），
+/// 因此 M3 界面与标题栏共用同一套 Material 3 方案。主题只安装在指定子树，
+/// 不接管 `Scene`、不修改 `StyleSheets`，不会影响上游页面的样式表绑定。
 @NotNullByDefault
 public final class CommunityM3 {
 
@@ -51,7 +50,7 @@ public final class CommunityM3 {
 
     /// 在指定子树安装 M3 Expressive 主题。
     ///
-    /// 必须在 JavaFX 线程调用；主题以 `Themes.getColorScheme()` 为颜色来源，
+    /// 必须在 JavaFX 线程调用；主题以 [M3DynamicColors#getScheme()] 为颜色来源，
     /// 字体跟随 `FontManager`（未配置自定义字体时继承组件默认字体）。
     /// 安装后追加 [#STYLESHEET]，用于修正 `.m3-root` 带来的背景和文字色。
     ///
@@ -102,7 +101,7 @@ public final class CommunityM3 {
     ///
     /// @param root 根节点
     private static void apply(@NotNull Parent root) {
-        M3Theme theme = M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, Themes.getColorScheme());
+        M3Theme theme = M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, M3DynamicColors.get().getScheme());
         M3ThemeManager.install(root, theme);
         root.getProperties().put(INSTALLED_PROPERTY, theme);
         if (!root.getStyleClass().contains("community-m3-host")) {

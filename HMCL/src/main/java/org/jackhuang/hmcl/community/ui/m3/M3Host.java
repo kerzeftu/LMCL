@@ -23,14 +23,14 @@ import javafx.beans.InvalidationListener;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import org.jackhuang.hmcl.setting.FontManager;
-import org.jackhuang.hmcl.theme.Themes;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
 /// 承载 LMCL 壳层并安装 Material 3 主题的容器。
 ///
-/// 主题只作用于本节点的子树，不接管 `Scene`；颜色跟随 [Themes]，字体跟随
-/// [FontManager]。主题色或字体变化时重新安装，避免用户切换主题后必须重启。
+/// 主题只作用于本节点的子树，不接管 `Scene`；颜色跟随 [M3DynamicColors]，
+/// 字体跟随 [FontManager]。强调色、壁纸或字体变化时重新安装，避免用户切换后
+/// 必须重启。
 ///
 /// 线程：构造与 [dispose] 必须在 JavaFX 应用线程调用。
 @NotNullByDefault
@@ -57,7 +57,7 @@ public final class M3Host extends StackPane {
         CommunityM3.install(this);
         M3MotionSupport.install();
         GlassBackdrop.get().attach(this);
-        Themes.colorSchemeProperty().addListener(themeListener);
+        M3DynamicColors.get().schemeProperty().addListener(themeListener);
         FontManager.fontProperty().addListener(fontListener);
     }
 
@@ -80,7 +80,7 @@ public final class M3Host extends StackPane {
     /// 移除监听并卸载主题；重复调用无副作用。
     public void dispose() {
         GlassBackdrop.get().detach();
-        Themes.colorSchemeProperty().removeListener(themeListener);
+        M3DynamicColors.get().schemeProperty().removeListener(themeListener);
         FontManager.fontProperty().removeListener(fontListener);
         CommunityM3.uninstall(this);
     }
