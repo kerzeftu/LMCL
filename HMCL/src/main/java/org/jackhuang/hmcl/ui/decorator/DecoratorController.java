@@ -21,13 +21,16 @@ import com.jfoenix.controls.JFXSnackbar;
 import com.jfoenix.controls.JFXSnackbarLayout;
 import javafx.animation.Interpolator;
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import org.glavo.monetfx.ColorScheme;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorDnD;
 import org.jackhuang.hmcl.community.config.CommunityConfigDnD;
 import org.jackhuang.hmcl.community.ui.CommunitySideBar;
@@ -35,6 +38,7 @@ import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.community.ui.OtherPage;
 import org.jackhuang.hmcl.community.ui.m3.GlassBackdrop;
+import org.jackhuang.hmcl.community.ui.m3.M3DynamicColors;
 import org.jackhuang.hmcl.community.ui.m3.M3Host;
 import org.jackhuang.hmcl.community.ui.m3.M3Settings;
 import org.jackhuang.hmcl.community.ui.transfer.SettingsImportDialog;
@@ -56,6 +60,8 @@ import org.jackhuang.hmcl.ui.wizard.WizardProvider;
 import org.jackhuang.hmcl.util.platform.OperatingSystem;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Locale;
+
 import static org.jackhuang.hmcl.ui.FXUtils.onEscPressed;
 
 public class DecoratorController {
@@ -69,6 +75,12 @@ public class DecoratorController {
 
     /// 标题栏节点；仅 M3 主题下添加 `lmcl-m3-title-bar` 样式类。
     private @Nullable Node titleBar;
+
+    /// 安装标题栏样式前的内联样式，移除时恢复。
+    private @Nullable String titleBarBaseStyle;
+
+    /// 主题色变化时刷新标题栏的 M3 动态取色。
+    private final InvalidationListener titleBarColorListener = observable -> applyTitleBarColors();
 
     public DecoratorController(Stage stage, Node mainPage) {
         decorator = new Decorator(stage);
@@ -213,14 +225,47 @@ public class DecoratorController {
         CommunityStyles.apply(parent);
         node.getStyleClass().add("lmcl-m3-title-bar");
         titleBar = node;
+        titleBarBaseStyle = node.getStyle();
+        M3DynamicColors.get().schemeProperty().addListener(titleBarColorListener);
+        applyTitleBarColors();
+    }
+
+    /// 将当前 M3 动态取色写入标题栏的 looked-up color 变量。
+    ///
+    /// 标题栏位于 M3 宿主之外，拿不到 m3fx 的 `-m3-color-*` 变量；这里读取
+    /// [M3DynamicColors] 基于壁纸生成的方案，随壁纸/主题色变化更新。
+    private void applyTitleBarColors() {
+        if (!(titleBar instanceof Parent parent) || !M3Settings.isM3Enabled()) {
+            return;
+        }
+
+        ColorScheme scheme = M3DynamicColors.get().getScheme();
+        parent.setStyle(
+                "-lmcl-title-surface: " + cssColor(scheme.getPrimaryContainer()) + "; "
+                        + "-lmcl-title-on-surface: " + cssColor(scheme.getOnPrimaryContainer()) + "; "
+                        + "-lmcl-title-outline: " + cssColor(scheme.getOutlineVariant()) + ";");
+    }
+
+    /// 将 JavaFX 颜色转换为可写入内联 CSS 的 rgba 字符串。
+    private static String cssColor(Color color) {
+        return String.format(
+                Locale.ROOT,
+                "rgba(%d,%d,%d,%.3f)",
+                Math.round(color.getRed() * 255.0),
+                Math.round(color.getGreen() * 255.0),
+                Math.round(color.getBlue() * 255.0),
+                color.getOpacity());
     }
 
     /// Removes the M3 title bar style; safe to call repeatedly.
     private void removeTitleBarStyle() {
+        M3DynamicColors.get().schemeProperty().removeListener(titleBarColorListener);
         if (titleBar != null) {
             titleBar.getStyleClass().remove("lmcl-m3-title-bar");
+            titleBar.setStyle(titleBarBaseStyle);
         }
         titleBar = null;
+        titleBarBaseStyle = null;
     }
 
     public Decorator getDecorator() {

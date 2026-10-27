@@ -223,21 +223,27 @@
     -fx-fill: -monet-on-primary-container;
 }
 
-/* 标题栏：M3 顶栏使用 surface-container 主题色，不再叠玻璃层。 */
+/* 标题栏：使用与 M3 宿主相同的动态取色（primary-container 角色）。 */
+.jfx-tool-bar.lmcl-m3-title-bar {
+    -lmcl-title-surface: -monet-surface-container;
+    -lmcl-title-on-surface: -monet-on-surface;
+    -lmcl-title-outline: -monet-outline-variant;
+}
+
 .jfx-tool-bar.lmcl-m3-title-bar,
 .jfx-tool-bar.lmcl-m3-title-bar.background,
 .jfx-tool-bar.lmcl-m3-title-bar.gray-background {
-    -fx-background-color: -monet-surface-container;
-    -fx-border-color: transparent transparent -monet-outline-variant transparent;
+    -fx-background-color: -lmcl-title-surface;
+    -fx-border-color: transparent transparent -lmcl-title-outline transparent;
     -fx-border-width: 0 0 1 0;
 }
 
 .jfx-tool-bar.lmcl-m3-title-bar .label {
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -lmcl-title-on-surface;
 }
 
 .jfx-tool-bar.lmcl-m3-title-bar .svg {
-    -fx-fill: -monet-on-surface-variant;
+    -fx-fill: -lmcl-title-on-surface;
 }
 
 
@@ -316,6 +322,14 @@
 .lmcl-m3 .community-glass-card.community-glass-active > .card {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
+}
+
+/* 亚克力卡片边缘：细高光边框让玻璃与底色分层。 */
+.lmcl-m3 .community-glass-card.community-glass-active {
+    -fx-border-color: rgba(255, 255, 255, 0.20);
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
 }
 
 
