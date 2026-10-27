@@ -1,14 +1,14 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-27 v3.17.16）：v3.17.13 已把 m3fx 改为仓库内 vendored 源码（`96ccd6d`），切片 A 基座与 B1 侧栏玻璃已实现；v3.17.10 侧栏选中框 16px、v3.17.11 主页圆角按钮命中区域、v3.17.1 主页卡片动态高度、v3.17.2 账户卡/5×7 日历、v3.17.3 日历右栏统计/设置·统计、v3.17.4 色阶、v3.17.5 每日一言、v3.17.6 本地源选择、v3.17.7 设置层级、v3.17.8 MC 语料已交付；v3.17.15 把外观主题改为三个视觉主题（M3 Expressive / M3 关闭玻璃 / Classic），v3.17.16 修复 Classic→M3 首次切换崩溃、未保存主题默认 M3 Expressive，并完成崩溃报告/字体预览/崩溃窗口品牌收口；M3 切片 B2/C–G 仍待 Windows 对切片 A/B1 的验收。**
+> **状态（2026-10-27 v3.17.17）：v3.17.13 已把 m3fx 改为仓库内 vendored 源码（`96ccd6d`）；切片 A 基座、B1 侧栏玻璃与 B2 全范围玻璃（主页头部/9 卡/账户卡/标题栏）已实现；v3.17.16 起未保存主题默认 M3 Expressive，v3.17.17 修复壁纸异步加载不重试/只采样 M3Host 的玻璃时序问题并出 `m3expressive18-debug` 诊断包；C–G 仍待 Windows 实机验收。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.16
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.16 交付后 `main`（v3.17.15 主题三态合并后；`621e3298f` 为 H7 vendoring）；切片 A 的 `m3expressive1` 已由 `m3expressive17` 取代
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.17
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.17 交付后 `main`（在 v3.17.16 `aa55cab28` 之上；B2 玻璃改动待提交）；切片 A 的包已由 `m3expressive18-debug` 取代
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   未保存 `visual` 配置时默认 M3 Expressive（`DEFAULT_M3_ENABLED=true`）；显式 Classic 或 `-Dlmcl.visual.m3=off` 时与 1.0.0 一致。
 > - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + 16px 圆角选中框（v3.17.10 从 999 胶囊还原）；
 >   `-Dlmcl.visual.glass=auto/on/off` 控制，默认 auto，失败自动回退 CSS 表面色。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive17`（v3.17.16 主题切换崩溃修复、默认 M3 Expressive、崩溃/字体品牌收口；v3.17.15 三个视觉主题；v3.17.13 H7：m3fx 96ccd6d 源码 vendoring + v3.17.11 圆角按钮命中区域 + v3.17.10 M3 B1 侧栏玻璃与选中框还原；基于 v3.17.8 的 MC 语料加载提示 + 每日一言 + 账户卡/5×7 日历 + 右栏统计 + 明暗自适应色阶）。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive18-debug`（v3.17.17 B2 全范围玻璃 + debug 日志；基于 v3.17.16 主题切换崩溃修复/默认 M3/品牌收口、v3.17.15 三个视觉主题、v3.17.13 H7 vendor + v3.17.11 圆角命中 + v3.17.10 B1 侧栏玻璃）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 > - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
@@ -2463,13 +2463,13 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
   的对照、主题色/字体跟随、动画停用、布局回归都待用户截图验收。
 - m3fx 主题可能改变 JFoenix 控件的内边距/字体度量，尤其侧栏 64px 宽度和主页卡片高度；
   如果出现裁切，优先在 `.lmcl-m3` 作用域补最小覆盖，不改上游布局。
-- A 切片 v3.17.16 起默认开启（M3 Expressive）；显式 Classic 保留。B2 毛玻璃仍未开始。
+- A 切片 v3.17.16 起默认开启（M3 Expressive）；显式 Classic 保留。B2 全范围玻璃已在 v3.17.17 实现，待 Windows 实机日志/截图。
 
 ### 18.7 下一步
 
-1. 用户用 `m3expressive17` 包做默认 M3 Expressive 与显式 Classic 对照截图，确认主题/玻璃/字体/滚动条无回归。
+1. 用户用 `m3expressive18-debug` 包（内置壁纸 + `-Dlmcl.visual.debug=true`）确认侧栏/主页头部/9 卡/标题栏玻璃、壁纸加载后补快照、主题/字体/滚动条无回归。
 2. Windows 实机回归 Classic→M3、M3→Classic、连续切换、各页面、重启、对话框与缩放。
-3. 验收通过后再规划 B2：主页头部/卡片玻璃；标题栏玻璃留到 B2/C。
+3. B2 代码已完成；实机日志确认后进入 C（主页控件/指标/日历/空态 M3 统一）。
 
 ---
 
@@ -2567,7 +2567,7 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 - §5 的阶段划分、文件清单、工期仍然有效；
 - §19 补充“每步怎么做、做到什么程度、交付什么”；
 - 如果 §5 的旧验收与 §19 冲突，以 §19 的硬约束和交付物为准；
-- 阶段 0 的历史记录保留；当前状态是“切片 A/B1 已实现，v3.17.16 起默认 M3 Expressive，Windows 实机待验收”。
+- 阶段 0 的历史记录保留；当前状态是“切片 A/B1/B2 已实现，v3.17.17 出 B2 debug 包，Windows 实机待验收”。
 
 ### 19.7 当前基线校正（避免按旧数字执行）
 
@@ -2575,15 +2575,15 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 |---|---|---|
 | 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
 | 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
-| 当前测试包 | `m3expressive1` | `m3expressive17`（jar 12,448,057 B / zip 75,741,178 B `621b1542…`；默认 M3 Expressive + 三主题 + 崩溃修复） |
-| 切片 A/B1 状态 | 待 Windows 验收 | A/B1 均已实现；v3.17.16 起未保存主题默认 M3 Expressive，显式 Classic 保留；仍待 Windows 实机验收 |
+| 当前测试包 | `m3expressive1` | `m3expressive18-debug`（jar 12,452,628 B / zip 75,750,011 B `d6c8394c…`；B2 全范围玻璃 + debug 日志） |
+| 切片 A/B1/B2 状态 | 待 Windows 验收 | A/B1/B2 均已实现；v3.17.17 修复玻璃异步加载/采样范围并出 debug 包；仍待 Windows 实机验收 |
 | 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转；v3.17.5 问候语下改为每日一言；v3.17.6 本地源可分别启用；v3.17.7 每日一言设置收为单卡片 |
 
 ### 19.8 下一步建议
 
-1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive17` 继承，不并入 M3 B2–G；v3.17.14 的主题三态化已回退，v3.17.15 的三个视觉主题与 v3.17.16 的崩溃修复/默认值也属于非 M3 B2–G 变更；
-2. 用户先对 `m3expressive17` 做 Windows 实机验收（默认 M3 Expressive、Classic↔M3 切换矩阵、三个视觉主题/自定义主题包、主页卡片按钮圆角外不可点、侧栏玻璃/16px 选中框/`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
-3. 玻璃通过后继续切片 B2（主页头部/卡片玻璃）；标题栏玻璃留到 B2/C；
+1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive18-debug` 继承，不并入 M3 B2–G；v3.17.14 的主题三态化已回退，v3.17.15 的三个视觉主题与 v3.17.16 的崩溃修复/默认值也属于非 M3 B2–G 变更；
+2. 用户先对 `m3expressive18-debug` 做 Windows 实机验收（B2 玻璃日志/截图、默认 M3 Expressive、Classic↔M3 切换矩阵、三个视觉主题/自定义主题包、主页卡片按钮圆角外不可点、`glass=off` 回退/窗口缩放，以及账户卡、5×7 日历、右栏统计、每日一言、本地源等回归）；
+3. B2 玻璃实机确认后进入 C（主页控件/指标/日历/空态 M3 统一）；标题栏玻璃已在 B2 完成；
 4. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
 
 
@@ -2709,7 +2709,7 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 
 ### 21.5 下一步
 
-1. 用户用 m3expressive17 验收默认 M3 Expressive、Classic↔M3 切换、16px 选中框、玻璃侧栏、圆角按钮命中区域与三个视觉主题（m3expressive12 已被取代）；
+1. 用户用 m3expressive18-debug 验收 B2 玻璃、默认 M3 Expressive、Classic↔M3 切换、16px 选中框、圆角按钮命中区域与三个视觉主题（m3expressive17 已被取代）；
 2. 通过后进入 B2：主页头部/卡片玻璃，再评估标题栏玻璃；
 3. B2 仍优先不新增上游侵入点。
 
@@ -2820,3 +2820,34 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 - `README.md` v3.17.13、`docs/00-整体要求.md` v3.17.13；
 - 本方案 §23、[审查记录 §69](审查记录-v3.16.4源码核对.md)；
 - `lmcl/docs-community/` 同步；代码提交 `212db8136`，合并 `621e3298f`。
+
+
+## 24. 切片 B2 实施记录（全范围壁纸玻璃，2026-10-27）
+
+### 24.1 背景
+
+用户 m26457 选择“内置壁纸 + 毛玻璃同时做，可以出 debug 包”。在此前的 B1 中只有 64px 侧栏有 `GlassSurface`；用户反馈“毛玻璃效果没有生效”。诊断见[毛玻璃未生效](修复方案-毛玻璃未生效.md) §10：最可疑的是 `GlassBackdrop` 在壁纸 `Image` 尚未加载时生成快照失败且不重试，以及采样宿主只覆盖 `M3Host`。
+
+### 24.2 实现
+
+- `GlassBackdrop`：监听壁纸 `Image.progress/width/error` 与宿主 scene；图片加载完成/失败后重新 schedule；M3 下以整个 `Decorator` 为宿主，全窗口快照供标题栏/侧栏/主页复用；`detach()` 解除监听；`lmcl.visual.debug` 输出 `[glass]` 日志。
+- `GlassSurface`：监听 scene；无 scene/宽高不足/快照无效时隐藏；`[glass-surface]` 输出尺寸、viewport、visible。
+- `BuiltinWidgets.glassCard(Node, arc)`：`StackPane` + `GlassSurface`；快照可见时加 `community-glass-active`，否则保留 M3 实色卡片底。
+- `HomePane`：头部、账户卡、9 张组件卡全部包玻璃；头部加 padding。
+- `DecoratorController`：M3 时 `GlassBackdrop.attach(decorator)`，在 `.jfx-tool-bar` 注入标题栏玻璃；Classic/`glass=off` 时移除；监听 scene/skin，避免换肤后残留。
+- CSS：标题栏 active 背景透明；卡片 active 背景/边框透明；tint 用 `-monet-surface-container-low`（标题栏不依赖 M3Host token）。
+- 无新增上游侵入点；`DecoratorController.java` 复用第 7 处。
+
+### 24.3 验证与包
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **189/0/0/0**；全量 **299/0/0/2 skipped**。
+- jar **12,452,628 B** `45c09aec…`；exe **13,653,780 B** `51b90eed…`；stub 1,201,152 B `ded29e28…`。
+- 包 `dist/LMCL-1.0.0-win-x64-m3expressive18-debug.zip` **75,750,011 B** `d6c8394c…`；328 entries、`testzip=None`；包内 `SHA256SUMS` 327 文件通过。
+- 未在 Windows 实机验证；需要用 `run-m3-debug.bat` 看 `[glass] snapshot=` 与 `[glass-surface] shown:` 日志。
+
+### 24.4 下一步
+
+1. 用户用内置壁纸 + m3e18-debug 复测，回报截图与日志；
+2. 若仍无纹理，检查日志是否 `images=0`（纯色背景）或 `snapshot=null`（快照失败）；
+3. 若纹理存在但太弱，调 tint 不透明度/模糊半径，并做 H6 对比度测量；
+4. 通过后进入切片 C（主页控件、指标、日历、空态统一 M3）。
