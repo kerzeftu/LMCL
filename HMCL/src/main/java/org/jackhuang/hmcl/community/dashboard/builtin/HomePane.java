@@ -37,7 +37,6 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import javafx.util.Duration;
@@ -499,7 +498,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 实例/下载/设置入口在全局 `CommunitySideBar`；账户入口在左栏账户卡（打开 `ManagementPage` 的账户页）。
     /// 页头右侧只保留“自定义”按钮，用于首页组件显隐设置，避免与全局导航重复。
     @NotNull
-    private StackPane buildHeader() {
+    private HBox buildHeader() {
         greeting.setText(greetingText());
         greeting.getStyleClass().addAll("title-label", "community-headline");
 
@@ -528,9 +527,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         }
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(0, 0, 2, 0));
-        StackPane headerCard = BuiltinWidgets.glassCard(header, 16);
-        headerCard.setPadding(new Insets(8, 12, 8, 12));
-        return headerCard;
+        return header;
     }
 
     /// 构建左右两条独立滚动的列（只执行一次）。
@@ -590,7 +587,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         if (accountCard == null) {
             accountCard = buildAccountCard();
         }
-        infoColumn.getChildren().add(BuiltinWidgets.glassCard(accountCard, 16));
+        infoColumn.getChildren().add(accountCard);
         for (DashboardItem item : itemsForHome()) {
             if (!item.enabled()) {
                 continue;

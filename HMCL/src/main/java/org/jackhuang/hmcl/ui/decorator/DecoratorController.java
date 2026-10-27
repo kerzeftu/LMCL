@@ -23,6 +23,7 @@ import javafx.animation.Interpolator;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -34,7 +35,6 @@ import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.community.ui.OtherPage;
 import org.jackhuang.hmcl.community.ui.m3.GlassBackdrop;
-import org.jackhuang.hmcl.community.ui.m3.GlassSurface;
 import org.jackhuang.hmcl.community.ui.m3.M3Host;
 import org.jackhuang.hmcl.community.ui.m3.M3Settings;
 import org.jackhuang.hmcl.community.ui.transfer.SettingsImportDialog;
@@ -67,11 +67,8 @@ public class DecoratorController {
     /// 当前挂在外壳上的 M3 宿主；Classic 主题下为 `null`。
     private @Nullable M3Host m3Host;
 
-    /// 标题栏玻璃表面；仅 M3 + 玻璃开启时存在。
-    private @Nullable GlassSurface titleGlass;
-
-    /// 标题栏容器；用于添加/移除玻璃层与激活样式。
-    private @Nullable StackPane titleContainer;
+    /// 标题栏节点；仅 M3 主题下添加 `lmcl-m3-title-bar` 样式类。
+    private @Nullable Node titleBar;
 
     public DecoratorController(Stage stage, Node mainPage) {
         decorator = new Decorator(stage);
@@ -90,14 +87,14 @@ public class DecoratorController {
         applyVisualTheme();
         decorator.sceneProperty().addListener((observable, oldScene, newScene) -> {
             if (newScene != null) {
-                Platform.runLater(this::installTitleBarGlass);
+                Platform.runLater(this::installTitleBarStyle);
             }
         });
         decorator.skinProperty().addListener((observable, oldSkin, newSkin) -> {
-            removeTitleBarGlass();
-            Platform.runLater(this::installTitleBarGlass);
+            removeTitleBarStyle();
+            Platform.runLater(this::installTitleBarStyle);
         });
-        Platform.runLater(this::installTitleBarGlass);
+        Platform.runLater(this::installTitleBarStyle);
         decorator.onCloseNavButtonActionProperty().set(e -> close());
         decorator.onBackNavButtonActionProperty().set(e -> back());
         decorator.onRefreshNavButtonActionProperty().set(e -> refresh());
@@ -190,59 +187,40 @@ public class DecoratorController {
             // Use the whole decorator as the backdrop host, so the sidebar, home
             // content and title bar all sample the same scene-space snapshot.
             GlassBackdrop.get().attach(decorator);
-            Platform.runLater(this::installTitleBarGlass);
+            Platform.runLater(this::installTitleBarStyle);
         } else {
             decorator.getContent().setAll(shell);
             GlassBackdrop.get().detach();
-            removeTitleBarGlass();
+            removeTitleBarStyle();
         }
     }
 
-    /// Adds a glass layer to the decorator title bar when M3 glass is active.
-    private void installTitleBarGlass() {
-        if (!M3Settings.isM3Enabled() || !M3Settings.isGlassEnabled()) {
-            removeTitleBarGlass();
+    /// Applies the M3 surface color to the decorator title bar.
+    private void installTitleBarStyle() {
+        if (!M3Settings.isM3Enabled()) {
+            removeTitleBarStyle();
             return;
         }
-        if (titleGlass != null) {
+        if (titleBar != null) {
             return;
         }
 
         Node node = decorator.lookup(".jfx-tool-bar");
-        if (!(node instanceof StackPane container)) {
+        if (!(node instanceof Parent parent)) {
             return;
         }
 
-        CommunityStyles.apply(container);
-        GlassSurface glass = new GlassSurface();
-        glass.getStyleClass().add("lmcl-m3-title-glass");
-        glass.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        container.getChildren().add(0, glass);
-        titleContainer = container;
-        titleGlass = glass;
-
-        glass.visibleProperty().addListener((observable, oldValue, visible) -> {
-            if (visible) {
-                if (!container.getStyleClass().contains("lmcl-m3-title-glass-active")) {
-                    container.getStyleClass().add("lmcl-m3-title-glass-active");
-                }
-            } else {
-                container.getStyleClass().remove("lmcl-m3-title-glass-active");
-            }
-        });
+        CommunityStyles.apply(parent);
+        node.getStyleClass().add("lmcl-m3-title-bar");
+        titleBar = node;
     }
 
-    /// Removes the title bar glass layer; safe to call repeatedly.
-    private void removeTitleBarGlass() {
-        StackPane container = titleContainer;
-        if (container != null) {
-            container.getStyleClass().remove("lmcl-m3-title-glass-active");
-            if (titleGlass != null) {
-                container.getChildren().remove(titleGlass);
-            }
+    /// Removes the M3 title bar style; safe to call repeatedly.
+    private void removeTitleBarStyle() {
+        if (titleBar != null) {
+            titleBar.getStyleClass().remove("lmcl-m3-title-bar");
         }
-        titleContainer = null;
-        titleGlass = null;
+        titleBar = null;
     }
 
     public Decorator getDecorator() {

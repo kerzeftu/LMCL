@@ -341,8 +341,11 @@ public final class GlassBackdrop {
         int pixelWidth = Math.max(2, (int) Math.ceil(width * snapshotScale));
         int pixelHeight = Math.max(2, (int) Math.ceil(height * snapshotScale));
 
-        double blur = Math.max(6.0, Math.min(18.0, pixelWidth / 18.0));
-        int padding = (int) Math.ceil(blur) + 2;
+        // 快照本身会按 640px 上限降采样，再被玻璃表面放大；18px 的旧上限在
+        // 大窗口上只剩一层很淡的柔化。这里提高模糊半径，同时把模糊放进
+        // SnapshotParameters，确保快照步骤实际应用效果而不是只依赖节点 effect。
+        double blur = Math.max(12.0, Math.min(32.0, pixelWidth / 14.0));
+        int padding = (int) Math.ceil(blur * 1.5) + 2;
         int canvasWidth = pixelWidth + padding * 2;
         int canvasHeight = pixelHeight + padding * 2;
 
@@ -357,7 +360,7 @@ public final class GlassBackdrop {
             return null;
         }
 
-        canvas.setEffect(new BoxBlur(blur, blur, 2));
+        canvas.setEffect(new BoxBlur(blur, blur, 3));
 
         SnapshotParameters parameters = new SnapshotParameters();
         parameters.setFill(Color.TRANSPARENT);

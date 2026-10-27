@@ -59,7 +59,8 @@
 
 .lmcl-m3-glass-tint {
     -fx-background-color: -m3-color-surface-container-low;
-    -fx-opacity: 0.42;
+    /* 0.42 会明显压暗壁纸纹理；v3.17.18 降到 0.30，让模糊更可见。 */
+    -fx-opacity: 0.30;
 }
 
 .lmcl-m3 .community-sidebar-button {
