@@ -1,14 +1,14 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-27 v3.17.18）：v3.17.13 已把 m3fx 改为仓库内 vendored 源码（`96ccd6d`）；切片 A 基座、B1 侧栏玻璃与 B2 玻璃（9 卡 + 侧栏）已实现；v3.17.18 把顶栏改为 M3 主题表面色、移除主页头部/账户卡的玻璃框并把模糊上限提到 32；C–G 仍待 Windows 实机验收。**
+> **状态（2026-10-28 v3.17.20）：v3.17.13 已把 m3fx 改为仓库内 vendored 源码（`96ccd6d`）；切片 A 基座、B1 侧栏玻璃、B2 玻璃（9 卡 + 侧栏）、v3.17.19 磨砂亚克力与顶栏壁纸动态取色、v3.17.20 莫奈取色/自定义强调色已实现；C–G 仍待 Windows 实机验收。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.18
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.18 调整待提交（在 v3.17.16 `aa55cab28`、v3.17.17 `c4e48cdbe` 之上）；当前调试包 `m3expressive19-debug`
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.20
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.20 代码提交 `e62026627`；当前调试包 `m3expressive21-debug`
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   未保存 `visual` 配置时默认 M3 Expressive（`DEFAULT_M3_ENABLED=true`）；显式 Classic 或 `-Dlmcl.visual.m3=off` 时与 1.0.0 一致。
 > - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + 16px 圆角选中框（v3.17.10 从 999 胶囊还原）；
 >   `-Dlmcl.visual.glass=auto/on/off` 控制，默认 auto，失败自动回退 CSS 表面色。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive19-debug`（v3.17.18 顶栏主题表面色/主页去框/模糊 32 + debug 日志；基于 v3.17.17 B2 玻璃修复、v3.17.16 主题切换崩溃修复/默认 M3/品牌收口、v3.17.15 三个视觉主题、v3.17.13 H7 vendor + v3.17.11 圆角命中 + v3.17.10 B1 侧栏玻璃）。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive21-debug`（v3.17.20 强调色/莫奈取色；基于 v3.17.19 亚克力/顶栏动态取色、v3.17.18 顶栏主题表面色、v3.17.17 B2 玻璃修复、v3.17.16 主题切换崩溃修复/默认 M3/品牌收口、v3.17.15 三个视觉主题、v3.17.13 H7 vendor + v3.17.11 圆角命中 + v3.17.10 B1 侧栏玻璃）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 > - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
@@ -2567,23 +2567,23 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 - §5 的阶段划分、文件清单、工期仍然有效；
 - §19 补充“每步怎么做、做到什么程度、交付什么”；
 - 如果 §5 的旧验收与 §19 冲突，以 §19 的硬约束和交付物为准；
-- 阶段 0 的历史记录保留；当前状态是“切片 A/B1/B2 已实现，v3.17.18 出 m3e19-debug，Windows 实机待验收”。
+- 阶段 0 的历史记录保留；当前状态是“切片 A/B1/B2 + v3.17.19/20 已完成，v3.17.20 出 m3e21-debug，Windows 实机待验收”。
 
 ### 19.7 当前基线校正（避免按旧数字执行）
 
-| 项 | 旧方案写法 | 2026-10-27 实际 |
+| 项 | 旧方案写法 | 2026-10-28 实际 |
 |---|---|---|
 | 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
 | 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
-| 当前测试包 | `m3expressive1` | `m3expressive19-debug`（jar 12,452,175 B / zip 76,016,381 B `9812f62d…`；B2 玻璃 + 顶栏 M3 主题色 + debug 日志） |
-| 切片 A/B1/B2 状态 | 待 Windows 验收 | A/B1/B2 均已实现；v3.17.18 调顶栏主题色、移除主页多余框并把模糊上限提到 32；仍待 Windows 实机验收 |
+| 当前测试包 | `m3expressive1` | `m3expressive21-debug`（jar 12,458,303 B / zip 75,762,787 B `3f835d96…`；B2 玻璃 + 亚克力 + 顶栏动态取色 + 强调色/莫奈取色 + debug 日志） |
+| 切片 A/B1/B2 状态 | 待 Windows 验收 | A/B1/B2 均已实现；v3.17.18 调顶栏主题色、移除主页多余框并把模糊上限提到 32；v3.17.19 加亚克力/顶栏壁纸动态取色；v3.17.20 加强调色四模式与 M3 正文/顶栏同源；仍待 Windows 实机验收 |
 | 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转；v3.17.5 问候语下改为每日一言；v3.17.6 本地源可分别启用；v3.17.7 每日一言设置收为单卡片 |
 
 ### 19.8 下一步建议
 
-1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive19-debug` 继承，不并入 M3 B2–G；v3.17.14 的主题三态化已回退，v3.17.15 的三个视觉主题与 v3.17.16 的崩溃修复/默认值也属于非 M3 B2–G 变更；
-2. 用户先对 `m3expressive19-debug` 做 Windows 实机验收（顶栏主题色、主页玻璃/模糊强度、账户卡与每日一言无框、默认 M3 Expressive、Classic↔M3 切换矩阵、三个视觉主题/自定义主题包、主页卡片按钮圆角外不可点、`glass=off` 回退/窗口缩放，以及 5×7 日历、右栏统计、每日一言、本地源等回归）；
-3. B2 玻璃实机确认后进入 C（主页控件/指标/日历/空态 M3 统一）；标题栏已改为 M3 主题色；
+1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive21-debug` 继承，不并入 M3 B2–G；v3.17.14 的主题三态化已回退，v3.17.15 的三个视觉主题与 v3.17.16 的崩溃修复/默认值也属于非 M3 B2–G 变更；
+2. 用户先对 `m3expressive21-debug` 做 Windows 实机验收（顶栏动态取色、强调色四模式/自定义取色器、主页玻璃/亚克力强度、账户卡与每日一言无框、默认 M3 Expressive、Classic↔M3 切换矩阵、三个视觉主题/自定义主题包、主页卡片按钮圆角外不可点、`glass=off` 回退/窗口缩放，以及 5×7 日历、右栏统计、每日一言、本地源等回归）；
+3. B2 玻璃与强调色实机确认后进入 C（主页控件/指标/日历/空态 M3 统一）；标题栏与 M3 正文共用 `M3DynamicColors` 色板；
 4. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
 
 
@@ -2897,3 +2897,57 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 - 壁纸切换/缩放/三主题连续切换是否有颜色闪烁或旧 scheme 残留，需 `m3expressive20-debug` 复测；
 - 磨砂亚克力是 JavaFX 叠加层，不是 Windows 系统 Acrylic；系统级方案若要上，单独立项；
 - 通过后继续切片 C（主页控件/指标/空态统一 M3），不在本切片重写控件行为。
+
+---
+
+## 27. v3.17.20 莫奈取色与自定义强调色
+
+### 27.1 目标与入口
+
+- 用户要求：增加莫奈取色（动态取色），并在设置内提供自定义强调色入口（设置 → 外观）。
+- 入口仍是 `PersonalizationPage` 的“外观”主题区；该文件已是第 12 处代码侵入，本切片不新增上游侵入点。
+- 旧的“主题色 + 覆盖主题”行删除，替换为“强调色”区，避免同一能力出现两套入口。
+
+### 27.2 取色语义
+
+| 模式 | 写入 | 色板来源 |
+|---|---|---|
+| 跟随壁纸（莫奈） | `themeColorType=BACKGROUND` + `THEME_APPEARANCE_COLOR` 覆盖 | `M3DynamicColors` 从当前壁纸生成完整 MonetFX 色板 |
+| 自定义 | `themeColorType=CUSTOM` + `customThemeColor` + 覆盖 | `Themes.getColorScheme()`（自定义种子） |
+| 跟随系统 | `themeColorType=SYSTEM` + 覆盖 | `Themes.getColorScheme()`（系统色） |
+| 跟随主题 | 移除 `THEME_APPEARANCE_COLOR` 覆盖 | `Themes.getColorScheme()`（主题包 source / 默认） |
+
+- “设置 → 外观”的亮度模式、自定义主题包、导出主题不受影响；`ThemePackManager.apply` 仍会清空外观覆盖，此时强调色回到“跟随主题”。
+- 自定义色使用 `JFXColorPicker`，色板为 `ThemeColor.STANDARD_COLORS`；选择器变化立即写入 `CUSTOM` + 覆盖。
+
+### 27.3 实现
+
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3DynamicColors.java`
+  - 监听 `Themes.backgroundProperty()`、`Themes.colorSchemeProperty()`、`LauncherSettings.themeColorTypeProperty()`、`customThemeColorProperty()`，以及 `getThemeAppearanceOverrides()` 中 `THEME_APPEARANCE_COLOR` 的增删。
+  - `isWallpaperAccent()` 仅在覆盖集合包含 `THEME_APPEARANCE_COLOR` 且类型为 `ThemeColorType.BACKGROUND` 时为 true。
+  - 非壁纸模式：取消壁纸监听，`scheme.set(Themes.getColorScheme())`；壁纸模式：从壁纸 `Image` 在 IO 线程构建 `ColorScheme.newBuilder(base).setWallpaper(image).build()`，代数号丢弃过期结果；纯色背景取第一填充色种子，无背景回退 `Themes`。
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/CommunityM3.java`
+  - `M3Theme.fromColorScheme(M3Profile.EXPRESSIVE_2025, M3DynamicColors.get().getScheme())`，不再直接使用 `Themes.getColorScheme()`。
+- `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/m3/M3Host.java`
+  - 监听 `M3DynamicColors.get().schemeProperty()`，不再监听 `Themes.colorSchemeProperty()`；M3 正文与标题栏共用同一色板。
+- `HMCL/src/main/java/org/jackhuang/hmcl/ui/main/PersonalizationPage.java`
+  - 删除 `themeColorSublist`、`RadioChoiceList<ThemeColorType>` 与 `themeColorOverrideButton`，新增 `ComponentSublist accentSublist`。
+  - `LineSelectButton<String> accentModePane`：`dynamic/custom/system/theme`，标题 `settings.launcher.accent.mode`，显示名 `settings.launcher.accent.mode.<mode>`。
+  - `LinePane customColorPane` 内嵌宽 120 的 `JFXColorPicker`，仅 `custom` 可见并占位。
+  - `refreshAccent()`：有覆盖时按 `BACKGROUND/CUSTOM/SYSTEM/DEFAULT` 映射 `dynamic/custom/system/theme`；无覆盖固定 `theme`；回填选择器与颜色选择器。
+  - 选择与颜色变化在 `updatingAccent` 保护下写设置，避免监听回环；描述绑定 `settings.launcher.accent.description.<mode>`。
+- 三份 `HMCL/src/main/resources/assets/lang/I18N.properties`、`I18N_zh.properties`、`I18N_zh_CN.properties` 各新增 11 个 `settings.launcher.accent.*` key；中文括号用 ASCII，避免 `checkTranslations` 的全角括号校验。
+
+### 27.4 验证与包
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **189/0/0/0**；全量 **299/0/0/2 skipped**。
+- jar **12,458,303 B** `86a5a6391f2686b88fb612972fcbc7c9da2e6932729f94423bba837ed98b995f`；exe **13,659,455 B** `07ecb092775c4c4bf6680f16769af71f5cf913ac41c47609bfdff86ccbae8f8f`；stub 1,201,152 B `ded29e28…`。
+- 包 `dist/LMCL-1.0.0-win-x64-m3expressive21-debug.zip` **75,762,787 B** `3f835d9656806f8926d086cb8c5e25a64eca0d4164c2ba7cd6d45d6ed12ba682`；328 entries、`testzip=None`；包内 327 文件 `SHA256SUMS` 通过。
+- 无新增上游代码侵入点；`M3DynamicColors` 是社区类，`PersonalizationPage` 复用第 12 处。
+
+### 27.5 未验证与下一步
+
+- WSL2 无 Windows GUI：未实机验证选择器弹出/取色、四种模式切换后的正文/顶栏颜色、切壁纸时的刷新、重启后的保持。
+- 壁纸动态取色的 `primaryContainer` 若在实机偏饱和，可改用 `surfaceContainer` 或降低 alpha；不改结构。
+- H6 对比度仍随玻璃切片统一验收；本切片只保证 M3 正文与顶栏使用同一色板。
+- 下一步继续切片 C（主页控件/指标/空态统一 M3）；Windows 验收结果回填本文件与待办总览。
