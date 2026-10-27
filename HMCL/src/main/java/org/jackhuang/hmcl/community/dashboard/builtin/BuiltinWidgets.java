@@ -35,6 +35,7 @@ import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
 import org.jackhuang.hmcl.ui.construct.DialogPane;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
+import org.jetbrains.annotations.Nullable;
 
 import static org.jackhuang.hmcl.ui.FXUtils.newBorderButton;
 import static org.jackhuang.hmcl.ui.FXUtils.newRaisedButton;
@@ -138,22 +139,24 @@ final class BuiltinWidgets {
         return spacer;
     }
 
-    /// 用一块玻璃表面包裹卡片或头部内容。
+    /// 用一块双层磨砂材质包裹卡片内容。
     ///
-    /// 玻璃表面作为背景铺满 wrapper；只有当 `GlassSurface` 真正拿到壁纸快照
-    /// 并可见时才给 wrapper 加 `community-glass-active`，让 CSS 把内容自身的
-    /// 实色背景变透明。没有快照时保留原 M3 表面色，避免白字落在壁纸上。
+    /// `GlassSurface` 始终铺满 wrapper 作为背景；快照可用时绘制两层模糊壁纸，
+    /// 不可用时显示统一半透明兜底。内容自身的 `.card` 只在 M3 玻璃开启时透明，
+    /// 因此 Classic 与关闭玻璃模式仍保留原来的实色卡片。
     ///
-    /// @param content 卡片或头部节点
-    /// @param arc     圆角直径
-    /// @return 玻璃包装节点
+    /// @param content   卡片节点
+    /// @param arc       圆角直径
+    /// @param debugName 诊断名称，可为 `null`
+    /// @return 材质包装节点
     @NotNull
-    static StackPane glassCard(@NotNull Node content, double arc) {
-        GlassSurface glass = new GlassSurface(arc);
+    static StackPane materialCard(@NotNull Node content, double arc, @Nullable String debugName) {
+        GlassSurface glass = new GlassSurface(arc, GlassSurface.Kind.CARD);
+        glass.setDebugName(debugName);
         glass.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         StackPane wrapper = new StackPane(glass, content);
-        wrapper.getStyleClass().add("community-glass-card");
+        wrapper.getStyleClass().add("community-material-card");
         wrapper.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         wrapper.setMinHeight(Region.USE_PREF_SIZE);
         StackPane.setAlignment(glass, Pos.TOP_LEFT);
@@ -161,17 +164,17 @@ final class BuiltinWidgets {
         if (content instanceof Region region) {
             region.setMaxWidth(Double.MAX_VALUE);
         }
-
-        glass.visibleProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                if (!wrapper.getStyleClass().contains("community-glass-active")) {
-                    wrapper.getStyleClass().add("community-glass-active");
-                }
-            } else {
-                wrapper.getStyleClass().remove("community-glass-active");
-            }
-        });
         return wrapper;
+    }
+
+    /// 用一块双层磨砂材质包裹卡片内容。
+    ///
+    /// @param content 卡片节点
+    /// @param arc     圆角直径
+    /// @return 材质包装节点
+    @NotNull
+    static StackPane materialCard(@NotNull Node content, double arc) {
+        return materialCard(content, arc, null);
     }
 
     /// 创建符合上游 `DialogPane` 视觉的对话框骨架。

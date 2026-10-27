@@ -587,7 +587,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         if (accountCard == null) {
             accountCard = buildAccountCard();
         }
-        infoColumn.getChildren().add(accountCard);
+        infoColumn.getChildren().add(BuiltinWidgets.materialCard(accountCard, 16, "account"));
         for (DashboardItem item : itemsForHome()) {
             if (!item.enabled()) {
                 continue;
@@ -654,7 +654,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         widget.setMaxHeight(Region.USE_PREF_SIZE);
         widget.setMaxWidth(Double.MAX_VALUE);
         widgets.put(id, widget);
-        column.getChildren().add(BuiltinWidgets.glassCard(widget, 16));
+        column.getChildren().add(BuiltinWidgets.materialCard(widget, 16, id));
         widget.initialize();
         widget.requestRefresh();
     }

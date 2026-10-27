@@ -52,6 +52,9 @@ public final class M3Host extends StackPane {
     /// @param content 内容节点，可为 `null`
     public M3Host(@Nullable Node content) {
         getStyleClass().addAll("lmcl-m3-host", "lmcl-m3");
+        if (M3Settings.isGlassEnabled()) {
+            getStyleClass().add("lmcl-m3-glass");
+        }
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         setContent(content);
         CommunityM3.install(this);

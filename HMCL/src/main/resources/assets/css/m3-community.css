@@ -48,19 +48,40 @@
     -fx-border-width: 0 1 0 0;
 }
 
+/* 磨砂侧栏：表面由 GlassSurface 单层绘制，不再叠加实色或顶部渐变。 */
+.lmcl-m3-glass .community-sidebar {
+    -fx-background-color: transparent;
+}
+
 .lmcl-m3 .community-sidebar-content {
     -fx-background-color: transparent;
 }
 
-/* 玻璃侧栏：快照层由 GlassSurface 自绘，这里只给半透明表面色与边界。 */
+/* 磨砂材质：远景 + 近景两张模糊图，外加统一的半透明表面色。 */
 .lmcl-m3-glass-surface {
     -fx-background-color: transparent;
 }
 
-.lmcl-m3-glass-tint {
-    -fx-background-color: -m3-color-surface-container-low;
-    /* 0.42 会明显压暗壁纸纹理；v3.17.18 降到 0.30，让模糊更可见。 */
+.lmcl-m3-glass .lmcl-m3-glass-image-far {
+    -fx-opacity: 0.50;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-image-near {
     -fx-opacity: 0.30;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-fallback {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-opacity: 0.72;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-tint {
+    -fx-background-color: -m3-color-surface-container-low;
+    -fx-opacity: 0.28;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-sidebar .lmcl-m3-glass-tint {
+    -fx-opacity: 0.40;
 }
 
 .lmcl-m3 .community-sidebar-button {

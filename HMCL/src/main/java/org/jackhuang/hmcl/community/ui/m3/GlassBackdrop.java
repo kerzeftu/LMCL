@@ -15,17 +15,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Modified by LMCL team on 2026-10-23: wallpaper snapshot source for M3 glass.
+ * Modified by LMCL team on 2026-10-28: two-layer frosted material backdrop.
  */
 package org.jackhuang.hmcl.community.ui.m3;
 
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Point2D;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
@@ -48,11 +46,12 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 从当前启动器壁纸生成一张低分辨率模糊快照，供 M3 玻璃表面采样。
+/// 从当前启动器壁纸生成双层低分辨率模糊快照，供 M3 磨砂表面采样。
 ///
 /// `DecoratorSkin` 的背景节点是私有的，社区版无法直接读取；这里改为根据
 /// [Themes#backgroundProperty()] 中的 [LauncherBackground] 在离屏画布上重绘壁纸，
-/// 再用 [BoxBlur] 生成模糊图。这样既不侵入 `DecoratorSkin`，也能跟随主题切换。
+/// 再分别用大、小两个半径的 [BoxBlur] 生成两张图。这样既不侵入
+/// `DecoratorSkin`，也能跟随主题切换。
 ///
 /// 快照以 M3 宿主为坐标原点，只覆盖内容区；[GlassSurface] 会按自身在场景中的
 /// 位置裁剪对应区域。没有可绘制壁纸（纯色主题也会绘制）时返回 `null`，调用方
@@ -68,20 +67,17 @@ public final class GlassBackdrop {
     /// 快照最大高度。
     private static final double MAX_SNAPSHOT_HEIGHT = 400.0;
 
+    /// 远景模糊在屏幕上的目标半径。
+    private static final double FAR_BLUR_SCENE = 64.0;
+
+    /// 近景模糊在屏幕上的目标半径。
+    private static final double NEAR_BLUR_SCENE = 24.0;
+
     /// 单例。
     private static final GlassBackdrop INSTANCE = new GlassBackdrop();
 
-    /// 模糊后的壁纸快照。
-    private final ReadOnlyObjectWrapper<Image> image = new ReadOnlyObjectWrapper<>();
-
-    /// 快照对应的场景 X 原点。
-    private final ReadOnlyDoubleWrapper originX = new ReadOnlyDoubleWrapper();
-
-    /// 快照对应的场景 Y 原点。
-    private final ReadOnlyDoubleWrapper originY = new ReadOnlyDoubleWrapper();
-
-    /// 快照像素 / 场景像素。
-    private final ReadOnlyDoubleWrapper scale = new ReadOnlyDoubleWrapper(1.0);
+    /// 当前双层快照；`null` 表示没有可用壁纸或玻璃关闭。
+    private final ReadOnlyObjectWrapper<GlassSnapshot> snapshot = new ReadOnlyObjectWrapper<>();
 
     /// 壁纸变化监听。
     private final InvalidationListener backgroundListener = observable -> schedule();
@@ -128,32 +124,11 @@ public final class GlassBackdrop {
         return INSTANCE;
     }
 
-    /// 模糊壁纸快照属性；`null` 表示当前没有可用壁纸。
+    /// 当前双层壁纸快照；`null` 表示当前没有可用快照。
     ///
     /// @return 只读属性
-    public ReadOnlyObjectProperty<Image> imageProperty() {
-        return image.getReadOnlyProperty();
-    }
-
-    /// 快照对应的场景 X 原点。
-    ///
-    /// @return 只读属性
-    public ReadOnlyDoubleProperty originXProperty() {
-        return originX.getReadOnlyProperty();
-    }
-
-    /// 快照对应的场景 Y 原点。
-    ///
-    /// @return 只读属性
-    public ReadOnlyDoubleProperty originYProperty() {
-        return originY.getReadOnlyProperty();
-    }
-
-    /// 快照像素与场景像素的比例。
-    ///
-    /// @return 只读属性
-    public ReadOnlyDoubleProperty scaleProperty() {
-        return scale.getReadOnlyProperty();
+    public ReadOnlyObjectProperty<GlassSnapshot> snapshotProperty() {
+        return snapshot.getReadOnlyProperty();
     }
 
     /// 绑定一个 M3 宿主作为坐标原点与尺寸来源。
@@ -203,10 +178,7 @@ public final class GlassBackdrop {
 
     /// 清空快照。
     private void clear() {
-        image.set(null);
-        originX.set(0.0);
-        originY.set(0.0);
-        scale.set(1.0);
+        snapshot.set(null);
     }
 
     /// 合并窗口拖动/缩放期间的多次刷新请求。
@@ -218,7 +190,7 @@ public final class GlassBackdrop {
         refreshDelay.playFromStart();
     }
 
-    /// 重新生成模糊壁纸。
+    /// 重新生成双层模糊壁纸。
     private void refresh() {
         Region host = this.host;
         if (host == null || !M3Settings.isGlassEnabled()) {
@@ -247,16 +219,16 @@ public final class GlassBackdrop {
         LauncherBackground background = Themes.backgroundProperty().get();
         watchImage(background);
 
-        Snapshot snapshot;
+        Snapshot rendered;
         try {
-            snapshot = render(background, width, height);
+            rendered = render(background, width, height);
         } catch (RuntimeException e) {
             LOG.warning("Failed to capture M3 glass backdrop", e);
             clear();
             return;
         }
 
-        if (snapshot == null) {
+        if (rendered == null) {
             debug("snapshot unavailable: host=" + width + "x" + height
                     + ", images=" + background.background().getImages().size()
                     + ", fills=" + background.background().getFills().size());
@@ -264,15 +236,20 @@ public final class GlassBackdrop {
             return;
         }
 
-        double padding = snapshot.padding() / snapshot.scale();
-        originX.set(origin.getX() - padding);
-        originY.set(origin.getY() - padding);
-        scale.set(snapshot.scale());
-        image.set(snapshot.image());
+        double padding = rendered.padding() / rendered.scale();
+        GlassSnapshot next = new GlassSnapshot(
+                rendered.far(),
+                rendered.near(),
+                rendered.scale(),
+                origin.getX() - padding,
+                origin.getY() - padding,
+                rendered.padding());
+        snapshot.set(next);
         debug("snapshot ready: host=" + width + "x" + height
-                + ", image=" + snapshot.image().getWidth() + "x" + snapshot.image().getHeight()
-                + ", scale=" + snapshot.scale()
-                + ", origin=" + originX.get() + "," + originY.get());
+                + ", far=" + rendered.far().getWidth() + "x" + rendered.far().getHeight()
+                + ", near=" + rendered.near().getWidth() + "x" + rendered.near().getHeight()
+                + ", scale=" + rendered.scale()
+                + ", origin=" + next.originX() + "," + next.originY());
     }
 
     /// 监听背景图片的异步加载；加载完成或失败后重新生成快照。
@@ -329,7 +306,16 @@ public final class GlassBackdrop {
                 + " error=" + image.isError();
     }
 
-    /// 渲染并模糊一张壁纸快照。
+    /// 计算屏幕半径换算到快照像素后的模糊半径。
+    ///
+    /// @param sceneRadius 屏幕上的目标半径
+    /// @param scale       快照像素 / 场景像素
+    /// @return 像素半径，至少 1
+    static double blurRadius(double sceneRadius, double scale) {
+        return Math.max(1.0, sceneRadius * scale);
+    }
+
+    /// 渲染并生成一张双层壁纸快照。
     ///
     /// @param source 当前壁纸
     /// @param width  宿主宽度
@@ -341,11 +327,9 @@ public final class GlassBackdrop {
         int pixelWidth = Math.max(2, (int) Math.ceil(width * snapshotScale));
         int pixelHeight = Math.max(2, (int) Math.ceil(height * snapshotScale));
 
-        // 快照本身会按 640px 上限降采样，再被玻璃表面放大；18px 的旧上限在
-        // 大窗口上只剩一层很淡的柔化。这里提高模糊半径，同时把模糊放进
-        // SnapshotParameters，确保快照步骤实际应用效果而不是只依赖节点 effect。
-        double blur = Math.max(12.0, Math.min(32.0, pixelWidth / 14.0));
-        int padding = (int) Math.ceil(blur * 1.5) + 2;
+        double farBlur = blurRadius(FAR_BLUR_SCENE, snapshotScale);
+        double nearBlur = blurRadius(NEAR_BLUR_SCENE, snapshotScale);
+        int padding = (int) Math.ceil(farBlur * 1.5) + 2;
         int canvasWidth = pixelWidth + padding * 2;
         int canvasHeight = pixelHeight + padding * 2;
 
@@ -360,13 +344,26 @@ public final class GlassBackdrop {
             return null;
         }
 
-        canvas.setEffect(new BoxBlur(blur, blur, 3));
+        Image far = blur(canvas, farBlur, canvasWidth, canvasHeight);
+        Image near = blur(canvas, nearBlur, canvasWidth, canvasHeight);
+        return new Snapshot(far, near, snapshotScale, padding);
+    }
 
+    /// 对画布应用一次高斯模糊并生成图片。
+    ///
+    /// @param canvas 已绘制壁纸的画布
+    /// @param radius 模糊半径（像素）
+    /// @param width  输出宽度
+    /// @param height 输出高度
+    /// @return 模糊图
+    @NotNull
+    private static Image blur(@NotNull Canvas canvas, double radius, int width, int height) {
+        canvas.setEffect(new BoxBlur(Math.max(1.0, radius), Math.max(1.0, radius), 3));
         SnapshotParameters parameters = new SnapshotParameters();
         parameters.setFill(Color.TRANSPARENT);
-        WritableImage output = new WritableImage(canvasWidth, canvasHeight);
+        WritableImage output = new WritableImage(width, height);
         canvas.snapshot(parameters, output);
-        return new Snapshot(output, snapshotScale, padding);
+        return output;
     }
 
     /// 用第一张背景图片按 cover 方式铺满画布。
@@ -416,11 +413,12 @@ public final class GlassBackdrop {
         return false;
     }
 
-    /// 一张快照及其像素比例。
+    /// 一张双层快照的原始渲染结果。
     ///
-    /// @param image   模糊图
+    /// @param far     远景模糊图
+    /// @param near    近景模糊图
     /// @param scale   像素 / 场景像素
     /// @param padding 四周额外渲染的像素数
-    private record Snapshot(Image image, double scale, int padding) {
+    private record Snapshot(Image far, Image near, double scale, int padding) {
     }
 }

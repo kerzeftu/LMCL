@@ -318,17 +318,13 @@
     -fx-min-height: 30;
 }
 
-/* 有真实壁纸快照时才让卡片背景透明，露出后面的玻璃表面。 */
-.lmcl-m3 .community-glass-card.community-glass-active > .card {
+/* 主页卡片材质：表面由 GlassSurface 单层绘制，卡片自身透明，避免双层叠加。 */
+.lmcl-m3-glass .community-material-card > .card {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
 }
 
-/* 亚克力卡片边缘：细高光边框让玻璃与底色分层。 */
-.lmcl-m3 .community-glass-card.community-glass-active {
-    -fx-border-color: rgba(255, 255, 255, 0.20);
-    -fx-border-width: 1;
-    -fx-border-radius: 16;
+.community-material-card {
     -fx-background-radius: 16;
 }
 

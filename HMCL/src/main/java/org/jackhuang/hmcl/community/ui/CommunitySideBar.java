@@ -86,7 +86,8 @@ public final class CommunitySideBar extends StackPane {
         setMaxWidth(WIDTH);
         setMaxHeight(Double.MAX_VALUE);
 
-        GlassSurface glass = new GlassSurface();
+        GlassSurface glass = new GlassSurface(0.0, GlassSurface.Kind.SIDEBAR);
+        glass.setDebugName("sidebar");
         glass.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         VBox content = new VBox();
