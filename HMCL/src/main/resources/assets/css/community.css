@@ -223,6 +223,18 @@
     -fx-fill: -monet-on-primary-container;
 }
 
+/* 标题栏玻璃：GlassSurface 在装饰器外，使用全局 monet token，不依赖 M3 子树。 */
+.jfx-tool-bar.lmcl-m3-title-glass-active,
+.jfx-tool-bar.lmcl-m3-title-glass-active.background,
+.jfx-tool-bar.lmcl-m3-title-glass-active.gray-background {
+    -fx-background-color: transparent;
+}
+
+.lmcl-m3-title-glass-active .lmcl-m3-glass-tint {
+    -fx-background-color: -monet-surface-container-low;
+    -fx-opacity: 0.38;
+}
+
 
 /* Semantic inline text roles; use these instead of per-node setStyle. */
 .community-hint {
@@ -293,6 +305,12 @@
 
 .community-home .community-card-actions .jfx-button {
     -fx-min-height: 30;
+}
+
+/* 有真实壁纸快照时才让卡片背景透明，露出后面的玻璃表面。 */
+.lmcl-m3 .community-glass-card.community-glass-active > .card {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
 .community-home .community-source-row {

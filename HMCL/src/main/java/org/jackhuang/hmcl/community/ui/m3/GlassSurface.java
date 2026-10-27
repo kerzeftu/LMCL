@@ -32,6 +32,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
+import static org.jackhuang.hmcl.util.logging.Logger.LOG;
+
 /// 一块采样壁纸快照的 M3 玻璃表面。
 ///
 /// 结构为“模糊壁纸切片 + 半透明表面色 + 圆角裁剪”。它只读取
@@ -60,6 +62,9 @@ public final class GlassSurface extends StackPane {
 
     /// 自身尺寸变化监听。
     private final InvalidationListener geometryListener = observable -> update();
+
+    /// 是否输出玻璃诊断日志。
+    private static final boolean DEBUG = Boolean.getBoolean("lmcl.visual.debug");
 
     /// 创建一个直角玻璃表面。
     public GlassSurface() {
@@ -93,6 +98,7 @@ public final class GlassSurface extends StackPane {
 
         widthProperty().addListener(geometryListener);
         heightProperty().addListener(geometryListener);
+        sceneProperty().addListener(geometryListener);
         localToSceneTransformProperty().addListener(geometryListener);
         GlassBackdrop.get().imageProperty().addListener(weakImageListener);
         GlassBackdrop.get().scaleProperty().addListener(weakImageListener);
@@ -107,21 +113,30 @@ public final class GlassSurface extends StackPane {
         double height = getHeight();
         if (width <= 1.0 || height <= 1.0) {
             setVisible(false);
+            debug("hidden: size " + width + "x" + height);
             return;
         }
 
         clip.setWidth(width);
         clip.setHeight(height);
 
+        if (getScene() == null) {
+            setVisible(false);
+            debug("hidden: no scene");
+            return;
+        }
+
         @Nullable Image image = GlassBackdrop.get().imageProperty().get();
         if (image == null || image.isError() || image.getWidth() <= 0.0 || image.getHeight() <= 0.0) {
             setVisible(false);
+            debug("hidden: no snapshot");
             return;
         }
 
         Point2D origin = localToScene(0.0, 0.0);
         if (origin == null) {
             setVisible(false);
+            debug("hidden: no scene transform");
             return;
         }
 
@@ -133,6 +148,7 @@ public final class GlassSurface extends StackPane {
 
         if (!setViewport(image, imageX, imageY, imageWidth, imageHeight)) {
             setVisible(false);
+            debug("hidden: viewport out of snapshot");
             return;
         }
 
@@ -141,6 +157,16 @@ public final class GlassSurface extends StackPane {
         imageView.setVisible(true);
         tint.setVisible(true);
         setVisible(true);
+        debug("shown: " + width + "x" + height
+                + " viewport=" + imageView.getViewport()
+                + " snapshot=" + image.getWidth() + "x" + image.getHeight());
+    }
+
+    /// 输出诊断信息；仅在 `-Dlmcl.visual.debug=true` 时生效。
+    private static void debug(@NotNull String message) {
+        if (DEBUG) {
+            LOG.info("[glass-surface] " + message);
+        }
     }
 
     /// 设置一个不会越出快照边界的视口。

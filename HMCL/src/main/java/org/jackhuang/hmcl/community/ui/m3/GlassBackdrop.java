@@ -89,8 +89,29 @@ public final class GlassBackdrop {
     /// 宿主尺寸变化监听。
     private final InvalidationListener sizeListener = observable -> schedule();
 
+    /// 宿主场景变化监听：窗口显示/隐藏后重新采样。
+    private final InvalidationListener sceneListener = observable -> schedule();
+
+    /// 当前监听加载进度的壁纸图像。
+    private @Nullable Image watchedImage;
+
+    /// 壁纸图像加载完成/失败监听。
+    private final InvalidationListener imageListener = observable -> {
+        Image watched = watchedImage;
+        if (watched != null && (watched.isError() || watched.getWidth() > 0.0)) {
+            debug("wallpaper image ready: " + describeImage(watched));
+            schedule();
+        }
+    };
+
     /// 当前宿主；`null` 表示没有采样源。
     private @Nullable Region host;
+
+    /// 是否已经注册当前宿主的监听；玻璃开关变化后需要重新挂载。
+    private boolean attached;
+
+    /// 是否输出玻璃诊断日志（`-Dlmcl.visual.debug=true`）。
+    private static final boolean DEBUG = Boolean.getBoolean("lmcl.visual.debug");
 
     /// 合并窗口拖动/缩放期间的连续刷新。
     private final PauseTransition refreshDelay = new PauseTransition(Duration.millis(160));
@@ -141,7 +162,10 @@ public final class GlassBackdrop {
     ///
     /// @param host M3 宿主
     public void attach(@NotNull Region host) {
-        if (this.host == host) {
+        if (this.host == host && attached) {
+            if (!M3Settings.isGlassEnabled()) {
+                detach();
+            }
             return;
         }
         detach();
@@ -153,7 +177,11 @@ public final class GlassBackdrop {
 
         host.widthProperty().addListener(sizeListener);
         host.heightProperty().addListener(sizeListener);
+        host.sceneProperty().addListener(sceneListener);
         Themes.backgroundProperty().addListener(backgroundListener);
+        attached = true;
+        debug("attach host=" + host.getClass().getSimpleName()
+                + " size=" + host.getWidth() + "x" + host.getHeight());
         schedule();
     }
 
@@ -163,10 +191,13 @@ public final class GlassBackdrop {
         if (host != null) {
             host.widthProperty().removeListener(sizeListener);
             host.heightProperty().removeListener(sizeListener);
+            host.sceneProperty().removeListener(sceneListener);
         }
         Themes.backgroundProperty().removeListener(backgroundListener);
+        unwatchImage();
         refreshDelay.stop();
         this.host = null;
+        attached = false;
         clear();
     }
 
@@ -198,15 +229,24 @@ public final class GlassBackdrop {
         double width = host.getWidth();
         double height = host.getHeight();
         if (width < 8.0 || height < 8.0) {
+            debug("skip refresh: host too small " + width + "x" + height);
+            return;
+        }
+
+        if (host.getScene() == null) {
+            debug("skip refresh: host is not in a scene");
             return;
         }
 
         Point2D origin = host.localToScene(0.0, 0.0);
         if (origin == null) {
+            debug("skip refresh: host has no scene transform");
             return;
         }
 
         LauncherBackground background = Themes.backgroundProperty().get();
+        watchImage(background);
+
         Snapshot snapshot;
         try {
             snapshot = render(background, width, height);
@@ -217,6 +257,9 @@ public final class GlassBackdrop {
         }
 
         if (snapshot == null) {
+            debug("snapshot unavailable: host=" + width + "x" + height
+                    + ", images=" + background.background().getImages().size()
+                    + ", fills=" + background.background().getFills().size());
             clear();
             return;
         }
@@ -226,6 +269,64 @@ public final class GlassBackdrop {
         originY.set(origin.getY() - padding);
         scale.set(snapshot.scale());
         image.set(snapshot.image());
+        debug("snapshot ready: host=" + width + "x" + height
+                + ", image=" + snapshot.image().getWidth() + "x" + snapshot.image().getHeight()
+                + ", scale=" + snapshot.scale()
+                + ", origin=" + originX.get() + "," + originY.get());
+    }
+
+    /// 监听背景图片的异步加载；加载完成或失败后重新生成快照。
+    private void watchImage(@NotNull LauncherBackground background) {
+        Image next = firstImage(background.background());
+        if (next == watchedImage) {
+            return;
+        }
+        unwatchImage();
+        watchedImage = next;
+        if (next != null) {
+            next.progressProperty().addListener(imageListener);
+            next.widthProperty().addListener(imageListener);
+            next.errorProperty().addListener(imageListener);
+            debug("watch wallpaper image: " + describeImage(next));
+        }
+    }
+
+    /// 解除壁纸图片监听。
+    private void unwatchImage() {
+        Image watched = watchedImage;
+        if (watched != null) {
+            watched.progressProperty().removeListener(imageListener);
+            watched.widthProperty().removeListener(imageListener);
+            watched.errorProperty().removeListener(imageListener);
+        }
+        watchedImage = null;
+    }
+
+    /// 返回背景中的第一张图片，可能尚未加载完成。
+    @Nullable
+    private static Image firstImage(@NotNull Background background) {
+        for (BackgroundImage backgroundImage : background.getImages()) {
+            Image image = backgroundImage.getImage();
+            if (image != null) {
+                return image;
+            }
+        }
+        return null;
+    }
+
+    /// 输出诊断信息；仅在 `-Dlmcl.visual.debug=true` 时生效。
+    private static void debug(@NotNull String message) {
+        if (DEBUG) {
+            LOG.info("[glass] " + message);
+        }
+    }
+
+    /// 描述图片加载状态，便于诊断异步壁纸。
+    @NotNull
+    private static String describeImage(@NotNull Image image) {
+        return image.getWidth() + "x" + image.getHeight()
+                + " progress=" + image.getProgress()
+                + " error=" + image.isError();
     }
 
     /// 渲染并模糊一张壁纸快照。

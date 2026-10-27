@@ -25,8 +25,10 @@ import javafx.scene.control.OverrunStyle;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.ui.RoundedHitArea;
+import org.jackhuang.hmcl.community.ui.m3.GlassSurface;
 import org.jackhuang.hmcl.game.HMCLGameRepository;
 import org.jackhuang.hmcl.game.Version;
 import org.jackhuang.hmcl.ui.construct.DialogCloseEvent;
@@ -134,6 +136,42 @@ final class BuiltinWidgets {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         return spacer;
+    }
+
+    /// 用一块玻璃表面包裹卡片或头部内容。
+    ///
+    /// 玻璃表面作为背景铺满 wrapper；只有当 `GlassSurface` 真正拿到壁纸快照
+    /// 并可见时才给 wrapper 加 `community-glass-active`，让 CSS 把内容自身的
+    /// 实色背景变透明。没有快照时保留原 M3 表面色，避免白字落在壁纸上。
+    ///
+    /// @param content 卡片或头部节点
+    /// @param arc     圆角直径
+    /// @return 玻璃包装节点
+    @NotNull
+    static StackPane glassCard(@NotNull Node content, double arc) {
+        GlassSurface glass = new GlassSurface(arc);
+        glass.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        StackPane wrapper = new StackPane(glass, content);
+        wrapper.getStyleClass().add("community-glass-card");
+        wrapper.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        wrapper.setMinHeight(Region.USE_PREF_SIZE);
+        StackPane.setAlignment(glass, Pos.TOP_LEFT);
+        StackPane.setAlignment(content, Pos.TOP_LEFT);
+        if (content instanceof Region region) {
+            region.setMaxWidth(Double.MAX_VALUE);
+        }
+
+        glass.visibleProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                if (!wrapper.getStyleClass().contains("community-glass-active")) {
+                    wrapper.getStyleClass().add("community-glass-active");
+                }
+            } else {
+                wrapper.getStyleClass().remove("community-glass-active");
+            }
+        });
+        return wrapper;
     }
 
     /// 创建符合上游 `DialogPane` 视觉的对话框骨架。

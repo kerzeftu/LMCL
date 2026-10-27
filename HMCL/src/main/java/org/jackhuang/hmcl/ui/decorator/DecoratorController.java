@@ -20,6 +20,7 @@ package org.jackhuang.hmcl.ui.decorator;
 import com.jfoenix.controls.JFXSnackbar;
 import com.jfoenix.controls.JFXSnackbarLayout;
 import javafx.animation.Interpolator;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.scene.Node;
 import javafx.scene.input.*;
@@ -29,8 +30,11 @@ import javafx.util.Duration;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorDnD;
 import org.jackhuang.hmcl.community.config.CommunityConfigDnD;
 import org.jackhuang.hmcl.community.ui.CommunitySideBar;
+import org.jackhuang.hmcl.community.ui.CommunityStyles;
 import org.jackhuang.hmcl.community.ui.ManagementPage;
 import org.jackhuang.hmcl.community.ui.OtherPage;
+import org.jackhuang.hmcl.community.ui.m3.GlassBackdrop;
+import org.jackhuang.hmcl.community.ui.m3.GlassSurface;
 import org.jackhuang.hmcl.community.ui.m3.M3Host;
 import org.jackhuang.hmcl.community.ui.m3.M3Settings;
 import org.jackhuang.hmcl.community.ui.transfer.SettingsImportDialog;
@@ -63,6 +67,12 @@ public class DecoratorController {
     /// 当前挂在外壳上的 M3 宿主；Classic 主题下为 `null`。
     private @Nullable M3Host m3Host;
 
+    /// 标题栏玻璃表面；仅 M3 + 玻璃开启时存在。
+    private @Nullable GlassSurface titleGlass;
+
+    /// 标题栏容器；用于添加/移除玻璃层与激活样式。
+    private @Nullable StackPane titleContainer;
+
     public DecoratorController(Stage stage, Node mainPage) {
         decorator = new Decorator(stage);
         decorator.titleTransparentProperty().bind(Themes.titleBarTransparentProperty());
@@ -78,6 +88,16 @@ public class DecoratorController {
         HBox.setHgrow(navigator, Priority.ALWAYS);
         navigator.setMaxWidth(Double.MAX_VALUE);
         applyVisualTheme();
+        decorator.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (newScene != null) {
+                Platform.runLater(this::installTitleBarGlass);
+            }
+        });
+        decorator.skinProperty().addListener((observable, oldSkin, newSkin) -> {
+            removeTitleBarGlass();
+            Platform.runLater(this::installTitleBarGlass);
+        });
+        Platform.runLater(this::installTitleBarGlass);
         decorator.onCloseNavButtonActionProperty().set(e -> close());
         decorator.onBackNavButtonActionProperty().set(e -> back());
         decorator.onRefreshNavButtonActionProperty().set(e -> refresh());
@@ -167,9 +187,62 @@ public class DecoratorController {
             decorator.getContent().setAll(nextHost);
             nextHost.setContent(shell);
             m3Host = nextHost;
+            // Use the whole decorator as the backdrop host, so the sidebar, home
+            // content and title bar all sample the same scene-space snapshot.
+            GlassBackdrop.get().attach(decorator);
+            Platform.runLater(this::installTitleBarGlass);
         } else {
             decorator.getContent().setAll(shell);
+            GlassBackdrop.get().detach();
+            removeTitleBarGlass();
         }
+    }
+
+    /// Adds a glass layer to the decorator title bar when M3 glass is active.
+    private void installTitleBarGlass() {
+        if (!M3Settings.isM3Enabled() || !M3Settings.isGlassEnabled()) {
+            removeTitleBarGlass();
+            return;
+        }
+        if (titleGlass != null) {
+            return;
+        }
+
+        Node node = decorator.lookup(".jfx-tool-bar");
+        if (!(node instanceof StackPane container)) {
+            return;
+        }
+
+        CommunityStyles.apply(container);
+        GlassSurface glass = new GlassSurface();
+        glass.getStyleClass().add("lmcl-m3-title-glass");
+        glass.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        container.getChildren().add(0, glass);
+        titleContainer = container;
+        titleGlass = glass;
+
+        glass.visibleProperty().addListener((observable, oldValue, visible) -> {
+            if (visible) {
+                if (!container.getStyleClass().contains("lmcl-m3-title-glass-active")) {
+                    container.getStyleClass().add("lmcl-m3-title-glass-active");
+                }
+            } else {
+                container.getStyleClass().remove("lmcl-m3-title-glass-active");
+            }
+        });
+    }
+
+    /// Removes the title bar glass layer; safe to call repeatedly.
+    private void removeTitleBarGlass() {
+        StackPane container = titleContainer;
+        if (container != null) {
+            container.getStyleClass().remove("lmcl-m3-title-glass-active");
+            if (titleGlass != null) {
+                container.getChildren().remove(titleGlass);
+            }
+        }
+        titleContainer = null;
+        titleGlass = null;
     }
 
     public Decorator getDecorator() {
