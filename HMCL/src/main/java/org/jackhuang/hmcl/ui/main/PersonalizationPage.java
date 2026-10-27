@@ -18,7 +18,6 @@
 package org.jackhuang.hmcl.ui.main;
 
 import com.jfoenix.controls.*;
-import com.jfoenix.effects.JFXDepthManager;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
@@ -60,7 +59,6 @@ import org.jackhuang.hmcl.theme.BuiltinBackground;
 import org.jackhuang.hmcl.theme.NetworkBackgroundImageCachePolicy;
 import org.jackhuang.hmcl.theme.Theme;
 import org.jackhuang.hmcl.theme.ThemeColor;
-import org.jackhuang.hmcl.theme.ThemeColorSource;
 import org.jackhuang.hmcl.theme.ThemePackExporter;
 import org.jackhuang.hmcl.theme.ThemePackManifest;
 import org.jackhuang.hmcl.theme.ThemePackManager;
@@ -575,163 +573,112 @@ public class PersonalizationPage extends StackPane {
         }
 
         {
-            ComponentSublist themeColorSublist = new ComponentSublist();
-            themeColorSublist.setTitle(i18n("settings.launcher.theme_color"));
-            themeColorSublist.setHasSubtitle(true);
-            Supplier<@Nullable ThemeColorSource> effectiveThemeColorSource = () -> {
-                try {
-                    return ThemePackManager.resolveCurrentThemeColorSource(ThemePackManager.currentResolveContext());
-                } catch (IOException | RuntimeException e) {
-                    return null;
-                }
-            };
-            Supplier<ThemeColorType> effectiveThemeColorType = () -> {
-                @Nullable ThemeColorSource source = effectiveThemeColorSource.get();
-                if (source instanceof ThemeColorSource.Wallpaper) {
-                    return ThemeColorType.BACKGROUND;
-                }
-                if (source instanceof ThemeColorSource.Custom) {
-                    return ThemeColorType.CUSTOM;
-                }
-                return ThemeColorType.DEFAULT;
-            };
+            ComponentSublist accentSublist = new ComponentSublist();
+            accentSublist.setTitle(i18n("settings.launcher.accent"));
+            accentSublist.setHasSubtitle(true);
 
             ColorPicker picker = new JFXColorPicker();
             picker.getCustomColors().setAll(ThemeColor.STANDARD_COLORS.stream().map(ThemeColor::color).toList());
-            Platform.runLater(() -> JFXDepthManager.setDepth(picker, 0));
+            picker.setPrefWidth(120);
 
-            var defaultColorChoice = new RadioChoiceList.Choice<ThemeColorType>(
-                    i18n("settings.launcher.theme_color_type.default"),
-                    ThemeColorType.DEFAULT);
+            LineSelectButton<String> accentModePane = new LineSelectButton<>();
+            accentModePane.setTitle(i18n("settings.launcher.accent.mode"));
+            accentModePane.setConverter(mode -> i18n("settings.launcher.accent.mode."
+                    + Objects.requireNonNullElse(mode, "theme")));
+            accentModePane.setItems(Arrays.asList("dynamic", "custom", "system", "theme"));
 
-            var systemColorChoice = new RadioChoiceList.Choice<ThemeColorType>(
-                    i18n("settings.launcher.theme_color_type.system"),
-                    ThemeColorType.SYSTEM);
+            LinePane customColorPane = new LinePane();
+            customColorPane.setTitle(i18n("settings.launcher.accent.custom_color"));
+            customColorPane.setRight(picker);
+            customColorPane.visibleProperty().bind(accentModePane.valueProperty().isEqualTo("custom"));
+            customColorPane.managedProperty().bind(customColorPane.visibleProperty());
 
-            var customColorChoice = new RadioChoiceList.Choice<ThemeColorType>(
-                    i18n("settings.launcher.theme_color_type.custom"),
-                    ThemeColorType.CUSTOM) {
-                @Override
-                protected Node createRightNode() {
-                    return picker;
-                }
-            };
-            customColorChoice.setSubtitle(i18n("settings.launcher.theme_color_type.custom.description"));
-
-            var backgroundColorChoice = new RadioChoiceList.Choice<ThemeColorType>(
-                    i18n("settings.launcher.theme_color_type.background"),
-                    ThemeColorType.BACKGROUND);
-
-            RadioChoiceList<ThemeColorType> themeColorChoiceList = new RadioChoiceList<>();
-            themeColorChoiceList.setFallbackValue(ThemeColorType.DEFAULT);
-            themeColorChoiceList.setChoices(Arrays.asList(
-                    defaultColorChoice,
-                    systemColorChoice,
-                    customColorChoice,
-                    backgroundColorChoice));
-
-            JFXButton themeColorOverrideButton = createThemeAppearanceOverrideButton();
-            themeColorSublist.setTitleRight(themeColorOverrideButton);
-            Holder<Boolean> updatingThemeColor = new Holder<>(false);
-            InvalidationListener refreshThemeColor = ignored -> {
-                if (updatingThemeColor.value) {
+            Holder<Boolean> updatingAccent = new Holder<>(false);
+            InvalidationListener refreshAccent = ignored -> {
+                if (updatingAccent.value) {
                     return;
                 }
-                updatingThemeColor.value = true;
+                updatingAccent.value = true;
                 try {
                     boolean overridden = settings().getThemeAppearanceOverrides().contains(
                             LauncherSettings.THEME_APPEARANCE_COLOR);
                     ThemeColorType type = overridden
                             ? Objects.requireNonNullElse(settings().themeColorTypeProperty().get(), ThemeColorType.DEFAULT)
-                            : effectiveThemeColorType.get();
+                            : ThemeColorType.DEFAULT;
+                    String mode = overridden ? switch (type) {
+                        case BACKGROUND -> "dynamic";
+                        case CUSTOM -> "custom";
+                        case SYSTEM -> "system";
+                        case DEFAULT -> "theme";
+                    } : "theme";
                     ThemeColor color = Objects.requireNonNullElse(
                             settings().customThemeColorProperty().get(),
                             ThemeColor.DEFAULT);
-                    if (!overridden) {
-                        @Nullable ThemeColorSource source = effectiveThemeColorSource.get();
-                        if (source instanceof ThemeColorSource.Custom custom) {
-                            color = custom.color();
-                        }
-                    }
-                    themeColorChoiceList.selectedValueProperty().set(type);
+                    accentModePane.setValue(mode);
                     picker.setValue(color.color());
-                    updateThemeAppearanceOverrideButton(themeColorOverrideButton, !overridden);
                 } finally {
-                    updatingThemeColor.value = false;
+                    updatingAccent.value = false;
                 }
             };
-            themeColorChoiceList.selectedValueProperty().addListener((observable, oldValue, newValue) -> {
-                if (updatingThemeColor.value) {
+
+            accentModePane.valueProperty().addListener((observable, oldMode, newMode) -> {
+                if (updatingAccent.value || newMode == null) {
                     return;
                 }
-                updatingThemeColor.value = true;
+                updatingAccent.value = true;
                 try {
-                    ThemeColorType type = Objects.requireNonNullElse(newValue, ThemeColorType.DEFAULT);
-                    settings().themeColorTypeProperty().set(type);
-                    if (type == ThemeColorType.CUSTOM) {
-                        @Nullable Color color = picker.getValue();
-                        settings().customThemeColorProperty().set(
-                                color != null ? ThemeColor.of(color) : ThemeColor.DEFAULT);
-                    }
-                    settings().getThemeAppearanceOverrides().add(LauncherSettings.THEME_APPEARANCE_COLOR);
-                    updateThemeAppearanceOverrideButton(themeColorOverrideButton, false);
-                } finally {
-                    updatingThemeColor.value = false;
-                }
-            });
-            picker.valueProperty().addListener((observable, oldValue, newValue) -> {
-                if (updatingThemeColor.value) {
-                    return;
-                }
-                updatingThemeColor.value = true;
-                try {
-                    settings().themeColorTypeProperty().set(ThemeColorType.CUSTOM);
-                    settings().customThemeColorProperty().set(
-                            newValue != null ? ThemeColor.of(newValue) : ThemeColor.DEFAULT);
-                    settings().getThemeAppearanceOverrides().add(LauncherSettings.THEME_APPEARANCE_COLOR);
-                    themeColorChoiceList.selectedValueProperty().set(ThemeColorType.CUSTOM);
-                    updateThemeAppearanceOverrideButton(themeColorOverrideButton, false);
-                } finally {
-                    updatingThemeColor.value = false;
-                }
-            });
-            settings().themeColorTypeProperty().addListener(refreshThemeColor);
-            settings().customThemeColorProperty().addListener(refreshThemeColor);
-            addThemeAppearanceRefreshListener(refreshThemeColor);
-            themeColorOverrideButton.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
-                updatingThemeColor.value = true;
-                try {
-                    if (!settings().getThemeAppearanceOverrides().contains(LauncherSettings.THEME_APPEARANCE_COLOR)) {
-                        ThemeColorType type = Objects.requireNonNullElse(
-                                themeColorChoiceList.getSelectedValue(),
-                                ThemeColorType.DEFAULT);
-                        settings().themeColorTypeProperty().set(type);
-                        if (type == ThemeColorType.CUSTOM) {
+                    switch (newMode) {
+                        case "dynamic" -> {
+                            settings().themeColorTypeProperty().set(ThemeColorType.BACKGROUND);
+                            settings().getThemeAppearanceOverrides().add(LauncherSettings.THEME_APPEARANCE_COLOR);
+                        }
+                        case "custom" -> {
+                            settings().themeColorTypeProperty().set(ThemeColorType.CUSTOM);
                             @Nullable Color color = picker.getValue();
                             settings().customThemeColorProperty().set(
                                     color != null ? ThemeColor.of(color) : ThemeColor.DEFAULT);
+                            settings().getThemeAppearanceOverrides().add(LauncherSettings.THEME_APPEARANCE_COLOR);
                         }
-                        settings().getThemeAppearanceOverrides().add(LauncherSettings.THEME_APPEARANCE_COLOR);
-                    } else {
-                        settings().getThemeAppearanceOverrides().remove(LauncherSettings.THEME_APPEARANCE_COLOR);
+                        case "system" -> {
+                            settings().themeColorTypeProperty().set(ThemeColorType.SYSTEM);
+                            settings().getThemeAppearanceOverrides().add(LauncherSettings.THEME_APPEARANCE_COLOR);
+                        }
+                        case "theme" -> settings().getThemeAppearanceOverrides().remove(
+                                LauncherSettings.THEME_APPEARANCE_COLOR);
+                        default -> {
+                        }
                     }
                 } finally {
-                    updatingThemeColor.value = false;
+                    updatingAccent.value = false;
                 }
-                refreshThemeColor.invalidated(null);
-                event.consume();
+                refreshAccent.invalidated(null);
             });
-            themeColorSublist.descriptionProperty().bind(Bindings.createStringBinding(() -> {
-                        ThemeColorType type = Objects.requireNonNullElse(
-                                themeColorChoiceList.selectedValueProperty().get(),
-                                ThemeColorType.DEFAULT);
-                        return i18n("settings.launcher.theme_color_type." + type.name().toLowerCase(Locale.ROOT));
-                    },
-                    themeColorChoiceList.selectedValueProperty()));
-            refreshThemeColor.invalidated(null);
+            picker.valueProperty().addListener((observable, oldColor, newColor) -> {
+                if (updatingAccent.value) {
+                    return;
+                }
+                updatingAccent.value = true;
+                try {
+                    settings().themeColorTypeProperty().set(ThemeColorType.CUSTOM);
+                    settings().customThemeColorProperty().set(
+                            newColor != null ? ThemeColor.of(newColor) : ThemeColor.DEFAULT);
+                    settings().getThemeAppearanceOverrides().add(LauncherSettings.THEME_APPEARANCE_COLOR);
+                    accentModePane.setValue("custom");
+                } finally {
+                    updatingAccent.value = false;
+                }
+            });
+            settings().themeColorTypeProperty().addListener(refreshAccent);
+            settings().customThemeColorProperty().addListener(refreshAccent);
+            addThemeAppearanceRefreshListener(refreshAccent);
+            accentSublist.descriptionProperty().bind(Bindings.createStringBinding(() -> i18n(
+                            "settings.launcher.accent.description."
+                                    + Objects.requireNonNullElse(accentModePane.getValue(), "theme")),
+                    accentModePane.valueProperty()));
+            refreshAccent.invalidated(null);
 
-            themeColorSublist.getContent().setAll(themeColorChoiceList);
-            themeAppearanceList.getContent().add(themeColorSublist);
+            accentSublist.getContent().setAll(accentModePane, customColorPane);
+            themeAppearanceList.getContent().add(accentSublist);
         }
 
         {
