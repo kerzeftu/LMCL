@@ -2,7 +2,7 @@
 
 > **阶段** 四（补丁） ｜ **优先级** P1 ｜ **工期** 1 周（第一阶段 4 人日 + 阶段 E 约 2 人日） ｜ **前置** [21](21-主页重构与侧边栏移除.md) ｜ **后续** — ｜ **侵入点** `LauncherSettingsPage.java`（第 8 处）、`Controllers.java`（第 9 处）；阶段 E 无新增上游侵入
 >
-> **状态**：v3.12 五 tab（内存优化 / 设置导入导出 / 帮助 / 反馈 / 关于 LMCL）已实现并编译验证；v3.10 起账户、实例迁到步骤 23 的 `ManagementPage`，社区设置项删除。§3.1A 的账户、实例、社区设置内嵌为 v3.9 历史；v3.12 新增的第五 tab 见 §9。GUI 未在 Windows 实机验证。
+> **状态**：v3.12 五 tab（内存优化 / 设置导入导出 / 帮助 / 反馈 / 关于 LMCL）已实现并编译验证；v3.10 起账户、实例迁到步骤 23 的 `ManagementPage`，社区设置项删除。§3.1A 的账户、实例、社区设置内嵌为 v3.9 历史；v3.12 新增的第五 tab 见 §9。**v3.17.21 起关于页应用图标与捐赠者已更新**，见 §6B.13。GUI 未在 Windows 实机验证。
 >
 > **v3.12 变更（2026-10-22）**：新增“设置导入 / 导出”tab（`ui/transfer/SettingsTransferPane`），对应 `.lmcl.json` 的 5 类 `SettingsSectionExporter`；`OtherPage` 左侧“工具”分类变为“内存优化 / 设置导入-导出”，“支持”分类不变；拖入识别仍挂在 `DecoratorController`（已有第 7 处侵入，无新增）。
 
@@ -16,7 +16,7 @@
 2. `OtherPage` 左侧 200 px 二级菜单按 HMCL 设置页样式分组，右 tab 内容可切换；
 3. 设置页只剩游戏 / Java / 设置 / 个性化 / 下载 五个 tab，原帮助、反馈、关于入口不再存在；
 4. `hmcl://settings/feedback` 等站内链接仍能打开反馈 tab，不出现死链；
-5. “关于 LMCL”包含产品信息、开发人员“指尖的宇宙 kerze”、上游 HMCL 全部致谢条目、捐赠者空态、更新检查与法律信息；
+5. “关于 LMCL”包含产品信息、开发人员“指尖的宇宙 kerze”、上游 HMCL 全部致谢条目、捐赠者列表（v3.17.21 起含“木子呆、法棍与仰望星空派”）、更新检查与法律信息；
 6. 关于页读取 `thanks.json`、`lmcl-donors.json` 走 IO 线程，不阻塞 FX；
 7. ~~六 tab 均可切换：账户、实例、社区设置、帮助、反馈、关于 LMCL；~~（v3.10 被步骤 23 取代：四 tab，账户/实例在管理页）
 8. ~~账户/实例内嵌可操作列表~~（v3.10 迁到步骤 23 的管理页）；
@@ -286,7 +286,7 @@ HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe \
 - [ ] 社区设置 tab 内嵌显示 dashboard/data/download/java/memory 分组，不弹独立对话框；
 - [ ] v3.9 时设置页五个 tab（历史；v3.11 起 Java 管理迁到管理页，设置页只剩游戏/设置/个性化/下载），默认 tab 正常；
 - [ ] `hmcl://settings/feedback` 或帮助页内的反馈链接打开“其他 → 反馈”；
-- [ ] 关于页：产品信息、开发人员、致谢全量、捐赠者空态、更新检查、法律信息；
+- [ ] 关于页：产品信息、开发人员、致谢全量、捐赠者列表（v3.17.21 起）、更新检查、法律信息；
 - [ ] 主页只有 9 卡，无 storage/memory；账户卡点击打开“其他 → 账户”；
 - [ ] 深色/浅色主题下头像与文字可读；
 - [ ] 返回主页/下载/设置后再次进入“其他”，tab 状态正常。
@@ -631,11 +631,52 @@ line.setPadding(new Insets(10, 16, 10, 48));
 2. 左留白固定 64 px（外层 16 + 内联 48），不随窗口宽度缩放；极窄窗口下可用于显示内容的宽度会更少。
 3. 标题列仍固定最大 140 px；多行值仍不换行，超出用省略号 + Tooltip。
 
+## 6B.13 v3.17.21 应用图标与捐赠者（2026-10-28，m27599）
+
+### 6B.13.1 需求
+
+用户提供 970×970 透明背景图标（紫色方块 + 鲸鱼），要求替换“各处出现图标的地方”，并把“木子呆、法棍与仰望星空派”加入捐赠致谢列表。
+
+### 6B.13.2 图标资源
+
+| 文件 | 尺寸/大小 | 用途 |
+|---|---|---|
+| `assets/img/icon.png` | 32×32 / 696 B | JavaFX 小图标 |
+| `assets/img/icon@2x.png` | 64×64 / 1,881 B | 对话框/页面 |
+| `assets/img/icon@4x.png` | 128×128 / 5,609 B | 关于页等 |
+| `assets/img/icon@8x.png` | 256×256 / 17,517 B | 设置/主题包列表 |
+| `assets/img/icon-mac.png` | 512×512 / 58,178 B | AWT Taskbar |
+| `assets/img/icon-title.png` | 24×24 / 481 B | 主页标题栏 |
+| `assets/img/icon-title@2x.png` | 48×48 / 1,266 B | 标题栏 HiDPI |
+| `assets/img/hmcl.png` | 32×32 / 3,004 B | 仅上游 HMCL“用户”致谢条目 |
+
+- 源文件与 7 档 ICO 入库 `lib/branding/`（`LMCL-icon.png`、`LMCL.ico`、`README.md`）；Windows exe 图标另在 `hmclauncher/HMCL.ico`。
+- `assets/about/thanks.json` 的 `about.thanks_to.users` 条目 `image` 改为 `/assets/img/hmcl.png`，避免 LMCL 图标覆盖上游致谢。
+- 未改 `AboutPage.java`/`FeedbackPage.java`/`GameSettingsPage.java`/`MainPage.java` 等引用路径。
+
+### 6B.13.3 捐赠者
+
+- `assets/about/lmcl-donors.json`：`[{"name":"木子呆、法棍与仰望星空派","note":"community.about.developer.icon"}]`。
+- `AboutLMCLPage.buildDonors`：`note` 先 `I18n.hasKey(note)`，是则翻译为“图标设计与绘制”，否则原样显示；复用已有 key。
+- `AboutDataTest` 改为 `loadsUpstreamThanksAndDonorList`，断言 1 条捐赠者与 name/note。
+
+### 6B.13.4 验证
+
+- `:HMCL:compileJava`、`:HMCL:checkTranslations` 通过；community **189/0/0/0**；全量 **299/0/0/2 skipped**。
+- jar **12,354,945 B** `fe3b6738f305681405340b6c403a36b3db2bcfdc7fda2ee4ce47f810bc752416`；exe **13,672,335 B** `c4483561077aa3d51300392e4bae0bf0727bc4d99ada9d6af23e0ac9f1b16cef`；HMCLauncher stub **1,317,390 B** `e06151cc…`；`exe[:stub]==stub`、`exe[stub:]==jar`。
+- `m3expressive22` zip **75,827,651 B** `87207fd7ce4783af2d667a2d81e5a2ded760ed5187e95a9b16821e54ace0199a`；327 entries、`testzip=None`。
+
+### 6B.13.5 未验证
+
+- WSL2 无 Windows GUI：窗口/任务栏/exe 图标、Windows 图标缓存、16/24 px 可辨识度、DPI 未实机确认；
+- 捐赠者行与上游致谢图标的视觉隔离未截图确认；
+- 图标源文件授权表述待发布前确认。
+
 ## 6. 实现偏差与已知问题
 
 1. 关于页致谢标题实际为“HMCL 贡献者致谢”，未使用方案里的“HMCL 项目与贡献者”；含义相近，但把社区伙伴也归入“贡献者”。
 2. 未在 Windows 实机验证；WSL2 无 DISPLAY/Wine，因此 GUI 层全部未点验。
-3. 图标仍为上游 `/assets/img/icon.png`；用户提供 LMCL 图标后需替换。
+3. 图标已在 v3.17.21 替换为 LMCL 自有图标；上游 HMCL 用户致谢条目改用保留的 `hmcl.png`，见 §6B.13。
 4. 账户、实例、社区设置的内嵌 tab 已在 v3.9 实现；`AccountListPage`/`GameListPage` 未修改源码，内嵌时只隐藏其 left 导航。
 5. 内嵌页依赖上游页面的私有 skin 与构造行为；上游升级若把 left 改为懒创建或改变 center 结构，需重新验证（当前基线 v3.16.4）。
 6. 实例页的目录切换菜单在 `GameDirectoryManager.selectedRepositoryProperty()` 变化时重建；新建目录后需重新打开菜单才刷新。

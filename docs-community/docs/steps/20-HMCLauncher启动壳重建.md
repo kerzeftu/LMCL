@@ -3,7 +3,7 @@
 > **阶段**：阶段一 · 工程底座 ｜ **优先级**：P1 ｜ **工期**：2–5 天
 > **前置**：[步骤 01](01-仓库建立与上游同步机制.md)（镜像/同步方式已定）、[步骤 03](03-产品身份与合规改造.md)（产品名、图标、版本号已定） ｜ **后续**：[步骤 04](04-包名Relocate改造.md)（产物拼接验证）、[步骤 18](18-内存优化P2-发布准备.md)（发布签名）
 > **侵入点**：HMCL 仓库 **0 处**；新增独立 fork 仓库 `HMCLauncher`，通过 `HMCL_LAUNCHER_EXE` 替换构建期 stub
-> **实现状态（2026-10-22）**：源码 fork/品牌字段/数据目录/CI 与 **MinGW i686 交叉构建**已完成（本地 `hmclauncher` 仓库，`c580531` + `802853c`）；**v3.16.8 起 stub 资源版本与启动器产品版本对齐为 `1.0.0.0`**；**Windows/MSVC 构建与 10 项行为验收待执行**；`home4-stub` 与 `m3spike8` 已删除，当前测试包为 `m3spike9`，已验收的 home3 保留。见 §7。
+> **实现状态（2026-10-28）**：源码 fork/品牌字段/数据目录/CI 与 **MinGW i686 交叉构建**已完成（本地 `hmclauncher` 仓库，`c580531` + `802853c` + `4c7daa3`）；**v3.16.8 起 stub 资源版本与启动器产品版本对齐为 `1.0.0.0`**；**v3.17.21 起图标替换为 LMCL 自有 7 档 ICO**，stub 重建为 1,317,390 B；**Windows/MSVC 构建与 10 项行为验收仍待执行**；当前测试包为 `m3expressive22`，已验收的 home3 保留。见 §7。
 
 ---
 
@@ -351,15 +351,29 @@ i686-w64-mingw32-g++-posix -std=c++20 -Os -s -municode -mwindows   -ffunction-se
 - MinGW i686 重新编译：`HMCLauncher.exe` 1,201,152 B，SHA-256 `ded29e28971755afc83041f91dec9fce7ff4f4a130c0bb07983b4a42f8f3370b`；PE32 GUI i386，`strings` 含 `1.0.0.0`、不含 `3.16.1000.0`。
 - 用该 stub 重建 `HMCL-1.0.0.exe`：exe 13,050,225 B（`4dcb508f…`），jar 11,849,073 B（`c1d264c7…`）；`exe[:stub]==stub`、`exe[stub:]==jar`。
 - 同步更新了 `README.md` 的品牌/版本说明与 `BRANDING.md` 的待办状态；Windows/MSVC 构建与 10 项行为验收仍未执行。
+- v3.17.21 再次替换 ICO 并重建 stub，见 §7.8；§7.6 的 1,201,152 B 哈希仅代表 v3.16.8 当时的产物。
 
 ### 7.7 风险与回退
 
 - **未实机启动**：`home4-stub` 只作测试，不替换已验收的 home3；`HMCL_LAUNCHER_EXE` 置空即回官方 stub。
 - **MinGW CRT 差异**：本 stub 用 MinGW 静态 CRT，体积 1.2 MB（官方约 454 KB），依赖面已压到 Win7 系统 DLL；MSVC 正式构建仍应作为发布基线。
-- 图标/Java 下载页仍是上游占位，发布前必须处理。
+- Java 下载页仍指向 `docs.hmcl.net` 占位，发布前必须处理；图标已于 v3.17.21 替换（见 §7.8）。
 - fork 仓库尚无远端；公开源码义务在发布二进制前必须补远端地址与 Release 源码包。
 
 ---
+
+### 7.8 v3.17.21 应用图标替换（当前）
+
+用户提供 970×970 透明背景图标后，HMCLauncher 的 Windows 图标资源同步替换：
+
+- `hmclauncher/HMCL.ico`：50645 B → **119,667 B**，7 档 16/24/32/48/64/128/256；文件名与资源 ID `IDI_HMCL` 保持不变，`HMCL.rc.in` 无需改路径。
+- 源图与 ICO 也在 `lmcl/lib/branding/` 入库（`LMCL-icon.png`、`LMCL.ico`、`README.md`），便于后续重新生成。
+- `hmclauncher/tools/check_branding.py` 的期望版本从 3.16.1000.0 更新为 1.0.0.0；`BRANDING.md` 的图标待办标记完成。
+- MinGW i686 重建：`windres` 生成 `.rc.o`，6 个 `.cpp` 链接 `-static -mwindows -lshlwapi -lversion`，`strip --strip-all`。
+- 新 stub：**1,317,390 B**，SHA-256 `e06151cc9088749c908788c26b7b1e743a2ab0775d7c0096943eceac538ca1bc`；PE32 GUI i386，`.rsrc` 含 7 个图标资源，无 ZIP 头。
+- 用该 stub 重建 LMCL：jar **12,354,945 B** `fe3b6738f305681405340b6c403a36b3db2bcfdc7fda2ee4ce47f810bc752416`；exe **13,672,335 B** `c4483561077aa3d51300392e4bae0bf0727bc4d99ada9d6af23e0ac9f1b16cef`；`exe[:stub]==stub`、`exe[stub:]==jar`、PK 偏移 1,317,390。
+- 测试包 `m3expressive22` zip **75,827,651 B** `87207fd7ce4783af2d667a2d81e5a2ded760ed5187e95a9b16821e54ace0199a`；327 entries、`testzip=None`。
+- 仍未验证：Windows 资源管理器/任务栏图标缓存、16/24 px 小尺寸可辨识度、DPI 缩放、MSVC 正式构建与 10 项行为验收。
 
 ## 8. 随包 JavaFX 依赖（v3.16.10，2026-10-23）
 
