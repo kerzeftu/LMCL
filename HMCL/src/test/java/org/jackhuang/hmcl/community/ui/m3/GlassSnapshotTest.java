@@ -18,8 +18,12 @@
 package org.jackhuang.hmcl.community.ui.m3;
 
 import javafx.geometry.Rectangle2D;
+import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -66,21 +70,66 @@ public final class GlassSnapshotTest {
 
     @Test
     public void blurRadiusTracksSnapshotScale() {
-        assertEquals(32.0, GlassBackdrop.blurRadius(64.0, 0.5), 0.001);
+        assertEquals(48.0, GlassBackdrop.blurRadius(96.0, 0.5), 0.001);
         assertEquals(1.0, GlassBackdrop.blurRadius(0.0, 0.5), 0.001);
     }
 
     @Test
+    public void fiveLayersUseFiveRadiiAndIterations() {
+        assertEquals(5, GlassBackdrop.layerCount());
+        assertEquals(96.0, GlassBackdrop.blurSceneRadiusAt(0), 0.001);
+        assertEquals(64.0, GlassBackdrop.blurSceneRadiusAt(1), 0.001);
+        assertEquals(40.0, GlassBackdrop.blurSceneRadiusAt(2), 0.001);
+        assertEquals(24.0, GlassBackdrop.blurSceneRadiusAt(3), 0.001);
+        assertEquals(12.0, GlassBackdrop.blurSceneRadiusAt(4), 0.001);
+        assertEquals(3, GlassBackdrop.iterationsAt(0));
+        assertEquals(3, GlassBackdrop.iterationsAt(1));
+        assertEquals(2, GlassBackdrop.iterationsAt(2));
+        assertEquals(2, GlassBackdrop.iterationsAt(3));
+        assertEquals(2, GlassBackdrop.iterationsAt(4));
+    }
+
+    @Test
+    public void paddingCoversLargestBlur() {
+        assertEquals(74, GlassBackdrop.paddingFor(0.5));
+        assertEquals(146, GlassBackdrop.paddingFor(1.0));
+    }
+
+    @Test
+    public void snapshotKeepsAllLayers() {
+        WritableImage image = new WritableImage(100, 100);
+        GlassSnapshot snapshot = new GlassSnapshot(
+                List.of(image, image, image, image, image), 1.0, 0.0, 0.0, 0);
+
+        assertEquals(5, snapshot.layerCount());
+        assertEquals(image, snapshot.layer(4));
+    }
+
+    @Test
+    public void rejectsEmptyLayers() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new GlassSnapshot(List.of(), 1.0, 0.0, 0.0, 0));
+    }
+
+    @Test
     public void rejectsImagesWithDifferentSizes() {
-        WritableImage far = new WritableImage(100, 100);
-        WritableImage near = new WritableImage(80, 80);
+        WritableImage first = new WritableImage(100, 100);
+        WritableImage second = new WritableImage(80, 80);
 
         assertThrows(IllegalArgumentException.class,
-                () -> new GlassSnapshot(far, near, 1.0, 0.0, 0.0, 0));
+                () -> new GlassSnapshot(List.of(first, second), 1.0, 0.0, 0.0, 0));
+    }
+
+    @Test
+    public void rejectsNullLayer() {
+        WritableImage image = new WritableImage(100, 100);
+
+        assertThrows(NullPointerException.class,
+                () -> new GlassSnapshot(Arrays.asList(image, null), 1.0, 0.0, 0.0, 0));
     }
 
     private static GlassSnapshot snapshot(int width, int height, double scale, double originX, double originY) {
-        WritableImage image = new WritableImage(width, height);
-        return new GlassSnapshot(image, image, scale, originX, originY, 0);
+        Image image = new WritableImage(width, height);
+        return new GlassSnapshot(List.of(image, image, image, image, image), scale, originX, originY, 0);
     }
 }

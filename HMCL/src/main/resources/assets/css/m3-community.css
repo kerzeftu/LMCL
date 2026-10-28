@@ -57,17 +57,50 @@
     -fx-background-color: transparent;
 }
 
-/* 磨砂材质：远景 + 近景两张模糊图，外加统一的半透明表面色。 */
+/* 磨砂材质：五层由远及近的独立高斯模糊，外加统一的半透明表面色。 */
 .lmcl-m3-glass-surface {
     -fx-background-color: transparent;
 }
 
-.lmcl-m3-glass .lmcl-m3-glass-image-far {
-    -fx-opacity: 0.50;
+.lmcl-m3-glass .lmcl-m3-glass-layer-0 {
+    -fx-opacity: 0.16;
 }
 
-.lmcl-m3-glass .lmcl-m3-glass-image-near {
-    -fx-opacity: 0.30;
+.lmcl-m3-glass .lmcl-m3-glass-layer-1 {
+    -fx-opacity: 0.18;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-layer-2 {
+    -fx-opacity: 0.20;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-layer-3 {
+    -fx-opacity: 0.22;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-layer-4 {
+    -fx-opacity: 0.22;
+}
+
+/* 1×1 卡片面积小，降低远景权重，避免被大半径模糊抹成一块纯色。 */
+.lmcl-m3-glass .lmcl-m3-glass-compact .lmcl-m3-glass-layer-0 {
+    -fx-opacity: 0.10;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-compact .lmcl-m3-glass-layer-1 {
+    -fx-opacity: 0.14;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-compact .lmcl-m3-glass-layer-2 {
+    -fx-opacity: 0.16;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-compact .lmcl-m3-glass-layer-3 {
+    -fx-opacity: 0.24;
+}
+
+.lmcl-m3-glass .lmcl-m3-glass-compact .lmcl-m3-glass-layer-4 {
+    -fx-opacity: 0.28;
 }
 
 .lmcl-m3-glass .lmcl-m3-glass-fallback {
@@ -77,7 +110,7 @@
 
 .lmcl-m3-glass .lmcl-m3-glass-tint {
     -fx-background-color: -m3-color-surface-container-low;
-    -fx-opacity: 0.28;
+    -fx-opacity: 0.22;
 }
 
 .lmcl-m3-glass .lmcl-m3-glass-sidebar .lmcl-m3-glass-tint {

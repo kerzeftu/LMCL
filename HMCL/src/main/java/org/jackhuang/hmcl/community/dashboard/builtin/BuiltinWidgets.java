@@ -139,11 +139,11 @@ final class BuiltinWidgets {
         return spacer;
     }
 
-    /// 用一块双层磨砂材质包裹卡片内容。
+    /// 用一块五层磨砂材质包裹卡片内容。
     ///
-    /// `GlassSurface` 始终铺满 wrapper 作为背景；快照可用时绘制两层模糊壁纸，
-    /// 不可用时显示统一半透明兜底。内容自身的 `.card` 只在 M3 玻璃开启时透明，
-    /// 因此 Classic 与关闭玻璃模式仍保留原来的实色卡片。
+    /// `GlassSurface` 始终铺满 wrapper 作为背景；快照可用时绘制五层不同半径的
+    /// 模糊壁纸，不可用时显示统一半透明兜底。内容自身的 `.card` 只在 M3 玻璃
+    /// 开启时透明，因此 Classic 与关闭玻璃模式仍保留原来的实色卡片。
     ///
     /// @param content   卡片节点
     /// @param arc       圆角直径

@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Modified by LMCL team on 2026-10-28: two-layer frosted material snapshot.
+ * Modified by LMCL team on 2026-10-29: multi-layer frosted material snapshot.
  */
 package org.jackhuang.hmcl.community.ui.m3;
 
@@ -26,33 +26,42 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 
-/// 一张可供 M3 磨砂表面采样的双层壁纸快照。
+/// 一张可供 M3 磨砂表面采样的多尺度壁纸快照。
 ///
-/// 两层图来自同一张壁纸：`far` 用大半径高斯模糊铺底，`near` 用小半径模糊
-/// 补充细节。两层共用同一套像素比例与场景原点，[GlassSurface] 只需要按自身
-/// 位置裁出相同视口。
+/// 所有层都从同一张壁纸生成，只是高斯模糊半径不同：第 0 层半径最大，用于
+/// 环境色与大面积明暗；最后一层半径最小，用于保留卡片尺寸较小时的局部细节。
+/// 各层共用同一套像素比例与场景原点，[GlassSurface] 只需要按自身位置裁出
+/// 相同视口。
 ///
-/// @param far     远景模糊图
-/// @param near    近景模糊图
+/// @param layers  模糊图层，至少 1 张，所有图层尺寸必须一致
 /// @param scale   快照像素 / 场景像素
 /// @param originX 快照左上角对应的场景 X 坐标
 /// @param originY 快照左上角对应的场景 Y 坐标
 /// @param padding 快照四周额外渲染的像素数
 @NotNullByDefault
 public record GlassSnapshot(
-        @NotNull Image far,
-        @NotNull Image near,
+        @NotNull List<Image> layers,
         double scale,
         double originX,
         double originY,
         int padding) {
 
-    /// 校验快照几何与两张图的尺寸。
+    /// 校验快照几何与所有图层的尺寸。
     public GlassSnapshot {
-        Objects.requireNonNull(far, "far");
-        Objects.requireNonNull(near, "near");
+        Objects.requireNonNull(layers, "layers");
+        if (layers.isEmpty()) {
+            throw new IllegalArgumentException("layers must not be empty");
+        }
+        List<Image> copy = List.copyOf(layers);
+        Image first = copy.get(0);
+        for (Image layer : copy) {
+            if (layer.getWidth() != first.getWidth() || layer.getHeight() != first.getHeight()) {
+                throw new IllegalArgumentException("all layers must have the same size");
+            }
+        }
         if (!Double.isFinite(scale) || scale <= 0.0) {
             throw new IllegalArgumentException("scale must be positive: " + scale);
         }
@@ -62,9 +71,22 @@ public record GlassSnapshot(
         if (padding < 0) {
             throw new IllegalArgumentException("padding must be non-negative: " + padding);
         }
-        if (far.getWidth() != near.getWidth() || far.getHeight() != near.getHeight()) {
-            throw new IllegalArgumentException("far and near images must have the same size");
-        }
+        layers = copy;
+    }
+
+    /// 图层数量。
+    ///
+    /// @return 图层数量
+    public int layerCount() {
+        return layers.size();
+    }
+
+    /// 返回指定图层。
+    ///
+    /// @param index 图层序号
+    /// @return 图层
+    public @NotNull Image layer(int index) {
+        return layers.get(index);
     }
 
     /// 快照四周额外渲染的场景像素数。
@@ -91,8 +113,9 @@ public record GlassSnapshot(
             return null;
         }
 
-        double imageWidth = far.getWidth();
-        double imageHeight = far.getHeight();
+        Image first = layers.get(0);
+        double imageWidth = first.getWidth();
+        double imageHeight = first.getHeight();
         double x = (sceneX - originX) * scale;
         double y = (sceneY - originY) * scale;
         double viewportWidth = width * scale;

@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Modified by LMCL team on 2026-10-28: two-layer frosted material backdrop.
+ * Modified by LMCL team on 2026-10-29: multi-layer frosted material backdrop.
  */
 package org.jackhuang.hmcl.community.ui.m3;
 
@@ -44,14 +44,17 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 从当前启动器壁纸生成双层低分辨率模糊快照，供 M3 磨砂表面采样。
+/// 从当前启动器壁纸生成多层低分辨率模糊快照，供 M3 磨砂表面采样。
 ///
 /// `DecoratorSkin` 的背景节点是私有的，社区版无法直接读取；这里改为根据
 /// [Themes#backgroundProperty()] 中的 [LauncherBackground] 在离屏画布上重绘壁纸，
-/// 再分别用大、小两个半径的 [BoxBlur] 生成两张图。这样既不侵入
-/// `DecoratorSkin`，也能跟随主题切换。
+/// 再用五个不同半径的 [BoxBlur] 生成五张图：96/64/40/24/12 像素，由远及近。
+/// 各层叠加后形成有层次、有细节的多层磨砂，而不是一张大模糊图加色块。
 ///
 /// 快照以 M3 宿主为坐标原点，只覆盖内容区；[GlassSurface] 会按自身在场景中的
 /// 位置裁剪对应区域。没有可绘制壁纸（纯色主题也会绘制）时返回 `null`，调用方
@@ -61,22 +64,22 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 @NotNullByDefault
 public final class GlassBackdrop {
 
-    /// 快照最大宽度，降低模糊与内存开销。
-    private static final double MAX_SNAPSHOT_WIDTH = 640.0;
+    /// 快照最大宽度；五层模糊需要更多像素，但不宜按窗口原始尺寸生成。
+    private static final double MAX_SNAPSHOT_WIDTH = 960.0;
 
     /// 快照最大高度。
-    private static final double MAX_SNAPSHOT_HEIGHT = 400.0;
+    private static final double MAX_SNAPSHOT_HEIGHT = 640.0;
 
-    /// 远景模糊在屏幕上的目标半径。
-    private static final double FAR_BLUR_SCENE = 64.0;
+    /// 各层模糊在屏幕上的目标半径，从远到近。
+    private static final double[] BLUR_RADII_SCENE = {96.0, 64.0, 40.0, 24.0, 12.0};
 
-    /// 近景模糊在屏幕上的目标半径。
-    private static final double NEAR_BLUR_SCENE = 24.0;
+    /// 各层 BoxBlur 迭代次数；远景多迭代消除色带，近景少迭代保留细节。
+    private static final int[] BLUR_ITERATIONS = {3, 3, 2, 2, 2};
 
     /// 单例。
     private static final GlassBackdrop INSTANCE = new GlassBackdrop();
 
-    /// 当前双层快照；`null` 表示没有可用壁纸或玻璃关闭。
+    /// 当前多层快照；`null` 表示没有可用壁纸或玻璃关闭。
     private final ReadOnlyObjectWrapper<GlassSnapshot> snapshot = new ReadOnlyObjectWrapper<>();
 
     /// 壁纸变化监听。
@@ -124,7 +127,7 @@ public final class GlassBackdrop {
         return INSTANCE;
     }
 
-    /// 当前双层壁纸快照；`null` 表示当前没有可用快照。
+    /// 当前多层壁纸快照；`null` 表示当前没有可用快照。
     ///
     /// @return 只读属性
     public ReadOnlyObjectProperty<GlassSnapshot> snapshotProperty() {
@@ -156,7 +159,8 @@ public final class GlassBackdrop {
         Themes.backgroundProperty().addListener(backgroundListener);
         attached = true;
         debug("attach host=" + host.getClass().getSimpleName()
-                + " size=" + host.getWidth() + "x" + host.getHeight());
+                + " size=" + host.getWidth() + "x" + host.getHeight()
+                + " layers=" + layerCount());
         schedule();
     }
 
@@ -190,7 +194,7 @@ public final class GlassBackdrop {
         refreshDelay.playFromStart();
     }
 
-    /// 重新生成双层模糊壁纸。
+    /// 重新生成多层模糊壁纸。
     private void refresh() {
         Region host = this.host;
         if (host == null || !M3Settings.isGlassEnabled()) {
@@ -238,17 +242,18 @@ public final class GlassBackdrop {
 
         double padding = rendered.padding() / rendered.scale();
         GlassSnapshot next = new GlassSnapshot(
-                rendered.far(),
-                rendered.near(),
+                rendered.layers(),
                 rendered.scale(),
                 origin.getX() - padding,
                 origin.getY() - padding,
                 rendered.padding());
         snapshot.set(next);
+        Image first = rendered.layers().get(0);
         debug("snapshot ready: host=" + width + "x" + height
-                + ", far=" + rendered.far().getWidth() + "x" + rendered.far().getHeight()
-                + ", near=" + rendered.near().getWidth() + "x" + rendered.near().getHeight()
+                + ", layers=" + rendered.layers().size()
+                + ", far=" + first.getWidth() + "x" + first.getHeight()
                 + ", scale=" + rendered.scale()
+                + ", padding=" + rendered.padding()
                 + ", origin=" + next.originX() + "," + next.originY());
     }
 
@@ -315,7 +320,39 @@ public final class GlassBackdrop {
         return Math.max(1.0, sceneRadius * scale);
     }
 
-    /// 渲染并生成一张双层壁纸快照。
+    /// 模糊图层数量。
+    ///
+    /// @return 图层数量
+    static int layerCount() {
+        return BLUR_RADII_SCENE.length;
+    }
+
+    /// 指定图层在屏幕坐标中的模糊半径。
+    ///
+    /// @param layer 图层序号
+    /// @return 屏幕半径
+    static double blurSceneRadiusAt(int layer) {
+        return BLUR_RADII_SCENE[layer];
+    }
+
+    /// 指定图层的 BoxBlur 迭代次数。
+    ///
+    /// @param layer 图层序号
+    /// @return 迭代次数
+    static int iterationsAt(int layer) {
+        return BLUR_ITERATIONS[layer];
+    }
+
+    /// 根据快照比例计算画布四周需要的 padding。
+    ///
+    /// @param scale 快照像素 / 场景像素
+    /// @return 像素 padding
+    static int paddingFor(double scale) {
+        double farBlur = blurRadius(BLUR_RADII_SCENE[0], scale);
+        return (int) Math.ceil(farBlur * 1.5) + 2;
+    }
+
+    /// 渲染并生成一张多层壁纸快照。
     ///
     /// @param source 当前壁纸
     /// @param width  宿主宽度
@@ -327,9 +364,7 @@ public final class GlassBackdrop {
         int pixelWidth = Math.max(2, (int) Math.ceil(width * snapshotScale));
         int pixelHeight = Math.max(2, (int) Math.ceil(height * snapshotScale));
 
-        double farBlur = blurRadius(FAR_BLUR_SCENE, snapshotScale);
-        double nearBlur = blurRadius(NEAR_BLUR_SCENE, snapshotScale);
-        int padding = (int) Math.ceil(farBlur * 1.5) + 2;
+        int padding = paddingFor(snapshotScale);
         int canvasWidth = pixelWidth + padding * 2;
         int canvasHeight = pixelHeight + padding * 2;
 
@@ -344,21 +379,28 @@ public final class GlassBackdrop {
             return null;
         }
 
-        Image far = blur(canvas, farBlur, canvasWidth, canvasHeight);
-        Image near = blur(canvas, nearBlur, canvasWidth, canvasHeight);
-        return new Snapshot(far, near, snapshotScale, padding);
+        List<Image> layers = new ArrayList<>(BLUR_RADII_SCENE.length);
+        for (int i = 0; i < BLUR_RADII_SCENE.length; i++) {
+            layers.add(blur(canvas,
+                    blurRadius(BLUR_RADII_SCENE[i], snapshotScale),
+                    BLUR_ITERATIONS[i],
+                    canvasWidth,
+                    canvasHeight));
+        }
+        return new Snapshot(List.copyOf(layers), snapshotScale, padding);
     }
 
     /// 对画布应用一次高斯模糊并生成图片。
     ///
-    /// @param canvas 已绘制壁纸的画布
-    /// @param radius 模糊半径（像素）
-    /// @param width  输出宽度
-    /// @param height 输出高度
+    /// @param canvas     已绘制壁纸的画布
+    /// @param radius     模糊半径（像素）
+    /// @param iterations BoxBlur 迭代次数
+    /// @param width      输出宽度
+    /// @param height     输出高度
     /// @return 模糊图
     @NotNull
-    private static Image blur(@NotNull Canvas canvas, double radius, int width, int height) {
-        canvas.setEffect(new BoxBlur(Math.max(1.0, radius), Math.max(1.0, radius), 3));
+    private static Image blur(@NotNull Canvas canvas, double radius, int iterations, int width, int height) {
+        canvas.setEffect(new BoxBlur(Math.max(1.0, radius), Math.max(1.0, radius), Math.max(1, iterations)));
         SnapshotParameters parameters = new SnapshotParameters();
         parameters.setFill(Color.TRANSPARENT);
         WritableImage output = new WritableImage(width, height);
@@ -413,12 +455,11 @@ public final class GlassBackdrop {
         return false;
     }
 
-    /// 一张双层快照的原始渲染结果。
+    /// 一张多层快照的原始渲染结果。
     ///
-    /// @param far     远景模糊图
-    /// @param near    近景模糊图
+    /// @param layers  模糊图层
     /// @param scale   像素 / 场景像素
     /// @param padding 四周额外渲染的像素数
-    private record Snapshot(Image far, Image near, double scale, int padding) {
+    private record Snapshot(List<Image> layers, double scale, int padding) {
     }
 }
