@@ -389,3 +389,27 @@ v3.16.10 的处理：
 发行包必须整体解压并保留 `dependencies/`；只复制 `LMCL.exe`/`LMCL-1.0.0-any.jar` 会回到首启下载。只带 Windows x64 + JDK 17 的 `classic` 依赖；JDK 23+ 的 `modern`（JavaFX 25）未随包。
 
 实现细节、验证数字与手工验收见[步骤 21 §19](21-主页重构与侧边栏移除.md)。Windows 实机“断网 + 全新用户数据”首启仍未验证。
+
+## 9. v3.17.26 构建链回归：必须显式指定 LMCL stub（2026-11-01）
+
+m3expressive26 的 `LMCL.exe` 实测 PE 资源只有 24/32/48/256 四档图标，与 LMCL fork stub 的七档不符。复核 `HMCL/build.gradle.kts`：
+
+- 第 35 行 `val launcherExe = System.getenv("HMCL_LAUNCHER_EXE") ?: ""`；
+- 第 72–74 行在 `launcherExe` 为空时加入 `libs.hmclauncher` 依赖，该依赖自带旧 HMCLauncher.exe；
+- 第 228–232 行只有 `launcherExe` 非空时才把指定文件放进 `assets/HMCLauncher.exe`。
+
+因此只跑 `:HMCL:makeExecutables` 而不设环境变量，会把旧 stub 拼进 `LMCL.exe`；JavaFX 窗口图标正确，但文件/任务栏图标仍是 HMCL。
+
+正确构建命令（本机）：
+
+```bash
+cd /home/kerze/hmclce/lmcl
+export JAVA_HOME=/home/kerze/hmclce/.tools/jdk-17.0.13+11
+export GRADLE_USER_HOME=/home/kerze/hmclce/.tools/gradle-home
+export HMCL_LAUNCHER_EXE=/home/kerze/hmclce/.tools/stub-build/HMCLauncher.exe
+./gradlew :HMCL:test :HMCL:makeExecutables --no-daemon
+```
+
+v3.17.26 按此命令重建：jar 12,377,837 B `c550d460…`、exe 13,695,227 B `e49214f6…`；`exe[:stub]==stub`（1,317,390 B）、`exe[stub:]==jar`，PE 资源恢复七档 LMCL 图标。`FXUtils.setIcon` 同时注册 32/64/128/256 px JavaFX 图标。
+
+**后续构建规范**：任何 Windows 测试包必须在构建日志中确认 `HMCL_LAUNCHER_EXE` 已设置，并在打包后解析 `LMCL.exe` 的 PE 图标组；不要仅凭 jar 内 `icon*.png` 判断 exe 图标。详见[审查记录 §81](../审查记录-v3.16.4源码核对.md)。

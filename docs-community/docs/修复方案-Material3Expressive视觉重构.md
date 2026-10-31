@@ -3058,3 +3058,11 @@ v3.17.24 的“真实背景节点快照 + 16ms 合并刷新”仍属静态快照
 - 无新增上游侵入；#18 保留为背景几何来源。community 203/0、全量 **336/0/2 skipped**；jar **12,141,260 B** `84ee936c…`、exe **12,595,404 B** `a3eeeea4…`、`m3expressive26` zip **74,917,416 B** `27b779ac…`；**未做 Windows 实机验收**，仍为 R1 壁纸层实时而非 R2。
 
 详见[材质方案 §19](修复方案-磨砂材质统一与多层模糊.md)、[实时方案 §11/§12](修复方案-磨砂实时渲染与三卡材质失效.md)、[审查记录 §80](审查记录-v3.16.4源码核对.md) 与[步骤 21 §34](steps/21-主页重构与侧边栏移除.md)。
+
+## 32. v3.17.26 快照 footer 点击与 LMCL 图标（m3expressive27）
+
+- 实例快照底部三个按钮点不到：确认是 `MainPage.launchPane`（230×57）在 `toFront()` 后覆盖右栏最后一张卡 footer；`HomePane` 底部预留 64 px，使 footer 可滚动到浮动启动按钮上方。玻璃/材质代码未改。
+- 应用图标：m3e26 构建未设置 `HMCL_LAUNCHER_EXE`，`libs.hmclauncher` 的旧 HMCLauncher.exe 使 `LMCL.exe` 只有四档旧图标；本版显式嵌入 LMCL fork stub（七档 16/24/32/48/64/128/256），`FXUtils.setIcon` Windows 分支同时注册 32/64/128/256 px JavaFX 图标。
+- 验证：community 203/0、全量 336/0/2 skipped；jar 12,377,837 B `c550d460…`、exe 13,695,227 B `e49214f6…`、m3expressive27 zip 75,893,168 B `51a27eeb…`；未做 Windows 实机验收，无新增上游侵入。
+
+详见[实时方案 §13](修复方案-磨砂实时渲染与三卡材质失效.md)、[审查记录 §81](审查记录-v3.16.4源码核对.md)、[步骤 21 §35](steps/21-主页重构与侧边栏移除.md)。
