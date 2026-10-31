@@ -145,6 +145,10 @@ final class BuiltinWidgets {
     /// 模糊壁纸，不可用时显示统一半透明兜底。内容自身的 `.card` 只在 M3 玻璃
     /// 开启时透明，因此 Classic 与关闭玻璃模式仍保留原来的实色卡片。
     ///
+    /// 内容根还会装上 [MaterialCardSurface] 守卫：1×1 卡的内容正好铺满整卡，
+    /// 只要主题给内容根补上一层实色背景，玻璃就会被完全盖住；守卫在玻璃开启
+    /// 时保证内容根透明，并在关闭玻璃后恢复实色，不依赖样式表的选择器胜负。
+    ///
     /// @param content   卡片节点
     /// @param arc       圆角直径
     /// @param debugName 诊断名称，可为 `null`
@@ -161,8 +165,11 @@ final class BuiltinWidgets {
         wrapper.setMinHeight(Region.USE_PREF_SIZE);
         StackPane.setAlignment(glass, Pos.TOP_LEFT);
         StackPane.setAlignment(content, Pos.TOP_LEFT);
+        // 玻璃必须在内容之下；显式置底，避免以后往 wrapper 插入节点时改变层序。
+        glass.toBack();
         if (content instanceof Region region) {
             region.setMaxWidth(Double.MAX_VALUE);
+            MaterialCardSurface.install(region);
         }
         return wrapper;
     }

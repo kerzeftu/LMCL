@@ -318,12 +318,9 @@
     -fx-min-height: 30;
 }
 
-/* 主页卡片材质：表面由 GlassSurface 单层绘制，卡片自身透明，避免双层叠加。 */
-.lmcl-m3-glass .community-material-card > .card {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-}
-
+/* 材质卡表面：玻璃开启时由 m3-community.css 的 4 类选择器声明透明，运行时再由
+   MaterialCardSurface 守卫兜底；这里不再重复声明，避免两份规则在主题切换时
+   互相覆盖。 */
 .community-material-card {
     -fx-background-radius: 16;
 }

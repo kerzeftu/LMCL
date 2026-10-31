@@ -29,6 +29,8 @@ public final class GlassSurfaceTest {
     @Test
     public void materialUsesFiveLayers() {
         assertEquals(5, GlassSurface.maxLayers());
+        // 表面层数与背景重建共享同一常量，避免两边漂移。
+        assertEquals(GlassBackdrop.layerCount(), GlassSurface.maxLayers());
     }
 
     @Test

@@ -23,6 +23,8 @@ import javafx.animation.Animation;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.geometry.Bounds;
@@ -37,6 +39,8 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BackgroundImage;
+import javafx.scene.layout.BackgroundPosition;
+import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -51,23 +55,26 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-/// 从当前启动器壁纸生成多层低分辨率模糊快照，供 M3 磨砂表面采样。
+/// 维护 M3 磨砂表面的壁纸采样源。
 ///
-/// `DecoratorSkin` 的真实背景节点带有 `lmcl-launcher-background` 样式类，这里优先
-/// 直接快照该节点，确保壁纸的标题栏偏移、窗口缩放和透明度与真实背景完全一致；
-/// 节点尚未挂载时才回退到根据 [Themes#backgroundProperty()] 中的 [LauncherBackground]
-/// 在离屏画布上重绘壁纸。随后用五个不同半径的 [BoxBlur] 生成五张图：
-/// 96/64/40/24/12 像素，由远及近。各层叠加后形成有层次、有细节的多层磨砂，
-/// 而不是一张大模糊图加色块。
+/// 主路径是“实时源”：本类定位 `DecoratorSkin` 的真实背景节点
+/// （`lmcl-launcher-background` 样式类），暴露该节点与
+/// [Themes#backgroundProperty()] 中可采样的壁纸 [Image]，[GlassSurface] 直接
+/// 用五层 [javafx.scene.image.ImageView] 按背景节点的实时场景几何采样。滚动、
+/// 窗口缩放、界面缩放与换壁纸都只更新视口/变换，不需要逐帧
+/// [javafx.scene.Node#snapshot]。实时源变化时 [liveRevisionProperty()] 自增，
+/// 各表面据此刷新。
 ///
-/// 快照以 M3 宿主为坐标原点，只覆盖内容区；[GlassSurface] 会按自身在场景中的
-/// 位置裁剪对应区域。没有可绘制壁纸（纯色主题也会绘制）时返回 `null`，调用方
-/// 回退到 CSS 的半透明表面色。
+/// 静态快照（五层不同半径的 [BoxBlur]）只作为回退：壁纸不是 `cover` 居中的
+/// 图片、背景节点暂时不存在、或表面位于快照覆盖范围外时使用。它同样兼容纯色
+/// `Background`，并保留 `lmcl.visual.glass.mode=snapshot` 行为。
 ///
-/// 线程：构造、[attach] 与 [detach] 必须在 JavaFX 应用线程调用。
+/// 线程：构造、[attach] 与 [detach] 必须在 JavaFX 应用线程调用；[liveSource()]
+/// 与 [liveRevisionProperty()] 可以从应用线程读取。
 @NotNullByDefault
 public final class GlassBackdrop {
 
@@ -92,6 +99,12 @@ public final class GlassBackdrop {
     /// 当前多层快照；`null` 表示没有可用壁纸或玻璃关闭。
     private final ReadOnlyObjectWrapper<GlassSnapshot> snapshot = new ReadOnlyObjectWrapper<>();
 
+    /// 实时源变化计数；背景节点、几何、壁纸或图片加载状态变化时自增。
+    ///
+    /// 这是一个整数“版本号”而不是对象属性，读者只需要监听失效并在回调里重新
+    /// 读取 [liveSource()]，避免每次几何变化都构造新对象。
+    private final ReadOnlyIntegerWrapper liveRevision = new ReadOnlyIntegerWrapper();
+
     /// 壁纸变化监听。
     private final InvalidationListener backgroundListener = observable -> schedule();
 
@@ -101,8 +114,8 @@ public final class GlassBackdrop {
     /// 宿主场景变化监听：窗口显示/隐藏后重新采样。
     private final InvalidationListener sceneListener = observable -> schedule();
 
-    /// 真实背景节点尺寸/位置变化监听：标题栏出现或高度变化时立即重新对齐。
-    private final InvalidationListener backgroundNodeListener = observable -> schedule();
+    /// 真实背景节点尺寸/位置/透明度/挂载状态变化监听。
+    private final InvalidationListener backgroundNodeListener = observable -> onBackgroundNodeChanged();
 
     /// 当前监听加载进度的壁纸图像。
     private @Nullable Image watchedImage;
@@ -150,22 +163,148 @@ public final class GlassBackdrop {
         return snapshot.getReadOnlyProperty();
     }
 
-    /// 绑定一个 M3 宿主作为坐标原点与尺寸来源。
+    /// 实时源变化计数。
     ///
-    /// 重复绑定同一宿主无副作用；换宿主会先解除旧监听。
+    /// 每次实时源（背景节点、几何、壁纸图片或透明度）变化时自增；监听者应在
+    /// 回调里重新读取 [liveSource()]，不要缓存上一次的记录。
+    ///
+    /// @return 只读属性
+    public ReadOnlyIntegerProperty liveRevisionProperty() {
+        return liveRevision.getReadOnlyProperty();
+    }
+
+    /// 当前可实时采样的壁纸源。
+    ///
+    /// 只有同时满足以下条件才返回非 `null`：已经 [attach]、玻璃开启、真实背景
+    /// 节点存在且与宿主同场景、节点可见且不透明、节点尺寸不小于 1、主题壁纸是
+    /// `cover` 居中且不重复的图片、图片已经加载且未失败、壁纸节点透明度大于 0。
+    /// 任一条件不满足时返回 `null`，[GlassSurface] 回退到静态快照或表面色。
+    ///
+    /// @return 实时源；不可用时为 `null`
+    @Nullable
+    public LiveSource liveSource() {
+        if (!attached || host == null || !M3Settings.isGlassEnabled()) {
+            return null;
+        }
+        Node node = backgroundNode;
+        if (node == null || node.getScene() == null || node.getScene() != host.getScene()) {
+            return null;
+        }
+        if (!node.isVisible() || node.getOpacity() <= 0.0) {
+            return null;
+        }
+        Bounds bounds = node.getLayoutBounds();
+        if (bounds.getWidth() < 1.0 || bounds.getHeight() < 1.0) {
+            return null;
+        }
+
+        LauncherBackground source = currentBackground();
+        if (source == null) {
+            return null;
+        }
+        BackgroundImage backgroundImage = liveImage(source.background());
+        if (backgroundImage == null) {
+            return null;
+        }
+        Image image = backgroundImage.getImage();
+        if (image == null || image.isError() || image.getWidth() <= 0.0 || image.getHeight() <= 0.0) {
+            return null;
+        }
+        double opacity = source.opacity();
+        if (!(opacity > 0.0)) {
+            return null;
+        }
+        return new LiveSource(node, image, Math.min(1.0, opacity));
+    }
+
+    /// 当前壁纸主题；主题尚未发布时退回真实背景节点自己的 `Background`。
+    @Nullable
+    private LauncherBackground currentBackground() {
+        LauncherBackground source = Themes.backgroundProperty().get();
+        if (source != null) {
+            return source;
+        }
+        Node node = backgroundNode;
+        if (node instanceof Region region && region.getBackground() != null) {
+            double opacity = region.getOpacity();
+            return new LauncherBackground(region.getBackground(),
+                    Double.isFinite(opacity) ? Math.max(0.0, Math.min(1.0, opacity)) : 0.0);
+        }
+        return null;
+    }
+
+    /// 从背景中挑选一张可以按 `cover` 居中、不重复方式实时采样的图片。
+    ///
+    /// 与 [Themes#createBackgroundWithOpacity] 生成的背景契约一致；任何其他
+    /// 尺寸/重复/位置组合都交给静态快照回退，避免实时层与真实画面错位。
+    ///
+    /// @param background 背景
+    /// @return 可采样的背景图片；没有时返回 `null`
+    @Nullable
+    static BackgroundImage liveImage(@NotNull Background background) {
+        for (BackgroundImage backgroundImage : background.getImages()) {
+            Image image = backgroundImage.getImage();
+            if (image == null) {
+                continue;
+            }
+            if (!backgroundImage.getSize().isCover()) {
+                continue;
+            }
+            if (backgroundImage.getRepeatX() != BackgroundRepeat.NO_REPEAT
+                    || backgroundImage.getRepeatY() != BackgroundRepeat.NO_REPEAT) {
+                continue;
+            }
+            if (!BackgroundPosition.DEFAULT.equals(backgroundImage.getPosition())) {
+                continue;
+            }
+            return backgroundImage;
+        }
+        return null;
+    }
+
+    /// 壁纸图片是否仍在异步加载；加载期间不生成快照，等图片就绪后直接切实时层。
+    private static boolean isWaitingForWallpaperImage(@Nullable LauncherBackground background) {
+        if (background == null) {
+            return false;
+        }
+        BackgroundImage backgroundImage = liveImage(background.background());
+        if (backgroundImage == null) {
+            return false;
+        }
+        Image image = backgroundImage.getImage();
+        return image != null
+                && !image.isError()
+                && image.getWidth() <= 0.0
+                && image.getProgress() < 1.0;
+    }
+
+    /// 通知所有 [GlassSurface] 重新读取实时源。
+    private void publishLive() {
+        liveRevision.set(liveRevision.get() + 1);
+    }
+
+    /// 绑定一个 M3 宿主作为坐标原点、尺寸来源与背景节点查找根。
+    ///
+    /// 重复绑定同一宿主无副作用；换宿主会先解除旧监听。玻璃关闭时只记录宿主，
+    /// 不注册任何监听，也不提供实时源。
     ///
     /// @param host M3 宿主
     public void attach(@NotNull Region host) {
         if (this.host == host && attached) {
             if (!M3Settings.isGlassEnabled()) {
                 detach();
+            } else {
+                // 重复 attach 常用于皮肤重建后重新试探背景节点是否已经出现。
+                schedule();
             }
             return;
         }
         detach();
         this.host = host;
         if (!M3Settings.isGlassEnabled()) {
-            clear();
+            clearSnapshot();
+            publishLive();
+            debug("glass disabled; no live source");
             return;
         }
 
@@ -181,7 +320,7 @@ public final class GlassBackdrop {
         schedule();
     }
 
-    /// 解除当前宿主并清空快照；重复调用无副作用。
+    /// 解除当前宿主、清空快照并通知实时层；重复调用无副作用。
     public void detach() {
         Region host = this.host;
         if (host != null) {
@@ -195,13 +334,16 @@ public final class GlassBackdrop {
         refreshDelay.stop();
         this.host = null;
         attached = false;
-        clear();
+        clearSnapshot();
+        publishLive();
+        debug("detach");
     }
 
     /// 查找并监听 `DecoratorSkin` 的真实背景节点。
     ///
     /// 节点在皮肤构造时创建，通常 `attach` 时已经可以查找；如果还没有，下一次
-    /// 刷新时会再次尝试。
+    /// 刷新时会再次尝试。除几何外还监听透明度、可见性与父节点，保证实时层与
+    /// 真实背景节点保持一致，并在节点被移出场景树时立刻解绑。
     private void bindBackgroundNode(@NotNull Region host) {
         if (backgroundNode != null) {
             return;
@@ -213,11 +355,15 @@ public final class GlassBackdrop {
         backgroundNode = node;
         node.layoutBoundsProperty().addListener(backgroundNodeListener);
         node.localToSceneTransformProperty().addListener(backgroundNodeListener);
+        node.opacityProperty().addListener(backgroundNodeListener);
+        node.visibleProperty().addListener(backgroundNodeListener);
+        node.parentProperty().addListener(backgroundNodeListener);
+        node.sceneProperty().addListener(backgroundNodeListener);
         debug("bind background node=" + node.getClass().getSimpleName()
                 + " size=" + node.getLayoutBounds().getWidth() + "x" + node.getLayoutBounds().getHeight());
     }
 
-    /// 解除真实背景节点监听。
+    /// 解除真实背景节点监听并释放引用。
     private void unbindBackgroundNode() {
         Node node = backgroundNode;
         if (node == null) {
@@ -225,32 +371,98 @@ public final class GlassBackdrop {
         }
         node.layoutBoundsProperty().removeListener(backgroundNodeListener);
         node.localToSceneTransformProperty().removeListener(backgroundNodeListener);
+        node.opacityProperty().removeListener(backgroundNodeListener);
+        node.visibleProperty().removeListener(backgroundNodeListener);
+        node.parentProperty().removeListener(backgroundNodeListener);
+        node.sceneProperty().removeListener(backgroundNodeListener);
         backgroundNode = null;
+        publishLive();
+    }
+
+    /// 真实背景节点变化：节点被移出场景树时立即解绑，其余变化交给合并刷新。
+    private void onBackgroundNodeChanged() {
+        Node node = backgroundNode;
+        if (node != null && node.getParent() == null) {
+            // 皮肤重建/换皮肤时旧节点被移出场景树；立刻解绑避免监听泄漏，
+            // 下一次 schedule 会重新 lookup 新节点。
+            unbindBackgroundNode();
+        }
+        schedule();
     }
 
     /// 清空快照。
-    private void clear() {
+    private void clearSnapshot() {
         snapshot.set(null);
     }
 
-    /// 合并窗口拖动/缩放期间的多次刷新请求。
+    /// 合并实时源更新与静态快照回退刷新。
+    ///
+    /// 顺序很重要：先尝试绑定背景节点并发布实时版本，实时源可用时立即停掉
+    /// 16 ms 快照计时器并清空旧快照；只有实时源不可用时才安排静态快照回退。
+    /// 壁纸图片仍在异步加载时完全不生成快照，等图片就绪后直接切实时层。
     private void schedule() {
         if (!Platform.isFxApplicationThread()) {
             Platform.runLater(this::schedule);
             return;
         }
-        // 拖动/缩放期间事件可能每帧都来；已经在等待时不再重置计时器，
-        // 保证最迟 16ms 后一定会用最新尺寸刷新，而不是等事件停止才刷新。
+        Region host = this.host;
+        if (host == null) {
+            return;
+        }
+        if (!M3Settings.isGlassEnabled()) {
+            // 运行中关闭玻璃：停止回退计时器并通知表面进入统一兜底。
+            refreshDelay.stop();
+            clearSnapshot();
+            publishLive();
+            return;
+        }
+
+        pruneBackgroundNode();
+        bindBackgroundNode(host);
+        LauncherBackground background = Themes.backgroundProperty().get();
+        watchImage(background);
+
+        publishLive();
+        if (liveSource() != null) {
+            // 实时层接管：立刻停止快照重建，避免两套管线同时工作。
+            refreshDelay.stop();
+            clearSnapshot();
+            return;
+        }
+        if (isWaitingForWallpaperImage(background)) {
+            // 图片仍在异步加载；保持现有快照/表面色，图片就绪后 imageListener
+            // 会再次 schedule，那时直接切实时层，不需要做一次无用快照。
+            debug("waiting for wallpaper image");
+            return;
+        }
+        // 快照只是回退：拖动/缩放期间事件可能每帧都来；已经在等待时不再重置
+        // 计时器，保证最迟 16ms 后一定会用最新尺寸刷新。
         if (refreshDelay.getStatus() != Animation.Status.RUNNING) {
             refreshDelay.playFromStart();
         }
     }
 
-    /// 重新生成多层模糊壁纸。
+    /// 背景节点被移出场景树时立即解绑；下一次刷新重新查找。
+    private void pruneBackgroundNode() {
+        Node node = backgroundNode;
+        if (node != null && node.getParent() == null) {
+            unbindBackgroundNode();
+        }
+    }
+
+
+    /// 重新生成多层模糊壁纸快照（仅回退路径）。
+    ///
+    /// 实时源可用时本方法只负责清空快照，不做任何 `Node.snapshot`。
     private void refresh() {
         Region host = this.host;
         if (host == null || !M3Settings.isGlassEnabled()) {
-            clear();
+            clearSnapshot();
+            return;
+        }
+
+        if (liveSource() != null) {
+            clearSnapshot();
             return;
         }
 
@@ -273,6 +485,11 @@ public final class GlassBackdrop {
         }
 
         LauncherBackground background = Themes.backgroundProperty().get();
+        if (background == null) {
+            debug("skip refresh: no launcher background");
+            clearSnapshot();
+            return;
+        }
         watchImage(background);
         bindBackgroundNode(host);
 
@@ -281,7 +498,7 @@ public final class GlassBackdrop {
             rendered = render(host, backgroundNode, background, width, height);
         } catch (RuntimeException e) {
             LOG.warning("Failed to capture M3 glass backdrop", e);
-            clear();
+            clearSnapshot();
             return;
         }
 
@@ -289,7 +506,7 @@ public final class GlassBackdrop {
             debug("snapshot unavailable: host=" + width + "x" + height
                     + ", images=" + background.background().getImages().size()
                     + ", fills=" + background.background().getFills().size());
-            clear();
+            clearSnapshot();
             return;
         }
 
@@ -310,9 +527,11 @@ public final class GlassBackdrop {
                 + ", origin=" + next.originX() + "," + next.originY());
     }
 
-    /// 监听背景图片的异步加载；加载完成或失败后重新生成快照。
-    private void watchImage(@NotNull LauncherBackground background) {
-        Image next = firstImage(background.background());
+    /// 监听背景图片的异步加载；加载完成或失败后重新发布实时源。
+    ///
+    /// `background` 允许为 `null`（启动早期或纯色主题），此时退化为取消监听。
+    private void watchImage(@Nullable LauncherBackground background) {
+        Image next = background == null ? null : firstImage(background.background());
         if (next == watchedImage) {
             return;
         }
@@ -622,6 +841,25 @@ public final class GlassBackdrop {
             return true;
         }
         return false;
+    }
+
+    /// 实时磨砂的输入源：真实背景节点提供几何，壁纸图片由每块玻璃自己采样。
+    ///
+    /// 该对象只在“实时层可用”时返回，调用方不需要再检查空场景、纯色背景等
+    /// 情况；一旦返回非空，`GlassSurface` 就不再依赖静态快照。
+    ///
+    /// @param backgroundNode 提供 `localToScene` 几何的真实背景节点
+    /// @param image          已加载完成的壁纸图片
+    /// @param opacity        背景节点自身的透明度（`LauncherBackground.opacity()`）
+    public record LiveSource(@NotNull Node backgroundNode, @NotNull Image image, double opacity) {
+        /// 校验实时源字段。
+        public LiveSource {
+            Objects.requireNonNull(backgroundNode, "backgroundNode");
+            Objects.requireNonNull(image, "image");
+            if (!Double.isFinite(opacity) || opacity < 0.0 || opacity > 1.0) {
+                throw new IllegalArgumentException("opacity must be finite and within [0, 1]: " + opacity);
+            }
+        }
     }
 
     /// 一张多层快照的原始渲染结果。

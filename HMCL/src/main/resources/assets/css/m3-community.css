@@ -217,8 +217,10 @@
     -fx-border-color: -m3-color-outline-variant;
 }
 
-/* 磨砂卡片的表面必须完全透明，否则会盖住底下的玻璃层；选择器比上面的
-   token 规则多一个类，且只在玻璃开启时生效，避免 glass=off 时卡片失去实色底。 */
+/* 磨砂卡片的表面必须完全透明，否则会盖住底下的玻璃层；选择器比上面的 token
+   规则多一个类，且只在玻璃开启时生效，避免 glass=off 时卡片失去实色底。
+   Classic / glass=off 时内容根由 `.lmcl-m3 .community-home .card` 等规则恢复
+   实色；运行时还有 MaterialCardSurface 守卫兜底（见 BuiltinWidgets）。 */
 .lmcl-m3-glass .community-home .community-material-card > .card {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
