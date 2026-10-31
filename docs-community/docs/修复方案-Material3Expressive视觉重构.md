@@ -3045,3 +3045,16 @@ v3.17.23 的五层材质在 WSL2 下只做了编译/单测/CSS 断言，没有 W
 ### 30.5 文档同步
 
 - 本文 §30；[材质方案](修复方案-磨砂材质统一与多层模糊.md) §18；README v3.17.24；`00-整体要求.md`（#18）；`待办总览.md`；审查记录 §79；步骤 21 §33；`lmcl/docs-community/` 同步。
+
+---
+
+## 31. v3.17.25 壁纸层 live 与三卡透明守卫（2026-11-01 / m3expressive26）
+
+v3.17.24 的“真实背景节点快照 + 16ms 合并刷新”仍属静态快照，用户复验判定非实时；v3.17.25 改为壁纸层 live：
+
+- `GlassBackdrop` 暴露 `LiveSource(backgroundNode, image, opacity)` 与 `liveRevision`；`GlassSurface` 用五个实时 `ImageView` 采样壁纸并套 96/64/40/24/12 px `BoxBlur`，拖动/缩放/换壁纸时按几何更新，不再逐帧 `Node.snapshot`。
+- 新增 `GlassLiveViewport`：背景图 cover 缩放/居中映射、`1.5×半径+2` 采样外扩、按本地缩放换算模糊半径。
+- 三张 1×1 卡根因确认为内容根铺满后被 `.card` 实色背景遮挡，不是 CSS 优先级；新增 `MaterialCardSurface`，玻璃开启时清空内容根 Background、关闭玻璃/Classic 恢复；CSS 删除旧 3 类冗余规则。
+- 无新增上游侵入；#18 保留为背景几何来源。community 203/0、全量 **336/0/2 skipped**；jar **12,141,260 B** `84ee936c…`、exe **12,595,404 B** `a3eeeea4…`、`m3expressive26` zip **74,917,416 B** `27b779ac…`；**未做 Windows 实机验收**，仍为 R1 壁纸层实时而非 R2。
+
+详见[材质方案 §19](修复方案-磨砂材质统一与多层模糊.md)、[实时方案 §11/§12](修复方案-磨砂实时渲染与三卡材质失效.md)、[审查记录 §80](审查记录-v3.16.4源码核对.md) 与[步骤 21 §34](steps/21-主页重构与侧边栏移除.md)。
