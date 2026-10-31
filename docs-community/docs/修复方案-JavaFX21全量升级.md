@@ -2,7 +2,7 @@
 
 > 状态：**规划（2026-10-28，低优先级）**；用户 m28123 要求在磨砂材质问题处理完后启动，**当前不改代码**。
 > 关联：[磨砂材质统一与多层模糊](修复方案-磨砂材质统一与多层模糊.md)（前置任务）、[M3 视觉重构](修复方案-Material3Expressive视觉重构.md)、[待办总览](待办总览.md)。
-> 当前基线：v3.17.21；`lmcl` 代码提交 `f92b45330`；Windows 测试包 `m3expressive22`；WSL2 无 Windows GUI。
+> 当前基线：v3.17.24（分支 `feature/28-frosted-v2`，实时对齐修复待提交）；Windows 测试包 `m3expressive25`；WSL2 无 Windows GUI。
 
 ---
 
@@ -16,7 +16,7 @@
    - 让构建、运行时下载清单、测试矩阵、许可与文档都只指向同一套 21.x。
 3. **不强制升级 JDK**。JavaFX 21 最低支持 JDK 17，当前随包 JRE 17 可以继续运行；若要把启动器运行时也升到 JDK 21，作为可选后续，不默认并入本任务。
 4. **官方 JavaFX 21.0.13 只覆盖 5 个平台/架构**：`win`（Windows x64）、`mac`（macOS x64）、`mac-aarch64`（macOS arm64）、`linux`（Linux x64）、`linux-aarch64`（Linux arm64）。Windows x86、Windows arm64、Linux arm32、LoongArch、RISC-V、FreeBSD 没有官方 21.0.13 产物；需要产品决定“降为不支持”或单独做 21 兼容构建。
-5. **本任务优先级低于材质重做**：先交付 `m3expressive24` 并完成材质验收；之后由助手主动提醒用户启动本任务，不自动开工。
+5. **本任务优先级低于材质重做**：先交付 `m3expressive25` 并完成材质验收；之后由助手主动提醒用户启动本任务，不自动开工。
 
 ---
 
@@ -150,7 +150,7 @@ else
 
 ## 5. 实施阶段
 
-> 前置门禁：磨砂材质 v2（`m3expressive24`）已交付并完成基本验收。未满足前不开始。
+> 前置门禁：磨砂材质 v2 + 实时对齐修复（`m3expressive25`）已交付并完成基本验收。未满足前不开始。
 
 | 阶段 | 内容 | 预计 |
 |---|---|---|
@@ -199,7 +199,7 @@ else
 | 运行时清单未同步，下载到旧版 | 高 | JSON 由任务生成；包内/下载清单做版本断言 |
 | 包体积/内存变化 | 低 | 21.0.13 与 21.0.8 体积相近；记录前后 jar/包大小 |
 
-回退：把 `JAVAFX_VERSION` 固定回 `21.0.8`，恢复 `openjfx-dependencies.json` 与包内 `dependencies/`，重出测试包；保留 `m3expressive24` 作为材质基线。
+回退：把 `JAVAFX_VERSION` 固定回 `21.0.8`，恢复 `openjfx-dependencies.json` 与包内 `dependencies/`，重出测试包；保留 `m3expressive25` 作为材质基线。
 
 ---
 
@@ -208,12 +208,12 @@ else
 1. 遗留平台（Windows x86/arm64、Linux arm32/LoongArch/RISC-V/FreeBSD）是否接受“降为不支持”？推荐 A。
 2. 是否只升 JavaFX、JRE 继续 17；还是同时规划 JDK 21 运行时迁移（另立任务）？
 3. JavaFX 目标补丁是否按实施日最新 21.x（当前核查 21.0.13），而不是固定 21.0.8？
-4. 本任务版本号/包名：建议 `v3.17.24` / `m3expressive25`（材质任务占 v3.17.22 / m3e23，v2 占 v3.17.23 / m3e24）。
+4. 本任务版本号/包名：建议 `v3.17.25` / `m3expressive26`（材质任务占 v3.17.22 / m3e23，v2 占 v3.17.23 / m3e24，实时对齐修复占 v3.17.24 / m3e25）。
 
 ---
 
 ## 9. 提醒机制
 
 - 本任务在 `docs/待办总览.md` 的 `VIS-03` 中登记为“材质完成后启动”。
-- 材质 `m3expressive24` 交付后的同一轮汇报中，助手必须主动提醒：“JavaFX 21 标准化任务已到启动点，是否开始？”
+- 材质 `m3expressive25` 交付后的同一轮汇报中，助手必须主动提醒：“JavaFX 21 标准化任务已到启动点，是否开始？”
 - 在该提醒发出前，不创建代码分支、不改 `JavaFXPlatform`、不构建新包。

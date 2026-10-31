@@ -1,14 +1,14 @@
 # 修复方案：Material 3 Expressive 视觉重构
 
-> **状态（2026-10-29 v3.17.23）：v3.17.13 已把 m3fx 改为仓库内 vendored 源码（`96ccd6d`）；切片 A 基座、B1 侧栏玻璃、B2 玻璃（9 卡 + 侧栏）、v3.17.19 磨砂亚克力与顶栏壁纸动态取色、v3.17.20 莫奈取色/自定义强调色、v3.17.21 应用图标/捐赠者、v3.17.22 材质 v1、v3.17.23 材质 v2（五层模糊 + 1×1 compact）已实现；C–G 仍待 Windows 实机验收。**
+> **状态（2026-11-01 v3.17.24）：v3.17.13 已把 m3fx 改为仓库内 vendored 源码（`96ccd6d`）；切片 A 基座、B1 侧栏玻璃、B2 玻璃（9 卡 + 侧栏）、v3.17.19 磨砂亚克力与顶栏壁纸动态取色、v3.17.20 莫奈取色/自定义强调色、v3.17.21 应用图标/捐赠者、v3.17.22 材质 v1、v3.17.23 材质 v2（五层模糊 + 1×1 compact）、v3.17.24 实时背景对齐与三张 1×1 卡透明修复已实现；C–G 仍待 Windows 实机验收。**
 >
-> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.23
-> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.23 代码（分支 `feature/28-frosted-v2`）；当前测试包 `m3expressive24`（五层模糊/1×1 compact）
+> - 当前产品：LMCL 1.0.0，基于 HMCL v3.16.4；文档 v3.17.24
+> - 当前代码基线：`/home/kerze/hmclce/lmcl`，v3.17.24 代码（分支 `feature/28-frosted-v2`）；当前测试包 `m3expressive25`（五层模糊 + 实时背景对齐/三张 1×1 卡透明）
 > - 切片 A 已接入 `M3Host`/`M3Settings`/`M3MotionSupport`/`CommunityControls`；
 >   未保存 `visual` 配置时默认 M3 Expressive（`DEFAULT_M3_ENABLED=true`）；显式 Classic 或 `-Dlmcl.visual.m3=off` 时与 1.0.0 一致。
 > - 切片 B1 已接入 `GlassBackdrop`/`GlassSurface`：64px 侧栏玻璃 + 16px 圆角选中框（v3.17.10 从 999 胶囊还原）；
 >   `-Dlmcl.visual.glass=auto/on/off` 控制，默认 auto，失败自动回退 CSS 表面色。
-> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive24`（v3.17.23 五层磨砂材质/1×1 compact；基于 v3.17.22 材质 v1、v3.17.21 应用图标/捐赠者、v3.17.20 强调色/莫奈取色、v3.17.19 亚克力/顶栏动态取色、v3.17.17 B2 玻璃修复、v3.17.16 主题切换崩溃修复/默认 M3、v3.17.15 三个视觉主题、v3.17.13 H7 vendor）。
+> - 阶段 0 的 `m3spike1–m3spike14` 是历史记录；当前测试包为 `m3expressive25`（v3.17.24 实时背景对齐/三卡透明；基于 v3.17.23 五层磨砂材质/1×1 compact；基于 v3.17.22 材质 v1、v3.17.21 应用图标/捐赠者、v3.17.20 强调色/莫奈取色、v3.17.19 亚克力/顶栏动态取色、v3.17.17 B2 玻璃修复、v3.17.16 主题切换崩溃修复/默认 M3、v3.17.15 三个视觉主题、v3.17.13 H7 vendor）。
 > - 本次复启按 §17 的垂直切片执行，不再按旧的“阶段 1 一次性全量 token”推进。
 > - §19 吸收用户提供的《HMCL × Material 3 Expressive 重构主提示词》，补齐硬约束、JavaFX 能力缺口、参考资源、每步交付物与“不要一次改全 UI”的执行纪律；不改变已批准的 D1–D7。
 >
@@ -126,7 +126,7 @@ D6（进度侵入）**已批准**；D7（启动按钮是否 FAB）与 D8（MVP �
 4. **性能**：冷启动增量 ≤ 300 ms；主页空闲 60 FPS；滚动无明显掉帧；
 5. **可降级**：`visual.m3=off` 时回到 v3.15 视觉；`visual.glass=off` 时回到不透明 M3 表面；
 6. **可复现**：不依赖 JitPack 运行时；构建可离线（依赖已 vendor）；
-7. **不扩散侵入**：设计上不扩散当前 17 处；完整 Wavy/加载若必须改 `TaskListPane`/`DialogPane`/`SpinnerPane`，须先批准并登记为 #18–#20（见 §6.2）。
+7. **不扩散侵入**：设计上不扩散当前 18 处；完整 Wavy/加载若必须改 `TaskListPane`/`DialogPane`/`SpinnerPane`，须先批准并登记为 #19–#21（见 §6.2）。
 
 ### 1.4 非目标
 
@@ -215,7 +215,7 @@ D6（进度侵入）**已批准**；D7（启动按钮是否 FAB）与 D8（MVP �
 
 ### 2.7 侵入预算
 
-`docs/00-整体要求.md` §4.2 当前登记 **17 处**代码侵入。与本方案相关的已有位置：
+`docs/00-整体要求.md` §4.2 当前登记 **18 处**代码侵入。与本方案相关的已有位置：
 
 | # | 文件 | 用途 |
 |---|---|---|
@@ -223,18 +223,19 @@ D6（进度侵入）**已批准**；D7（启动按钮是否 FAB）与 D8（MVP �
 | 9 | `Controllers.java` | 深链/对话框入口 |
 | 12 | `PersonalizationPage.java` | 外观设置内嵌主页自定义；v3.17.15 三视觉主题复用 |
 | 15 | `ThemePackManagementPage.java` | 自定义主题包列表，过滤内置主题包（v3.17.15 三视觉主题配套） |
+| 18 | `DecoratorSkin.java` | 真实背景节点样式类，供磨砂快照定位（v3.17.24） |
 
 > 2026-10-24：`HMCLGameRepository.java` 已因默认隔离 fallback 登记为第 14 处；M3 三处进度侵入点顺延为 #15–#17。2026-10-25：`ThemePackManagementPage.java` 因外观主题改版登记为第 15 处，M3 三处再顺延为 #16–#18；2026-10-27：v3.17.14 的 auto/light/dark 已回退，第 15 处保留给自定义主题包过滤。
 
 **侵入策略**：M3 主题安装、玻璃、样式默认不新增侵入；只有“完整 Wavy/加载替换”
-需要把 `TaskListPane`/`DialogPane`/`SpinnerPane` 登记为 #18–#20（需批准，见 §6.2/§14）。默认落点：
+需要把 `TaskListPane`/`DialogPane`/`SpinnerPane` 登记为 #19–#21（需批准，见 §6.2/§14）。`DecoratorSkin.java` 已于 v3.17.24 登记为 #18，不再占用 M3 进度额度。默认落点：
 
 - 已有第 7 处 `DecoratorController.java` 内（壳层组装）；
 - 新增 `org.jackhuang.hmcl.community.ui.m3` 包；
 - 新增 `assets/css/m3-community.css`；
 - 社区自己的 `HomePane`/`CommunitySideBar`/`DashboardWidget` 包装类。
 
-如果实现中发现必须改第 14 个上游文件，**停止并回到本文 §11 重新审批**，不允许先改后补。
+如果实现中发现必须改未登记的上游文件，**停止并回到本文 §11 重新审批**，不允许先改后补。
 
 ---
 
@@ -1944,15 +1945,15 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 | `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunitySideBar.java` | 透明背景/M3 激活态 | 社区文件 |
 | `HMCL/src/main/java/org/jackhuang/hmcl/community/dashboard/builtin/HomePane.java` | GlassCard 包装、头部 M3 | 社区文件 |
 | `HMCL/src/main/java/org/jackhuang/hmcl/community/ui/CommunityStyles.java` | 可选加载 m3 CSS | 社区文件 |
-| `HMCL/src/main/java/org/jackhuang/hmcl/ui/construct/TaskListPane.java` | 进度条替换 | 上游文件，拟 #18（需批准） |
-| `.../construct/DialogPane.java` | 进度条替换 | 上游文件，拟 #19（需批准） |
-| `.../construct/SpinnerPane.java` | spinner 替换 | 上游文件，拟 #20（需批准） |
+| `HMCL/src/main/java/org/jackhuang/hmcl/ui/construct/TaskListPane.java` | 进度条替换 | 上游文件，拟 #19（需批准） |
+| `.../construct/DialogPane.java` | 进度条替换 | 上游文件，拟 #20（需批准） |
+| `.../construct/SpinnerPane.java` | spinner 替换 | 上游文件，拟 #21（需批准） |
 | `.../account/ClassicAccountLoginDialog.java` | 进度条替换（CSS 近似） | 不改字段，0 新增 |
 | `.../terracotta/TerracottaControllerPage.java` | 进度条替换（CSS 近似） | 不改字段，0 新增 |
 
 > **重要**：`TaskListPane`/`DialogPane`/`SpinnerPane`/`ClassicAccountLoginDialog`/
 > `TerracottaControllerPage` 是上游文件。若直接改字段类型，会新增 **5 个代码侵入点**
-> （#18–#22）；未批准时违反当前 17 处预算。本方案只申请前 3 个（#18–#20），
+> （#19–#23）；未批准时违反当前 18 处预算。本方案只申请前 3 个（#19–#21），
 > 登录/Terracotta 两处保留 `JFXProgressBar`，用 CSS 近似。
 >
 > 处理方式（三选一，阶段 4 前必须定）：
@@ -1964,7 +1965,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 > 3. **子类/替换注入**：用 `TaskListPane` 的 public API 替换 bar？字段是 private，做不到。
 >
 > 推荐 **方案 2 的收敛版**：只改上述 3 处（覆盖任务/下载/对话框/加载四类主场景，
-> 登记 #18–#20）；`ClassicAccountLoginDialog`/`TerracottaControllerPage` 保留
+> 登记 #19–#21）；`ClassicAccountLoginDialog`/`TerracottaControllerPage` 保留
 > `JFXProgressBar`，用 CSS 圆角/颜色近似，直到下一次侵入审批。
 >
 > 这需要用户明确批准“新增 3 处侵入”，否则阶段 4 只能做 CSS 近似，R5 不完整。
@@ -2104,7 +2105,7 @@ P0 必做，P1 尽量做，P2 只在成本低且不影响行为时做。
 ### 10.1 代码侵入
 
 - 本方案设计上 **0 新增**；
-- 阶段 4 若坚持替换 `TaskListPane`/`DialogPane`/`SpinnerPane` 的进度条/加载，需要 **+3 处**（#18–#20）；
+- 阶段 4 若坚持替换 `TaskListPane`/`DialogPane`/`SpinnerPane` 的进度条/加载，需要 **+3 处**（#19–#21）；
 - 这 3 处必须：
   1. 写入 `docs/00-整体要求.md` §4.2 表；
   2. 更新 §7.2 固定数量、§8 DoD、§9 风险；
@@ -2484,7 +2485,7 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 | # | 约束 | 在 LMCL 的落点 |
 |---|---|---|
 | H1 | 禁止引入 Jetpack Compose、Android、Web 前端 API | 只允许 JavaFX 21 + 现有 HMCL/m3fx API；不引入 WebView 方案 |
-| H2 | 不改 `HMCLCore` 的下载、认证、游戏版本、任务框架逻辑 | M3 切片只改 `HMCL/src/main/java/org/jackhuang/hmcl/community/**`、CSS、资源；上游侵入只走已登记的 17 处 |
+| H2 | 不改 `HMCLCore` 的下载、认证、游戏版本、任务框架逻辑 | M3 切片只改 `HMCL/src/main/java/org/jackhuang/hmcl/community/**`、CSS、资源；上游侵入只走已登记的 18 处 |
 | H3 | 不修改既有 i18n key 的含义/拼写 | M3 重构阶段不重命名上游 key；只新增 `community.*` key，并跑 `:HMCL:checkTranslations` |
 | H4 | 每个切片必须能过构建 | `:HMCL:compileJava`、`:HMCL:checkTranslations`、community 测试；切片合并前再跑全量测试 |
 | H5 | 尊重 reduced motion；触控目标 ≥ 48dp（桌面按钮至少 36–40px 视觉 + 足够点击区） | 复用 `animationDisabled` 与 `M3Settings.reducedMotion`；图标按钮不缩小到不可点。**例外（2026-10-24 用户接受）**：主页紧凑卡片按钮 30px、账户卡展开按钮 32×32 暂维持，因启动器窗口本身不大；若触控/DPI 反馈再调，见审查记录 §68.4 |
@@ -2575,15 +2576,15 @@ Windows 截图对比 + 更新本文件“实施记录” + 打独立测试包。
 |---|---|---|
 | 主页卡片高度 | `addWidget` 设固定 `minHeight` 槽位 | v3.17.1 已删除槽位表；高度内容驱动，footer 贴底 |
 | 主页卡片数量 | 早期 10/11 卡 | 9 张组件卡 + 固定账户卡；memory/storage 已移除 |
-| 当前测试包 | `m3expressive1` | `m3expressive24`（jar 12,360,289 B / zip 75,838,097 B `4ce20c59…`；B2 玻璃 + 顶栏动态取色 + 强调色/莫奈取色 + LMCL 图标/捐赠者 + v3.17.23 五层磨砂材质/1×1 compact） |
-| 切片 A/B1/B2 状态 | 待 Windows 验收 | A/B1/B2 均已实现；v3.17.18 调顶栏主题色、移除主页多余框并把模糊上限提到 32；v3.17.19 加亚克力/顶栏壁纸动态取色；v3.17.20 加强调色四模式与 M3 正文/顶栏同源；v3.17.21 换 LMCL 图标/捐赠者（不改 M3 行为）；v3.17.22 完成 `GlassSnapshot` far/near 双层材质、删除 sheen/白边/噪点、9 卡+账户卡 `materialCard`、侧栏同材质；v3.17.23 改为五层模糊 + 1×1 compact；仍待 Windows 实机验收 |
+| 当前测试包 | `m3expressive1` | `m3expressive25`（jar 12,362,462 B / zip 75,865,225 B `a159c305…`；B2 玻璃 + 顶栏动态取色 + 强调色/莫奈取色 + LMCL 图标/捐赠者 + v3.17.23 五层磨砂材质/1×1 compact + v3.17.24 实时背景对齐/三卡透明） |
+| 切片 A/B1/B2 状态 | 待 Windows 验收 | A/B1/B2 均已实现；v3.17.18 调顶栏主题色、移除主页多余框并把模糊上限提到 32；v3.17.19 加亚克力/顶栏壁纸动态取色；v3.17.20 加强调色四模式与 M3 正文/顶栏同源；v3.17.21 换 LMCL 图标/捐赠者（不改 M3 行为）；v3.17.22 完成 `GlassSnapshot` far/near 双层材质、删除 sheen/白边/噪点、9 卡+账户卡 `materialCard`、侧栏同材质；v3.17.23 改为五层模糊 + 1×1 compact；v3.17.24 修复真实背景对齐与三张 1×1 卡透明；仍待 Windows 实机验收 |
 | 主页账户卡/日历 | 未涉及 | v3.17.2 已交付：账户卡 ▼ 下拉/200 ms 动画/新建·管理；日历固定 5×7 自然周；v3.17.3 右栏本日/本周统计 + 设置·统计页；v3.17.4 删除固定说明句，色阶随主题明暗反转；v3.17.5 问候语下改为每日一言；v3.17.6 本地源可分别启用；v3.17.7 每日一言设置收为单卡片 |
 
 ### 19.8 下一步建议
 
 1. [主页账户卡与游玩日历改版](修复方案-主页账户卡与游玩日历改版.md)、[每日一言与主页顶栏改造](修复方案-每日一言与主页顶栏改造.md)、[每日一言设置层级调整](修复方案-每日一言设置层级调整.md)与 v3.17.8 的 MC 语料替换均已实施、验证，并由 `m3expressive23` 继承，不并入 M3 B2–G；v3.17.14 的主题三态化已回退，v3.17.15 的三个视觉主题与 v3.17.16 的崩溃修复/默认值也属于非 M3 B2–G 变更；
-2. **B2 材质重做（v2 已实现）**：用户 m27893 判定 B2 材质不对；v3.17.22 先做 v1（双层模糊、删除 sheen/高光边框/噪点、统一 `materialCard`），v3.17.23 按[磨砂材质统一与多层模糊](修复方案-磨砂材质统一与多层模糊.md) §16–§17 改为五层模糊 + 1×1 compact；本文件 §24–§27 仅保留历史实现记录，§28 是 v1 历史，§29 是 v2 记录；
-3. 用户先对 `m3expressive24`（五层材质）做 Windows 实机验收（顶栏动态取色、强调色四模式/自定义取色器、主页材质、账户卡与每日一言无框、默认 M3 Expressive、Classic↔M3 切换矩阵、三个视觉主题/自定义主题包、主页卡片按钮圆角外不可点、`glass=off` 回退/窗口缩放，以及 5×7 日历、右栏统计、每日一言、本地源等回归）；
+2. **B2 材质重做（v2 已实现）**：用户 m27893 判定 B2 材质不对；v3.17.22 先做 v1（双层模糊、删除 sheen/高光边框/噪点、统一 `materialCard`），v3.17.23 按[磨砂材质统一与多层模糊](修复方案-磨砂材质统一与多层模糊.md) §16–§17 改为五层模糊 + 1×1 compact；v3.17.24 再按 §18 修复真实背景对齐与三张 1×1 卡透明；本文件 §24–§27 仅保留历史实现记录，§28 是 v1 历史，§29 是 v2 记录，§30 是 v3.17.24 记录；
+3. 用户先对 `m3expressive25`（五层材质 + 实时背景对齐）做 Windows 实机验收（实例快照框对齐、三张 1×1 卡透明、顶栏动态取色、强调色四模式/自定义取色器、主页材质、账户卡与每日一言无框、默认 M3 Expressive、Classic↔M3 切换矩阵、三个视觉主题/自定义主题包、主页卡片按钮圆角外不可点、`glass=off` 回退/窗口缩放，以及 5×7 日历、右栏统计、每日一言、本地源等回归）；
 4. 材质与强调色实机确认后进入 C（主页控件/指标/日历/空态 M3 统一）；标题栏与 M3 正文共用 `M3DynamicColors` 色板；
 5. 每个 M3 切片开始前，按 §19.4 先补 token 与控件清单，再改页面。
 
@@ -2775,7 +2776,7 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 
 - 只替换 m3fx 依赖来源：从 JitPack 远程坐标改为仓库内 `:m3fx` 子工程；不改变 M3 主题、玻璃、进度条等视觉设计。
 - 只收录上游 `src/main/java` 与 `src/main/resources`，不收录测试、demo、文档与上游构建脚本。
-- 不新增上游 `ui/**` 代码侵入点；`HMCL/build.gradle.kts`、`settings.gradle.kts`、`gradle/libs.versions.toml` 属构建配置，不计入 17 处。
+- 不新增上游 `ui/**` 代码侵入点；`HMCL/build.gradle.kts`、`settings.gradle.kts`、`gradle/libs.versions.toml` 属构建配置，不计入 18 处。
 - 不把 m3fx 改为“无模块编译”：上游 `module-info.java` 必须保留，见 23.2 的编译错误。
 
 ### 23.2 实现
@@ -3006,3 +3007,41 @@ v3.17.9（m3expressive11）把 `.lmcl-m3 .community-sidebar-button` 的 `-fx-bac
 
 - Windows 实机：三张 1×1 卡的 compact 观感、五层重建性能、文字对比度（H6）、窗口缩放跟随。
 - 未实现 `-Dlmcl.visual.glass.layers=3` 降级；性能不足时再单独立项。
+
+## 30. v3.17.24 实时背景对齐与三张 1×1 卡透明修复（2026-11-01 / m3expressive25）
+
+### 30.1 目标与触发
+
+User said (m29235)：“模糊要实时渲染，实例快照框的模糊层位置不对，java推荐，下载源和启动健康三个组件没有实现效果”。
+
+v3.17.23 的五层材质在 WSL2 下只做了编译/单测/CSS 断言，没有 Windows 实机；交付后暴露三个问题：
+
+1. `GlassBackdrop` 手动按宿主尺寸重绘壁纸，没有读取 `DecoratorSkin` 的真实背景 `Region`，导致实例快照卡的模糊层上下偏移；
+2. `m3-community.css` 的 `.lmcl-m3 .community-home .card`（3 类）后加载，压过 `community.css` 的透明规则（3 类），把 Java 推荐/下载源/启动健康三张 1×1 卡的 `.card` 重新涂成实色，玻璃层被盖住；
+3. `GlassBackdrop.refreshDelay=160ms` 且运行中直接 return，拖动/缩放时用户感知不到实时跟随。
+
+### 30.2 实现
+
+- **第 18 处上游侵入**：`DecoratorSkin.java` 给 `backgroundNode` 增加 `lmcl-launcher-background` 样式类，不改变布局/透明度绑定；`GlassBackdrop` 通过 `host.lookup(...)` 找到真实节点。
+- `GlassBackdrop`：`attach()` 绑定背景节点；监听 `layoutBoundsProperty`/`localToSceneTransformProperty`；`render(...)` 优先 `paintBackgroundNode`（`SnapshotParameters` + `Scale`，按 `localToScene` 偏移、真实尺寸/透明度与标题栏高度绘制），节点缺失时回退 `paintImages/paintFill`；非透明窗口预填 `SURFACE_CONTAINER`；`extendEdges` 只在节点贴住宿主边缘时延伸，不污染标题栏空白。
+- **实时**：`refreshDelay` 160ms→**16ms**；RUNNING 期间只标记 pending，结束后再执行一次合并刷新，避免拖动过程中丢帧。
+- **CSS**：在 `.lmcl-m3 .community-home .card` 之后增加
+  `.lmcl-m3-glass .community-home .community-material-card > .card { -fx-background-color: transparent; -fx-border-color: transparent; }`
+  （4 类，压过 3 类规则）；`CommunityCssTest` 断言该选择器存在。
+- 五层模糊、960×640、compact 阈值与层透明度不变；不新增第二套材质。
+
+### 30.3 验证
+
+- `:HMCL:compileJava` 成功；`:HMCL:test` **313/0/0/2 skipped**（community **203/0**）；`:HMCL:checkTranslations` 通过。
+- jar **12,362,462 B** `9fc849c6…`；exe **13,679,852 B** `755bd058…`；stub 1,317,390 B `e06151cc…`；`exe[:stub]==stub`、`exe[stub:]==jar`。
+- 包 `m3expressive25` **75,865,225 B** `a159c305…`；329 entries、包内 327 文件 `SHA256SUMS` 通过；删除 m3e24 后 `dist/SHA256SUMS` 1296 行通过。
+
+### 30.4 未验证
+
+- Windows 实机：`Node.snapshot` 在非 1.0 `Scale` 下的画面、三张 1×1 卡的透明恢复、标题栏透明/不透明下的位置、拖动缩放 16ms 刷新的性能；
+- 16ms 只是合并间隔，不代表每帧重建五层；首次/大幅缩放仍可能卡顿；
+- 背景节点依赖 `lmcl-launcher-background` 样式类查找，上游改动 `DecoratorSkin` 时需同步检查。
+
+### 30.5 文档同步
+
+- 本文 §30；[材质方案](修复方案-磨砂材质统一与多层模糊.md) §18；README v3.17.24；`00-整体要求.md`（#18）；`待办总览.md`；审查记录 §79；步骤 21 §33；`lmcl/docs-community/` 同步。
