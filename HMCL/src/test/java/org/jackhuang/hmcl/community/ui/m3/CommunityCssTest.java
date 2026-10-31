@@ -43,6 +43,8 @@ public final class CommunityCssTest {
         }
         assertTrue(css.contains(".lmcl-m3-glass-compact .lmcl-m3-glass-layer-4"),
                 "missing compact layer weight");
+        assertTrue(css.contains(".lmcl-m3-glass .community-home .community-material-card > .card"),
+                "material card surface must be transparent so the glass layers show through");
     }
 
     private static void assertParses(String resource) throws Exception {

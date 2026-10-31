@@ -146,6 +146,7 @@ public class DecoratorSkin extends SkinBase<Decorator> {
                 Themes.colorSchemeProperty()));
 
         Region backgroundNode = new Region();
+        backgroundNode.getStyleClass().add("lmcl-launcher-background");
         backgroundNode.setMouseTransparent(true);
         backgroundNode.backgroundProperty().bind(Bindings.createObjectBinding(
                 () -> skinnable.getContentBackground() == null

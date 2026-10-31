@@ -217,6 +217,13 @@
     -fx-border-color: -m3-color-outline-variant;
 }
 
+/* 磨砂卡片的表面必须完全透明，否则会盖住底下的玻璃层；选择器比上面的
+   token 规则多一个类，且只在玻璃开启时生效，避免 glass=off 时卡片失去实色底。 */
+.lmcl-m3-glass .community-home .community-material-card > .card {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
 .lmcl-m3 .community-home .community-source-name {
     -fx-text-fill: -m3-color-on-surface;
 }
