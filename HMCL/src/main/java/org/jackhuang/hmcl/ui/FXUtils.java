@@ -1125,10 +1125,21 @@ public final class FXUtils {
     }
 
     public static void setIcon(Stage stage) {
-        String icon;
         if (OperatingSystem.CURRENT_OS == OperatingSystem.WINDOWS) {
-            icon = "/assets/img/icon.png";
-        } else if (OperatingSystem.CURRENT_OS == OperatingSystem.MACOS) {
+            // Windows 会按任务栏/标题栏的 DPI 选择最接近的图标尺寸；只提供 32px
+            // 时高 DPI 下会缩放糊掉，因此把 LMCL 的完整尺寸链交给 JavaFX。
+            for (String icon : new String[]{
+                    "/assets/img/icon.png",
+                    "/assets/img/icon@2x.png",
+                    "/assets/img/icon@4x.png",
+                    "/assets/img/icon@8x.png"}) {
+                stage.getIcons().add(newBuiltinImage(icon));
+            }
+            return;
+        }
+
+        String icon;
+        if (OperatingSystem.CURRENT_OS == OperatingSystem.MACOS) {
             icon = "/assets/img/icon-mac.png";
         } else {
             icon = "/assets/img/icon@4x.png";

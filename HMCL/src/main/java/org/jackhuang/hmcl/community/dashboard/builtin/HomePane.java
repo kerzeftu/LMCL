@@ -123,6 +123,11 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 主页四周留白（像素）；避免卡片/滚动条紧贴窗口边框。
     private static final Insets HOME_PADDING = new Insets(10, 12, 12, 12);
 
+    /// 上游浮动启动按钮（230×57）会盖在主页右下角；这里预留额外的底部空间，
+    /// 让右栏最后一个组件（例如实例快照）的 footer 滚动到按钮上方，避免按钮
+    /// 被 `MainPage#launchPane` 抢走鼠标事件。
+    private static final int LAUNCH_PANE_CLEARANCE = 64;
+
     /// 首页。
     private final MainPage mainPage;
 
@@ -248,7 +253,11 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         setSpacing(12);
         setFillWidth(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        setPadding(HOME_PADDING);
+        setPadding(new Insets(
+                HOME_PADDING.getTop(),
+                HOME_PADDING.getRight(),
+                HOME_PADDING.getBottom() + LAUNCH_PANE_CLEARANCE,
+                HOME_PADDING.getLeft()));
 
         if (!config.readOnly() && config.firstRun() && config.items().isEmpty()) {
             config.setItems(defaultItems());
