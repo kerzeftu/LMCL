@@ -633,11 +633,12 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
     /// 把一列滚动区包进可裁剪的框架，并在上下各叠放一条边缘渐隐带。
     ///
-    /// 两条带都盖在框架的上下边缘：顶部带贴框架上沿，底部带贴框架下沿。
+    /// 两条带都盖在框架的上下边缘：顶部带贴框架上沿，底部带贴内容截断处。
     /// 右列可传入 [bottomInset] 把滚动区视口底边抬到浮动启动按钮上方，
-    /// 视口下方留下的条由底部渐隐带填充；这样内容在任意滚动位置都不会
-    /// 进入按钮的覆盖/点击区。滚到底（剩余距离为 0）时底部带由
-    /// [GlassEdgeFade] 自动隐藏。
+    /// 底部渐隐带同步上移同样的距离，使渐隐在内容截断处结束、下方内缩条
+    /// 露出纯背景；这样内容在任意滚动位置都不会进入按钮的覆盖/点击区，
+    /// 也不会出现“内容被硬切 + 清晰壁纸条”的观感。滚到底（剩余距离为 0）
+    /// 时底部带由 [GlassEdgeFade] 自动隐藏。
     ///
     /// 框架复制滚动区的宽度约束，保证替换后左右列宽度与旧布局一致。
     ///
@@ -655,6 +656,8 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         StackPane frame = new StackPane(pane, topFade, bottomFade);
         if (bottomInset > 0) {
             StackPane.setMargin(pane, new Insets(0, 0, bottomInset, 0));
+            // 渐隐带与滚动视口底边对齐：内容在渐隐结束处被截断，下方内缩条是纯背景。
+            StackPane.setMargin(bottomFade, new Insets(0, 0, bottomInset, 0));
         }
         frame.setMinWidth(pane.getMinWidth());
         frame.setPrefWidth(pane.getPrefWidth());
