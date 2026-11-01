@@ -70,18 +70,18 @@ public final class GlassSnapshotTest {
 
     @Test
     public void blurRadiusTracksSnapshotScale() {
-        assertEquals(48.0, GlassBackdrop.blurRadius(96.0, 0.5), 0.001);
+        assertEquals(96.0, GlassBackdrop.blurRadius(192.0, 0.5), 0.001);
         assertEquals(1.0, GlassBackdrop.blurRadius(0.0, 0.5), 0.001);
     }
 
     @Test
     public void fiveLayersUseFiveRadiiAndIterations() {
         assertEquals(5, GlassBackdrop.layerCount());
-        assertEquals(96.0, GlassBackdrop.blurSceneRadiusAt(0), 0.001);
-        assertEquals(64.0, GlassBackdrop.blurSceneRadiusAt(1), 0.001);
-        assertEquals(40.0, GlassBackdrop.blurSceneRadiusAt(2), 0.001);
-        assertEquals(24.0, GlassBackdrop.blurSceneRadiusAt(3), 0.001);
-        assertEquals(12.0, GlassBackdrop.blurSceneRadiusAt(4), 0.001);
+        assertEquals(192.0, GlassBackdrop.blurSceneRadiusAt(0), 0.001);
+        assertEquals(128.0, GlassBackdrop.blurSceneRadiusAt(1), 0.001);
+        assertEquals(80.0, GlassBackdrop.blurSceneRadiusAt(2), 0.001);
+        assertEquals(48.0, GlassBackdrop.blurSceneRadiusAt(3), 0.001);
+        assertEquals(24.0, GlassBackdrop.blurSceneRadiusAt(4), 0.001);
         assertEquals(3, GlassBackdrop.iterationsAt(0));
         assertEquals(3, GlassBackdrop.iterationsAt(1));
         assertEquals(2, GlassBackdrop.iterationsAt(2));
@@ -91,8 +91,8 @@ public final class GlassSnapshotTest {
 
     @Test
     public void paddingCoversLargestBlur() {
-        assertEquals(74, GlassBackdrop.paddingFor(0.5));
-        assertEquals(146, GlassBackdrop.paddingFor(1.0));
+        assertEquals(146, GlassBackdrop.paddingFor(0.5));
+        assertEquals(290, GlassBackdrop.paddingFor(1.0));
     }
 
     @Test

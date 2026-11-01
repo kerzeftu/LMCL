@@ -26,9 +26,11 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
+import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
@@ -37,6 +39,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import javafx.util.Duration;
@@ -57,6 +60,7 @@ import org.jackhuang.hmcl.community.quote.DailyQuoteService;
 import org.jackhuang.hmcl.community.quote.DailyQuoteSettings;
 import org.jackhuang.hmcl.community.quote.QuoteOrigin;
 import org.jackhuang.hmcl.community.ui.CommunitySettingsPanel;
+import org.jackhuang.hmcl.community.ui.m3.GlassEdgeFade;
 import org.jackhuang.hmcl.community.ui.m3.M3SpikePane;
 import org.jackhuang.hmcl.community.update.CommunityUpdateDialog;
 import org.jackhuang.hmcl.community.update.CommunityUpdateNotifier;
@@ -121,12 +125,31 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     private static final int COLUMN_GAP = 16;
 
     /// 主页四周留白（像素）；避免卡片/滚动条紧贴窗口边框。
-    private static final Insets HOME_PADDING = new Insets(10, 12, 12, 12);
+    ///
+    /// 页面底部保留 8 px 留白：左列视口底边落在「页底 - 8」；右列再在内层框架
+    /// 里内缩 [INSTANCE_VIEWPORT_BOTTOM_INSET]（视口底边 = 页底 - 64），底部渐隐带
+    /// 外缘下方仍有页面背景，卡片不再直接贴住窗口底边。
+    private static final Insets HOME_PADDING = new Insets(10, 12, 8, 12);
 
-    /// 上游浮动启动按钮（230×57）会盖在主页右下角；这里预留额外的底部空间，
-    /// 让右栏最后一个组件（例如实例快照）的 footer 滚动到按钮上方，避免按钮
-    /// 被 `MainPage#launchPane` 抢走鼠标事件。
+    /// 上游浮动启动按钮（230×57）会盖在主页右下角，旧实现曾用它作为右列框架的
+    /// 底部外边距，把整列视口抬高到按钮上方。
+    ///
+    /// v3.17.34 起右列改用 [INSTANCE_VIEWPORT_BOTTOM_INSET] 把滚动视口底边抬到
+    /// 按钮上方：视口底边 = 页底 - 8 - 56 = 页底 - 64，内容（含卡片 footer）在
+    /// 任意滚动位置都不会进入 230×57 按钮的覆盖/点击区，底部条由渐隐带填充。
+    /// 该常量仅作语义/文档参考（64 = 56 + 8），不得再当作外边距使用。
+    ///
+    /// @deprecated v3.17.32 起无引用，保留仅作语义参考；后续版本可删除。
+    @Deprecated
     private static final int LAUNCH_PANE_CLEARANCE = 64;
+
+    /// 右列滚动视口的底部内缩（像素）。
+    ///
+    /// 启动按钮高 57 px（`root.css .launch-pane`）：视口底边停在页底 - 64 px
+    /// （页底 8 px + 内缩 56 px），最后一张卡的 footer 最高只能到页底 - 64 px，
+    /// 落在按钮顶（页底 - 57 px）上方 7 px；滚动中途内容也不会进入按钮的
+    /// 覆盖/点击区。底部 56 px 条由底部渐隐带填充，不再压住卡片 footer。
+    private static final double INSTANCE_VIEWPORT_BOTTOM_INSET = 56;
 
     /// 首页。
     private final MainPage mainPage;
@@ -207,6 +230,21 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     /// 右实例栏独立滚动容器。
     private final ScrollPane instanceScroll = new ScrollPane();
 
+    /// 左列顶部边缘渐隐带。
+    private final GlassEdgeFade infoTopFade = new GlassEdgeFade(GlassEdgeFade.Edge.TOP);
+
+    /// 右列顶部边缘渐隐带。
+    private final GlassEdgeFade instanceTopFade = new GlassEdgeFade(GlassEdgeFade.Edge.TOP);
+
+    /// 左列底部边缘渐隐带。
+    private final GlassEdgeFade infoBottomFade = new GlassEdgeFade(GlassEdgeFade.Edge.BOTTOM);
+
+    /// 右列底部边缘渐隐带。
+    private final GlassEdgeFade instanceBottomFade = new GlassEdgeFade(GlassEdgeFade.Edge.BOTTOM);
+
+    /// 两列滚动位置、视口或内容高度变化时重算上下过渡带的距离。
+    private final InvalidationListener columnScrollListener = observable -> updateColumnEdgeDistances();
+
     /// 落盘防抖。
     private final PauseTransition saveDebounce = new PauseTransition(Duration.seconds(1));
 
@@ -250,14 +288,12 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
         CommunityStyles.apply(this);
         getStyleClass().add("community-home");
-        setSpacing(12);
+        // 页头自身下内边距 2 px + 此处 4 px = 页头与两列滚动区之间 6 px 可见间距。
+        setSpacing(4);
         setFillWidth(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        setPadding(new Insets(
-                HOME_PADDING.getTop(),
-                HOME_PADDING.getRight(),
-                HOME_PADDING.getBottom() + LAUNCH_PANE_CLEARANCE,
-                HOME_PADDING.getLeft()));
+        // 页底留白 8 px 由 HOME_PADDING 提供；右列启动按钮安全区改由实例列内容 padding 承担。
+        setPadding(HOME_PADDING);
 
         if (!config.readOnly() && config.firstRun() && config.items().isEmpty()) {
             config.setItems(defaultItems());
@@ -315,6 +351,16 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         if (accountCard != null) {
             accountCard.dispose();
         }
+        infoScroll.vvalueProperty().removeListener(columnScrollListener);
+        infoScroll.viewportBoundsProperty().removeListener(columnScrollListener);
+        instanceScroll.vvalueProperty().removeListener(columnScrollListener);
+        instanceScroll.viewportBoundsProperty().removeListener(columnScrollListener);
+        infoColumn.layoutBoundsProperty().removeListener(columnScrollListener);
+        instanceColumn.layoutBoundsProperty().removeListener(columnScrollListener);
+        infoTopFade.dispose();
+        infoBottomFade.dispose();
+        instanceTopFade.dispose();
+        instanceBottomFade.dispose();
         for (DashboardWidget widget : widgets.values()) {
             try {
                 widget.dispose();
@@ -335,6 +381,7 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
         for (DashboardWidget widget : widgets.values()) {
             widget.requestRefresh();
         }
+        updateColumnEdgeDistances();
     }
 
     /// 恢复默认显隐。
@@ -540,6 +587,14 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
     }
 
     /// 构建左右两条独立滚动的列（只执行一次）。
+    ///
+    /// 两列滚动区各自包进一个 `StackPane`，上下各叠放一条 [GlassEdgeFade]；
+    /// 滚动位置、视口尺寸与内容高度共同驱动两条过渡带显示的距离：顶部带显示
+    /// 已滚过的距离，底部带显示剩余可滚距离，滚到底时底部带自动隐藏。
+    ///
+    /// 页底留白 8 px 由 [HOME_PADDING] 提供；右列滚动视口再向内缩
+    /// [INSTANCE_VIEWPORT_BOTTOM_INSET]（56 px），内容（含卡片 footer）不会进入
+    /// 右下角 230×57 浮动启动按钮的覆盖/点击区，底部条由渐隐带填充。
     @NotNull
     private HBox buildColumns() {
         infoColumn.setFillWidth(true);
@@ -551,16 +606,103 @@ public final class HomePane extends VBox implements CommunitySettingsPanel.Dashb
 
         configureColumnScroll(infoScroll, INFO_WIDTH);
         configureColumnScroll(instanceScroll, Region.USE_COMPUTED_SIZE);
-        HBox.setHgrow(instanceScroll, Priority.ALWAYS);
 
         infoScroll.setContent(infoColumn);
         instanceScroll.setContent(instanceColumn);
 
-        HBox columns = new HBox(COLUMN_GAP, infoScroll, instanceScroll);
+        StackPane infoFrame = createColumnFrame(infoScroll, infoTopFade, infoBottomFade, 0.0);
+        StackPane instanceFrame = createColumnFrame(instanceScroll, instanceTopFade, instanceBottomFade,
+                INSTANCE_VIEWPORT_BOTTOM_INSET);
+        // 剩余宽度仍由右列吸收；宽度约束已复制到框架，布局结果与旧实现一致。
+        HBox.setHgrow(instanceFrame, Priority.ALWAYS);
+
+        infoScroll.vvalueProperty().addListener(columnScrollListener);
+        infoScroll.viewportBoundsProperty().addListener(columnScrollListener);
+        instanceScroll.vvalueProperty().addListener(columnScrollListener);
+        instanceScroll.viewportBoundsProperty().addListener(columnScrollListener);
+        infoColumn.layoutBoundsProperty().addListener(columnScrollListener);
+        instanceColumn.layoutBoundsProperty().addListener(columnScrollListener);
+
+        HBox columns = new HBox(COLUMN_GAP, infoFrame, instanceFrame);
         columns.setFillHeight(true);
         columns.setAlignment(Pos.TOP_LEFT);
         VBox.setVgrow(columns, Priority.ALWAYS);
+        updateColumnEdgeDistances();
         return columns;
+    }
+
+    /// 把一列滚动区包进可裁剪的框架，并在上下各叠放一条边缘渐隐带。
+    ///
+    /// 两条带都盖在框架的上下边缘：顶部带贴框架上沿，底部带贴框架下沿。
+    /// 右列可传入 [bottomInset] 把滚动区视口底边抬到浮动启动按钮上方，
+    /// 视口下方留下的条由底部渐隐带填充；这样内容在任意滚动位置都不会
+    /// 进入按钮的覆盖/点击区。滚到底（剩余距离为 0）时底部带由
+    /// [GlassEdgeFade] 自动隐藏。
+    ///
+    /// 框架复制滚动区的宽度约束，保证替换后左右列宽度与旧布局一致。
+    ///
+    /// @param pane 滚动区
+    /// @param topFade 顶部渐隐带
+    /// @param bottomFade 底部渐隐带
+    /// @param bottomInset 滚动区相对框架底部的内缩（像素）；0 表示贴底
+    /// @return 承载滚动区与上下渐隐带的框架
+    @NotNull
+    private static StackPane createColumnFrame(
+            @NotNull ScrollPane pane,
+            @NotNull GlassEdgeFade topFade,
+            @NotNull GlassEdgeFade bottomFade,
+            double bottomInset) {
+        StackPane frame = new StackPane(pane, topFade, bottomFade);
+        if (bottomInset > 0) {
+            StackPane.setMargin(pane, new Insets(0, 0, bottomInset, 0));
+        }
+        frame.setMinWidth(pane.getMinWidth());
+        frame.setPrefWidth(pane.getPrefWidth());
+        frame.setMaxWidth(pane.getMaxWidth());
+        frame.setMinHeight(0.0);
+        frame.setMaxHeight(Double.MAX_VALUE);
+        configureEdgeFade(topFade, Pos.TOP_CENTER);
+        configureEdgeFade(bottomFade, Pos.BOTTOM_CENTER);
+        return frame;
+    }
+
+    /// 配置一条边缘渐隐带：贴住对应边、固定 72 px 高、铺满整列宽度且不拦截鼠标。
+    ///
+    /// @param fade 渐隐带
+    /// @param alignment 渐隐带在框架中的对齐方式
+    private static void configureEdgeFade(@NotNull GlassEdgeFade fade, @NotNull Pos alignment) {
+        StackPane.setAlignment(fade, alignment);
+        fade.setPrefHeight(GlassEdgeFade.FADE_HEIGHT);
+        fade.setMaxHeight(GlassEdgeFade.FADE_HEIGHT);
+        fade.setMaxWidth(Double.MAX_VALUE);
+        fade.setMouseTransparent(true);
+    }
+
+    /// 按两列的滚动位置刷新上下边缘渐隐带。
+    private void updateColumnEdgeDistances() {
+        updateColumnEdgeDistances(infoScroll, infoTopFade, infoBottomFade);
+        updateColumnEdgeDistances(instanceScroll, instanceTopFade, instanceBottomFade);
+    }
+
+    /// 计算一列的滚动距离：顶部带显示已滚过的距离，底部带显示剩余可滚距离。
+    ///
+    /// 剩余距离 = `max(0, 内容高 - 视口高) - 已滚动距离`，滚到底时为 0，
+    /// 底部带随之隐藏；内容不足一屏时两条带都保持隐藏。
+    ///
+    /// @param pane 滚动区
+    /// @param top 顶部渐隐带
+    /// @param bottom 底部渐隐带
+    private static void updateColumnEdgeDistances(
+            @NotNull ScrollPane pane,
+            @NotNull GlassEdgeFade top,
+            @NotNull GlassEdgeFade bottom) {
+        @Nullable Node content = pane.getContent();
+        double contentHeight = content == null ? 0.0 : content.getLayoutBounds().getHeight();
+        double viewportHeight = pane.getViewportBounds().getHeight();
+        double maxDistance = Math.max(0.0, contentHeight - viewportHeight);
+        double offset = GlassEdgeFade.scrollDistance(pane.getVvalue(), contentHeight, viewportHeight);
+        top.setDistance(offset);
+        bottom.setDistance(maxDistance - offset);
     }
 
     /// 配置单列滚动：垂直滚动、无横向滚动、内容随视口宽度调整。

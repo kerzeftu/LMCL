@@ -19,9 +19,12 @@ package org.jackhuang.hmcl.community.dashboard.builtin;
 
 import com.jfoenix.controls.JFXButton;
 import javafx.beans.value.ChangeListener;
+import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.community.dashboard.DashboardContext;
 import org.jackhuang.hmcl.community.dashboard.DashboardWidget;
@@ -53,6 +56,9 @@ public final class SnapshotWidget extends DashboardWidget {
     private final Label detailLabel = BuiltinWidgets.caption("");
     private final Label sharedLabel = BuiltinWidgets.caption("");
     private final Label statusLabel = BuiltinWidgets.caption("");
+
+    // 窄列：三按钮使用 I18N 短标签（回滚/标记/管理…）；footer 的内边距与高度由
+    // community.css 的 .community-card-actions 规则收紧，避免文字被省略号截断。
     private final JFXButton rollbackButton = BuiltinWidgets.borderButton(
             i18n("community.snapshot.rollback_last"), this::rollbackLast);
     private final JFXButton markButton = BuiltinWidgets.borderButton(
@@ -75,12 +81,22 @@ public final class SnapshotWidget extends DashboardWidget {
         sharedLabel.getStyleClass().add("community-snapshot-warning");
         statusLabel.getStyleClass().add("subtitle-label");
         setSpacing(4);
+        rollbackButton.setTooltip(new Tooltip(i18n("community.snapshot.rollback_last.tooltip")));
+        markButton.setTooltip(new Tooltip(i18n("community.snapshot.mark_current.tooltip")));
+        manageButton.setTooltip(new Tooltip(i18n("community.snapshot.manage.tooltip")));
     }
 
     @Override
     @NotNull
     protected Node createContent() {
-        HBox buttons = BuiltinWidgets.cardFooter(rollbackButton, markButton, manageButton);
+        // 三按钮固定在卡片底部 footer（与其它卡片一致，不改变现有操作位置）；
+        // 右列滚动视口已在 HomePane 中抬到启动按钮上方，滚动中途 footer 也不会
+        // 进入浮动按钮的覆盖/点击区。标签过长时换行而不是用省略号截断。
+        FlowPane buttons = new FlowPane(8, 6, rollbackButton, markButton, manageButton);
+        buttons.getStyleClass().add("community-card-actions");
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+        buttons.setRowValignment(VPos.CENTER);
+        buttons.setMaxWidth(Double.MAX_VALUE);
         VBox body = new VBox(4, lastLabel, detailLabel, sharedLabel, statusLabel);
         body.setMinWidth(0);
         body.setFillWidth(true);

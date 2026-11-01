@@ -88,7 +88,10 @@ public final class GlassBackdrop {
     private static final double MAX_SNAPSHOT_HEIGHT = 640.0;
 
     /// 各层模糊在屏幕上的目标半径，从远到近。
-    private static final double[] BLUR_RADII_SCENE = {96.0, 64.0, 40.0, 24.0, 12.0};
+    ///
+    /// v3.17.28 由 `128/88/56/32/16` 加深到 `192/128/80/48/24`（约 +50%），
+    /// 向 HyperOS 2 高级材质的观感靠拢；层数与迭代次数保持不变。
+    private static final double[] BLUR_RADII_SCENE = {192.0, 128.0, 80.0, 48.0, 24.0};
 
     /// 各层 BoxBlur 迭代次数；远景多迭代消除色带，近景少迭代保留细节。
     private static final int[] BLUR_ITERATIONS = {3, 3, 2, 2, 2};

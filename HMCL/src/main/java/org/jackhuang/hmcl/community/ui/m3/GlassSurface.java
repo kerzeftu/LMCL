@@ -55,13 +55,16 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 /// 路径，由现有 CSS 统一隐藏。
 ///
 /// 五层采样视口都会比卡片本身向四周外扩 [GlassLiveViewport#sampleMargin]
-/// （远层 96 px 半径对应 146 px 场景外扩），保证卡片可见区域内部永远不是
+/// （远层 192 px 半径对应 290 px 场景外扩），保证卡片可见区域内部永远不是
 /// [BoxBlur] 的透明边缘；外扩部分由本节点的圆角 [Rectangle] clip 裁掉。
 /// 壁纸节点的 [org.jackhuang.hmcl.theme.LauncherBackground#opacity()] 是独立于
 /// 图片透明度的节点透明度，实时层把它乘在图层组上，避免半透明壁纸下磨砂偏亮。
 ///
 /// 1×1 小卡片会额外加 `lmcl-m3-glass-compact`，由 CSS 降低远景层、提高近景层，
 /// 避免小面积被大半径模糊抹成一块纯色。
+///
+/// 每层只做高斯模糊，不串联任何附加效果；整块表面之上再覆盖一层半透明
+/// 表面色 tint，只靠“五层模糊图层 + 半透明 tint”构成材质。
 ///
 /// 本节点不处理鼠标事件，必须作为内容层的背景使用。线程：构造与属性监听都在
 /// JavaFX 应用线程。
@@ -442,6 +445,7 @@ public final class GlassSurface extends StackPane {
             if (i < images.size()) {
                 view.setImage(images.get(i));
                 view.setViewport(viewport);
+                // 快照图层已包含模糊，不再叠加任何附加效果。
                 view.setEffect(null);
                 view.setLayoutX(0.0);
                 view.setLayoutY(0.0);

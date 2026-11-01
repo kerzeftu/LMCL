@@ -78,7 +78,7 @@ final class GlassLiveViewport {
 
     /// 返回一层模糊需要的采样外扩量（场景像素）。
     ///
-    /// 远层半径 96 时返回 146，保证卡片可见区域内部永远不是 BoxBlur 的透明
+    /// 远层半径 192 时返回 290，保证卡片可见区域内部永远不是 BoxBlur 的透明
     /// 边缘；外扩出去的部分由 [GlassSurface] 的圆角 clip 裁掉。
     ///
     /// @param sceneRadius 屏幕上的模糊半径
@@ -92,7 +92,7 @@ final class GlassLiveViewport {
     ///
     /// 卡片可能位于缩放变换下（界面缩放/DPI 适配），JavaFX 的 effect 在节点
     /// 局部空间生效，因此需要除以局部到场景的缩放比例，保证屏幕上的模糊半径
-    /// 仍是 96/64/40/24/12。
+    /// 仍是 192/128/80/48/24（v3.17.28 起）。
     ///
     /// @param sceneRadius        屏幕上的目标半径
     /// @param localToSceneScale  卡片局部到场景的缩放比例

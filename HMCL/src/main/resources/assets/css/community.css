@@ -315,7 +315,8 @@
 }
 
 .community-home .community-card-actions .jfx-button {
-    -fx-min-height: 30;
+    -fx-padding: 6 10;
+    -fx-min-height: 28;
 }
 
 /* 材质卡表面：玻璃开启时由 m3-community.css 的 4 类选择器声明透明，运行时再由
